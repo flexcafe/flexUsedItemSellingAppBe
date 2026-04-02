@@ -1,0 +1,922 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  ENUMS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// ── Auth & User ──────────────────────────────────────────────────────────────
+
+enum RegistrationType {
+  PHONE_AND_FACEBOOK
+  PHONE_ONLY
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+  PREFER_NOT_TO_SAY
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  FAILED
+}
+
+// ── Listing ──────────────────────────────────────────────────────────────────
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  RESERVED
+  SOLD
+  ARCHIVED
+  REMOVED
+}
+
+enum ListingCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum PaymentMethod {
+  CASH
+  KBZPAY
+}
+
+enum DeliveryFeePayer {
+  BUYER
+  SELLER
+}
+
+// ── Transaction ──────────────────────────────────────────────────────────────
+
+enum TransactionType {
+  DIRECT_TRADE
+  SAFE_PAYMENT
+}
+
+enum TransactionStatus {
+  INITIATED
+  SAFE_PAYMENT_PENDING
+  SAFE_PAYMENT_RECEIVED
+  BUYER_COMPLETED
+  SELLER_COMPLETED
+  COMPLETED
+  DISPUTED
+  CANCELLED
+  REFUNDED
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+  SAFE_PAYMENT_INITIATED
+  SAFE_PAYMENT_VERIFIED
+  PAYMENT_TRANSFERRED
+  DIRECT_TRADE_REQUEST
+  LOCATION_SHARING_STARTED
+  LOCATION_SHARING_STOPPED
+  TRANSACTION_COMPLETED
+}
+
+// ── Points & Ranking ─────────────────────────────────────────────────────────
+
+enum RankTier {
+  NEWBIE
+  BRONZE
+  SILVER
+  GOLD
+  VIP
+}
+
+enum PointSourceType {
+  REVIEW_RECEIVED
+  SUGGESTION_REWARD
+  ADMIN_GRANT
+  REFERRAL_BONUS
+  WITHDRAWAL
+}
+
+// ── Withdrawal ───────────────────────────────────────────────────────────────
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TRANSFERRED
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+enum AdminPermission {
+  MANAGE_CATEGORIES
+  MANAGE_SLIDER_ADS
+  MANAGE_USERS
+  MANAGE_LISTINGS
+  MANAGE_WITHDRAWALS
+  MANAGE_REPORTS
+  MANAGE_SUGGESTIONS
+  MANAGE_TRANSACTIONS
+  MANAGE_SAFE_PAYMENTS
+  MANAGE_RANK_CONFIG
+  MANAGE_POINT_CONFIG
+  VIEW_ANALYTICS
+  SEND_NOTIFICATIONS
+}
+
+// ── Slider Ads ───────────────────────────────────────────────────────────────
+
+enum SliderAdStatus {
+  ACTIVE
+  INACTIVE
+  SCHEDULED
+}
+
+// ── Suggestions ──────────────────────────────────────────────────────────────
+
+enum SuggestionStatus {
+  PENDING
+  REVIEWED
+  REWARDED
+  DISMISSED
+}
+
+// ── Fraud Reports ────────────────────────────────────────────────────────────
+
+enum FraudType {
+  FAKE_PRODUCT
+  PAYMENT_FRAUD
+  NO_DELIVERY
+  COUNTERFEIT
+  MISREPRESENTATION
+  SCAM
+  OTHER
+}
+
+enum FraudReportStatus {
+  PENDING
+  UNDER_REVIEW
+  CONFIRMED_FRAUD
+  DISMISSED
+}
+
+// ── Notifications ────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  SYSTEM
+  TRANSACTION
+  REVIEW
+  WITHDRAWAL
+  SUGGESTION
+  REPORT
+  ADMIN_MESSAGE
+  POINTS_RECEIVED
+  CHAT
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  1 · AUTH & USER
+//
+//  Two registration paths:
+//    PHONE_AND_FACEBOOK  → phone + Facebook ID + all profile fields
+//    PHONE_ONLY          → phone + all profile fields (no Facebook ID)
+//
+//  Two login paths:
+//    Facebook ID + password
+//    Phone number + password
+// ════════════════════════════════════════════════════════════════════════════════
+
+model User {
+  id               String           @id @default(uuid())
+  registrationType RegistrationType @map("registration_type")
+
+  // Credentials
+  phone    String  @unique
+  email    String? @unique
+  password String
+  nickname String
+
+  // Facebook (required only for PHONE_AND_FACEBOOK registration)
+  facebookId String? @unique @map("facebook_id")
+
+  // Verification flags
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  isPhoneVerified Boolean @default(false) @map("is_phone_verified")
+
+  // Account state
+  isActive  Boolean   @default(true) @map("is_active")
+  isBanned  Boolean   @default(false) @map("is_banned")
+  banReason String?   @map("ban_reason")
+  bannedAt  DateTime? @map("banned_at")
+
+  // Points & ranking (denormalized for fast reads; authoritative ledger is PointTransaction)
+  totalPoints Int      @default(0) @map("total_points")
+  currentRank RankTier @default(NEWBIE) @map("current_rank")
+
+  // Referral
+  referralCode String  @unique @map("referral_code")
+  referredById String? @map("referred_by_id")
+  referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
+  referrals    User[]  @relation("UserReferral")
+
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // ── Relations ──────────────────────────────────────────────────────────────
+  profile       UserProfile?
+  kbzPayAccount KbzPayAccount?
+
+  listings           Listing[]
+  sentMessages       ChatMessage[]       @relation("SenderMessages")
+  reviewsGiven       Review[]            @relation("ReviewerReviews")
+  reviewsReceived    Review[]            @relation("RevieweeReviews")
+  pointTransactions  PointTransaction[]
+  withdrawalRequests WithdrawalRequest[]
+  suggestions        Suggestion[]
+  reportsFiled       FraudReport[]       @relation("ReporterReports")
+  reportsAgainst     FraudReport[]       @relation("ReportedUserReports")
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  buyerTransactions  Transaction[]       @relation("BuyerTransactions")
+  sellerTransactions Transaction[]       @relation("SellerTransactions")
+  buyerChatRooms     ChatRoom[]          @relation("BuyerChatRooms")
+  sellerChatRooms    ChatRoom[]          @relation("SellerChatRooms")
+  locationShares     LocationShare[]
+
+  // Admin (null for regular clients)
+  adminRoleId String?    @map("admin_role_id")
+  adminRole   AdminRole? @relation(fields: [adminRoleId], references: [id])
+
+  @@index([phone])
+  @@index([facebookId])
+  @@index([currentRank])
+  @@index([isActive, isBanned])
+  @@map("users")
+}
+
+model UserProfile {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  avatar        String?
+  gender        Gender?
+  age           Int?
+  maritalStatus MaritalStatus? @map("marital_status")
+
+  // Region — user-typed + GPS cross-verification
+  inputRegion      String?   @map("input_region")
+  gpsLatitude      Float?    @map("gps_latitude")
+  gpsLongitude     Float?    @map("gps_longitude")
+  isRegionVerified Boolean   @default(false) @map("is_region_verified")
+  gpsVerifiedAt    DateTime? @map("gps_verified_at")
+
+  bio String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([inputRegion])
+  @@map("user_profiles")
+}
+
+model KbzPayAccount {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accountName String  @map("account_name")
+  phoneNumber String  @map("phone_number")
+  isVerified  Boolean @default(false) @map("is_verified")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("kbz_pay_accounts")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  2 · VERIFICATION  (OTP for phone, token for email)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model OtpVerification {
+  id          String             @id @default(uuid())
+  phone       String
+  code        String
+  status      VerificationStatus @default(PENDING)
+  expiresAt   DateTime           @map("expires_at")
+  attempts    Int                @default(0)
+  maxAttempts Int                @default(5) @map("max_attempts")
+  verifiedAt  DateTime?          @map("verified_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  @@index([phone, status])
+  @@index([expiresAt])
+  @@map("otp_verifications")
+}
+
+model EmailVerification {
+  id         String             @id @default(uuid())
+  email      String
+  token      String             @unique
+  status     VerificationStatus @default(PENDING)
+  expiresAt  DateTime           @map("expires_at")
+  verifiedAt DateTime?          @map("verified_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  @@index([email, status])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  3 · ADMIN RBAC
+//
+//  root_admin  → single static account, full access, cannot be deleted
+//  admin roles → dynamic, created by root_admin with cherry-picked permissions
+//  client      → every other user (buyer + seller are just roles in a transaction)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model AdminRole {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  // true for ROOT_ADMIN (seeded, immutable)
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  permissions AdminRolePermission[]
+  users       User[]
+
+  @@map("admin_roles")
+}
+
+model AdminRolePermission {
+  id         String          @id @default(uuid())
+  roleId     String          @map("role_id")
+  role       AdminRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission AdminPermission
+
+  @@unique([roleId, permission])
+  @@map("admin_role_permissions")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  4 · CATEGORIES  (hierarchical, admin-managed CRUD)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Category {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  slug      String  @unique
+  icon      String?
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  parentId String?    @map("parent_id")
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listings Listing[]
+
+  @@index([parentId])
+  @@index([slug])
+  @@map("categories")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  5 · LISTINGS  (product registration + display)
+//
+//  ‣ Seller picks category, fills product form
+//  ‣ Supports cash / KBZPay, delivery toggle, up to 3 preferred locations
+//  ‣ Lat/lng stored for proximity-based feed ordering
+//  ‣ Max 5 images (enforced at application layer)
+//  ‣ Full-text search on title+description via pg_trgm / tsvector (add in migration)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Listing {
+  id          String           @id @default(uuid())
+  title       String
+  description String           @db.Text
+  price       Decimal          @db.Decimal(12, 2)
+  condition   ListingCondition
+  status      ListingStatus    @default(DRAFT)
+
+  // Accepted payment methods (PostgreSQL enum array)
+  paymentMethods PaymentMethod[] @map("payment_methods")
+
+  // Direct trade location (primary meeting point + map pin)
+  directTradeLocation  String? @map("direct_trade_location")
+  directTradeLatitude  Float?  @map("direct_trade_latitude")
+  directTradeLongitude Float?  @map("direct_trade_longitude")
+  mapScreenshotUrl     String? @map("map_screenshot_url")
+  nearbyLandmarks      String? @map("nearby_landmarks")
+  preferredTradeTime   String? @map("preferred_trade_time")
+
+  // Delivery
+  isDeliveryAvailable Boolean           @default(false) @map("is_delivery_available")
+  deliveryFeePayer    DeliveryFeePayer? @map("delivery_fee_payer")
+
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  viewCount Int      @default(0) @map("view_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sellerId   String   @map("seller_id")
+  seller     User     @relation(fields: [sellerId], references: [id])
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  images             ListingImage[]
+  preferredLocations PreferredTradeLocation[]
+  transactions       Transaction[]
+  chatRooms          ChatRoom[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status, isDeleted])
+  @@index([directTradeLatitude, directTradeLongitude])
+  @@index([createdAt])
+  @@index([price])
+  @@map("listings")
+}
+
+model ListingImage {
+  id        String   @id @default(uuid())
+  listingId String   @map("listing_id")
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([listingId])
+  @@map("listing_images")
+}
+
+model PreferredTradeLocation {
+  id        String  @id @default(uuid())
+  listingId String  @map("listing_id")
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  label     String // e.g. "Location 1", "Location 2", "Location 3"
+  address   String
+  latitude  Float?
+  longitude Float?
+  sortOrder Int    @default(0) @map("sort_order")
+
+  @@index([listingId])
+  @@map("preferred_trade_locations")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  6 · SLIDER ADS  (admin-managed picture advertisements)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model SliderAd {
+  id        String         @id @default(uuid())
+  title     String
+  imageUrl  String         @map("image_url")
+  linkUrl   String?        @map("link_url")
+  status    SliderAdStatus @default(ACTIVE)
+  sortOrder Int            @default(0) @map("sort_order")
+
+  // Optional scheduling window
+  startsAt DateTime? @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([status, startsAt, endsAt])
+  @@map("slider_ads")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  7 · CHAT & MESSAGING
+//
+//  ‣ ChatRoom scoped to (listing × buyer × seller) — unique constraint
+//  ‣ Three in-chat actions: Direct Trade · Safe Payment · Transaction Complete
+//  ‣ System messages carry structured payload in `metadata` (JSON)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model ChatRoom {
+  id        String  @id @default(uuid())
+  listingId String  @map("listing_id")
+  listing   Listing @relation(fields: [listingId], references: [id])
+  buyerId   String  @map("buyer_id")
+  buyer     User    @relation("BuyerChatRooms", fields: [buyerId], references: [id])
+  sellerId  String  @map("seller_id")
+  seller    User    @relation("SellerChatRooms", fields: [sellerId], references: [id])
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages     ChatMessage[]
+  transactions Transaction[]
+
+  @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id         String      @id @default(uuid())
+  chatRoomId String      @map("chat_room_id")
+  chatRoom   ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  senderId   String      @map("sender_id")
+  sender     User        @relation("SenderMessages", fields: [senderId], references: [id])
+  type       MessageType @default(TEXT)
+  content    String      @db.Text
+
+  // Structured payload for system/action messages (payment info, trade details, etc.)
+  metadata Json?
+
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([chatRoomId, createdAt])
+  @@index([senderId])
+  @@map("chat_messages")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  8 · TRANSACTIONS & PAYMENTS
+//
+//  Flow (Safe Payment):
+//    1. Buyer clicks Safe Payment in chat → SAFE_PAYMENT_PENDING
+//    2. Buyer submits KBZPay transaction ID → admin verifies
+//    3. Admin confirms receipt → SAFE_PAYMENT_RECEIVED
+//    4. Both sides click Complete → BUYER_COMPLETED / SELLER_COMPLETED
+//    5. When both complete → COMPLETED, admin transfers money to seller
+//    6. Both sides leave reviews (stars + comment)
+//
+//  Flow (Direct Trade):
+//    1. Buyer clicks Direct Trade → sets meeting date/time
+//    2. Location sharing starts for both parties
+//    3. Meet, exchange, both click Complete
+//    4. Both leave reviews
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Transaction {
+  id         String   @id @default(uuid())
+  listingId  String   @map("listing_id")
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  chatRoomId String   @map("chat_room_id")
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id])
+  buyerId    String   @map("buyer_id")
+  buyer      User     @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  sellerId   String   @map("seller_id")
+  seller     User     @relation("SellerTransactions", fields: [sellerId], references: [id])
+
+  type   TransactionType
+  status TransactionStatus @default(INITIATED)
+  amount Decimal           @db.Decimal(12, 2)
+
+  // Completion tracking (both sides must confirm)
+  buyerCompleted    Boolean   @default(false) @map("buyer_completed")
+  sellerCompleted   Boolean   @default(false) @map("seller_completed")
+  buyerCompletedAt  DateTime? @map("buyer_completed_at")
+  sellerCompletedAt DateTime? @map("seller_completed_at")
+  completedAt       DateTime? @map("completed_at")
+
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @map("cancel_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  safePayment SafePayment?
+  directTrade DirectTrade?
+  reviews     Review[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([listingId])
+  @@index([chatRoomId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model SafePayment {
+  id            String      @id @default(uuid())
+  transactionId String      @unique @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  // Buyer's KBZPay transfer details
+  payerKbzName     String  @map("payer_kbz_name")
+  payerKbzPhone    String  @map("payer_kbz_phone")
+  paymentAmount    Decimal @map("payment_amount") @db.Decimal(12, 2)
+  kbzTransactionId String  @map("kbz_transaction_id")
+
+  // Admin verification
+  isVerified   Boolean   @default(false) @map("is_verified")
+  verifiedById String?   @map("verified_by_id")
+  verifiedAt   DateTime? @map("verified_at")
+
+  // Admin → Seller transfer after both sides complete
+  isTransferred Boolean   @default(false) @map("is_transferred")
+  transferredAt DateTime? @map("transferred_at")
+  transferRef   String?   @map("transfer_ref")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isVerified, isTransferred])
+  @@map("safe_payments")
+}
+
+model DirectTrade {
+  id            String      @id @default(uuid())
+  transactionId String      @unique @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  meetingDate      DateTime @map("meeting_date")
+  meetingTime      String   @map("meeting_time")
+  meetingLocation  String?  @map("meeting_location")
+  meetingLatitude  Float?   @map("meeting_latitude")
+  meetingLongitude Float?   @map("meeting_longitude")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  locationShares LocationShare[]
+
+  @@map("direct_trades")
+}
+
+model LocationShare {
+  id            String      @id @default(uuid())
+  directTradeId String      @map("direct_trade_id")
+  directTrade   DirectTrade @relation(fields: [directTradeId], references: [id], onDelete: Cascade)
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id])
+
+  latitude  Float
+  longitude Float
+  isActive  Boolean  @default(true) @map("is_active")
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([directTradeId, isActive])
+  @@index([userId])
+  @@map("location_shares")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  9 · REVIEWS & RATINGS
+//
+//  ‣ Both buyer and seller review each other per completed transaction
+//  ‣ 1–5 stars (enforced at application layer)
+//  ‣ Stars → points conversion governed by StarPointConfig
+//  ‣ Includes text comment (trade satisfaction)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Review {
+  id            String      @id @default(uuid())
+  transactionId String      @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  reviewerId    String      @map("reviewer_id")
+  reviewer      User        @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  revieweeId    String      @map("reviewee_id")
+  reviewee      User        @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+
+  stars         Int
+  comment       String? @db.Text
+  pointsAwarded Int     @default(0) @map("points_awarded")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // One review per person per transaction
+  @@unique([transactionId, reviewerId])
+  @@index([revieweeId, stars])
+  @@index([revieweeId, createdAt])
+  @@map("reviews")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  10 · POINTS, RANKING & WITHDRAWALS
+//
+//  ‣ Admin configures how many points each star count awards (StarPointConfig)
+//  ‣ Admin configures rank tier thresholds (RankConfig)
+//  ‣ Every point change is an immutable ledger entry (PointTransaction)
+//  ‣ User.totalPoints is a denormalized cache; recalculate from ledger if needed
+//  ‣ User can request point withdrawal → admin approves → KBZPay transfer
+// ════════════════════════════════════════════════════════════════════════════════
+
+model RankConfig {
+  id        String   @id @default(uuid())
+  tier      RankTier @unique
+  minPoints Int      @map("min_points")
+  maxPoints Int?     @map("max_points") // null = no upper limit (VIP)
+  label     String
+  badgeUrl  String?  @map("badge_url")
+  sortOrder Int      @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("rank_configs")
+}
+
+model StarPointConfig {
+  id            String @id @default(uuid())
+  starCount     Int    @unique @map("star_count") // 1–5
+  pointsAwarded Int    @map("points_awarded")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("star_point_configs")
+}
+
+model PointTransaction {
+  id           String          @id @default(uuid())
+  userId       String          @map("user_id")
+  user         User            @relation(fields: [userId], references: [id])
+  amount       Int // positive = earned, negative = withdrawn
+  sourceType   PointSourceType @map("source_type")
+  sourceId     String?         @map("source_id") // FK to Review / Suggestion / WithdrawalRequest
+  description  String?
+  balanceAfter Int             @map("balance_after")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([sourceType])
+  @@map("point_transactions")
+}
+
+model WithdrawalRequest {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  amount         Int
+  status         WithdrawalStatus @default(PENDING)
+  adminNote      String?          @map("admin_note")
+  processedById  String?          @map("processed_by_id")
+  processedAt    DateTime?        @map("processed_at")
+  kbzTransferRef String?          @map("kbz_transfer_ref")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("withdrawal_requests")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  11 · SUGGESTIONS  (user → admin, admin may reward points)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Suggestion {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  nickname String
+  name     String
+  details  String @db.Text
+
+  status        SuggestionStatus @default(PENDING)
+  pointsAwarded Int              @default(0) @map("points_awarded")
+  adminNote     String?          @map("admin_note")
+  reviewedById  String?          @map("reviewed_by_id")
+  reviewedAt    DateTime?        @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("suggestions")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  12 · FRAUD REPORTS  (user → admin, admin reviews & notifies)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model FraudReport {
+  id             String @id @default(uuid())
+  reporterId     String @map("reporter_id")
+  reporter       User   @relation("ReporterReports", fields: [reporterId], references: [id])
+  reportedUserId String @map("reported_user_id")
+  reportedUser   User   @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+
+  fraudUserName String    @map("fraud_user_name")
+  tradeDate     DateTime  @map("trade_date")
+  tradeTime     String?   @map("trade_time")
+  fraudType     FraudType @map("fraud_type")
+  details       String    @db.Text
+
+  status       FraudReportStatus @default(PENDING)
+  adminNote    String?           @map("admin_note")
+  reviewedById String?           @map("reviewed_by_id")
+  reviewedAt   DateTime?         @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@map("fraud_reports")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  13 · NOTIFICATIONS
+// ════════════════════════════════════════════════════════════════════════════════
+
+model Notification {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  referenceId String?          @map("reference_id") // polymorphic pointer to related entity
+  isRead      Boolean          @default(false) @map("is_read")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  14 · AUDIT LOG  (tracks every admin action for accountability)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id         String  @id @default(uuid())
+  adminId    String  @map("admin_id")
+  action     String
+  entityType String  @map("entity_type")
+  entityId   String? @map("entity_id")
+  oldValue   Json?   @map("old_value")
+  newValue   Json?   @map("new_value")
+  ipAddress  String? @map("ip_address")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
