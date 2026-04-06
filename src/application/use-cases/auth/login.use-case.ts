@@ -28,6 +28,8 @@ export class LoginUseCase {
   ) {}
 
   async execute(dto: LoginDto): Promise<AuthResponseDto> {
+    this.validateLoginMode(dto);
+
     const user = await this.resolveUser(dto);
 
     if (!user.isActiveUser()) {
@@ -39,15 +41,33 @@ export class LoginUseCase {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    await this.userRepository.update(user.id, { lastLoginAt: new Date() });
+
     const accessToken = this.jwtService.sign({
       sub: user.id,
       phone: user.phone,
     });
 
+    const authData = await this.userRepository.getAuthDataByUserId(user.id);
+    if (!authData) {
+      throw new UnauthorizedException('User profile not found');
+    }
+
     return new AuthResponseDto(
-      new UserProfileDto(user),
+      new UserProfileDto(authData),
       new AuthTokensDto(accessToken),
     );
+  }
+
+  private validateLoginMode(dto: LoginDto): void {
+    const hasPhone = Boolean(dto.phone);
+    const hasFacebook = Boolean(dto.facebookId);
+
+    if (hasPhone === hasFacebook) {
+      throw new BadRequestException(
+        'Provide exactly one login method: phone or facebookId',
+      );
+    }
   }
 
   private async resolveUser(dto: LoginDto): Promise<UserEntity> {
@@ -57,15 +77,8 @@ export class LoginUseCase {
       this.logger.log(`Login attempt via phone: ${dto.phone}`);
       user = await this.userRepository.findByPhone(dto.phone);
     } else if (dto.facebookId) {
-      this.logger.log(`Login attempt via Facebook ID`);
+      this.logger.log('Login attempt via Facebook ID');
       user = await this.userRepository.findByFacebookId(dto.facebookId);
-    } else if (dto.email) {
-      this.logger.log(`Login attempt via email: ${dto.email}`);
-      user = await this.userRepository.findByEmail(dto.email);
-    } else {
-      throw new BadRequestException(
-        'Provide phone, facebookId, or email to login',
-      );
     }
 
     if (!user) {

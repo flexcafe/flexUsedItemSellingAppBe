@@ -15,11 +15,15 @@ export class UserMapper {
       facebookId: prismaUser.facebookId,
       isEmailVerified: prismaUser.isEmailVerified,
       isPhoneVerified: prismaUser.isPhoneVerified,
+      emailVerifiedAt: prismaUser.emailVerifiedAt,
+      phoneVerifiedAt: prismaUser.phoneVerifiedAt,
       isActive: prismaUser.isActive,
       isBanned: prismaUser.isBanned,
       totalPoints: prismaUser.totalPoints,
       currentRank: prismaUser.currentRank as RankTier,
       referralCode: prismaUser.referralCode,
+      referredById: prismaUser.referredById,
+      adminRoleId: prismaUser.adminRoleId,
       createdAt: prismaUser.createdAt,
       updatedAt: prismaUser.updatedAt,
     });
@@ -32,6 +36,10 @@ export class UserMapper {
     if (entity.nickname !== undefined) data.nickname = entity.nickname;
     if (entity.phone !== undefined) data.phone = entity.phone;
     if (entity.isActive !== undefined) data.isActive = entity.isActive;
+    if (entity.phoneVerifiedAt !== undefined)
+      data.phoneVerifiedAt = entity.phoneVerifiedAt;
+    if (entity.emailVerifiedAt !== undefined)
+      data.emailVerifiedAt = entity.emailVerifiedAt;
     return data;
   }
 }

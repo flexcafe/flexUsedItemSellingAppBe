@@ -4,3 +4,6 @@ export * from './payment-method.enum.js';
 export * from './delivery-fee-payer.enum.js';
 export * from './registration-type.enum.js';
 export * from './rank-tier.enum.js';
+export * from './gender.enum.js';
+export * from './marital-status.enum.js';
+export * from './verification-status.enum.js';

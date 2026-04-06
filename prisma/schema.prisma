@@ -226,6 +226,8 @@ model User {
   // Verification flags
   isEmailVerified Boolean @default(false) @map("is_email_verified")
   isPhoneVerified Boolean @default(false) @map("is_phone_verified")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  phoneVerifiedAt DateTime? @map("phone_verified_at")
 
   // Account state
   isActive  Boolean   @default(true) @map("is_active")
@@ -310,13 +312,23 @@ model KbzPayAccount {
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  accountName String  @map("account_name")
-  phoneNumber String  @map("phone_number")
-  isVerified  Boolean @default(false) @map("is_verified")
+  accountName String             @map("account_name")
+  phoneNumber String             @map("phone_number")
+  status      VerificationStatus @default(PENDING)
+  isVerified  Boolean            @default(false) @map("is_verified")
+
+  verifyRequestedAt     DateTime? @map("verify_requested_at")
+  adminPhoneForTransfer String?   @map("admin_phone_for_transfer")
+  adminInstructionSentAt DateTime? @map("admin_instruction_sent_at")
+
+  verifiedAt   DateTime? @map("verified_at")
+  verifiedById String?   @map("verified_by_id")
+  adminNote    String?   @map("admin_note")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([status])
   @@map("kbz_pay_accounts")
 }
 
@@ -896,6 +908,7 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+  @@index([referenceId])
   @@map("notifications")
 }
 
