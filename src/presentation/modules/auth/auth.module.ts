@@ -17,6 +17,8 @@ import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/ad
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
+import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
+import { BrevoSmtpEmailSender } from '../../../infrastructure/email/brevo-smtp-email.sender.js';
 
 @Module({
   imports: [
@@ -43,6 +45,10 @@ import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.in
     AdminVerifyKbzPayUseCase,
     GetCurrentUserProfileUseCase,
     JwtStrategy,
+    {
+      provide: EMAIL_SENDER,
+      useClass: BrevoSmtpEmailSender,
+    },
     {
       provide: USER_REPOSITORY,
       useClass: UserRepository,

@@ -23,6 +23,7 @@ import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { hash } from 'bcrypt';
+import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
 
 function buildUser(overrides: Partial<ConstructorParameters<typeof UserEntity>[0]> = {}) {
   return new UserEntity({
@@ -107,12 +108,19 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
   };
 }
 
+function buildEmailSenderMock(): jest.Mocked<IEmailSender> {
+  return {
+    send: jest.fn(),
+  };
+}
+
 describe('Auth use-cases (registration + login + verification flows)', () => {
   describe(RegisterUseCase.name, () => {
     it('rejects when password != confirmPassword', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       await expect(
         useCase.execute({
@@ -136,8 +144,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('requires facebookId for PHONE_AND_FACEBOOK', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       await expect(
         useCase.execute({
@@ -161,8 +170,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('forbids facebookId for PHONE_ONLY', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       await expect(
         useCase.execute({
@@ -187,12 +197,13 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('rejects duplicate phone/email/facebookId', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       repo.findByPhone.mockResolvedValue(buildUser());
       repo.findByEmail.mockResolvedValue(null);
       repo.findByFacebookId.mockResolvedValue(null);
 
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       await expect(
         useCase.execute({
@@ -216,11 +227,12 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('rejects invalid referralId', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       repo.findByPhone.mockResolvedValue(null);
       repo.findByEmail.mockResolvedValue(null);
       repo.findByReferralCode.mockResolvedValue(null);
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       await expect(
         useCase.execute({
@@ -245,6 +257,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('creates user + initializes OTP & email verification + returns token', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       repo.findByPhone.mockResolvedValue(null);
       repo.findByEmail.mockResolvedValue(null);
       repo.findByFacebookId.mockResolvedValue(null);
@@ -259,7 +272,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(createdUser));
 
       const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender);
 
       const res = await useCase.execute({
         registrationType: RegistrationType.PHONE_AND_FACEBOOK,
@@ -282,6 +295,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(repo.create).toHaveBeenCalledTimes(1);
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
       expect(repo.createEmailVerification).toHaveBeenCalledTimes(1);
+      expect(emailSender.send).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledTimes(1);
       expect(res.tokens.accessToken).toBe('access-token');
       expect(res.user.id).toBe('user-new');
@@ -415,11 +429,13 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('SendEmailVerificationUseCase calls createEmailVerification', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       repo.findByEmail.mockResolvedValue(buildUser());
-      const useCase = new SendEmailVerificationUseCase(repo);
+      const useCase = new SendEmailVerificationUseCase(repo, emailSender);
       const res = await useCase.execute({ email: 'john@example.com' });
       expect(res.action).toBe('EMAIL_VERIFICATION_SENT');
       expect(repo.createEmailVerification).toHaveBeenCalledTimes(1);
+      expect(emailSender.send).toHaveBeenCalledTimes(1);
     });
 
     it('VerifyEmailVerificationUseCase marks email verified on valid token', async () => {

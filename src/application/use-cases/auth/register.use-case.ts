@@ -11,6 +11,8 @@ import { hash } from 'bcrypt';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
+import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
+import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
 import {
   AuthResponseDto,
@@ -26,6 +28,8 @@ export class RegisterUseCase {
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly jwtService: JwtService,
+    @Inject(EMAIL_SENDER)
+    private readonly emailSender: IEmailSender,
   ) {}
 
   async execute(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -100,7 +104,13 @@ export class RegisterUseCase {
     );
 
     this.logger.log(`OTP for ${dto.phone}: ${otpCode}`);
-    this.logger.log(`Email token for ${dto.email}: ${emailToken}`);
+    await this.emailSender.send({
+      to: dto.email,
+      subject: 'Verify your email',
+      text: `Your email verification token is: ${emailToken}`,
+      html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
+    });
+    this.logger.log(`Email verification token generated for ${dto.email}`);
 
     const accessToken = this.jwtService.sign({
       sub: user.id,
