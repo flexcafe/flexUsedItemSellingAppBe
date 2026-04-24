@@ -9,23 +9,12 @@ import {
   IsString,
   Min,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
 import { Gender } from '../../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 
 export class RegisterDto {
-  @ApiProperty({
-    enum: RegistrationType,
-    example: RegistrationType.PHONE_AND_FACEBOOK,
-    description:
-      'PHONE_AND_FACEBOOK requires facebookId. PHONE_ONLY must not include facebookId.',
-  })
-  @IsEnum(RegistrationType)
-  registrationType: RegistrationType;
-
   @ApiProperty({ example: 'CoolTrader' })
   @IsString()
   @IsNotEmpty()
@@ -54,19 +43,6 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   confirmPassword: string;
-
-  @ApiProperty({
-    example: '100012345678901',
-    required: false,
-    description: 'Required only when registrationType = PHONE_AND_FACEBOOK',
-  })
-  @ValidateIf(
-    (dto: RegisterDto) =>
-      dto.registrationType === RegistrationType.PHONE_AND_FACEBOOK,
-  )
-  @IsString()
-  @IsNotEmpty()
-  facebookId?: string;
 
   @ApiProperty({
     example: 'Kyaw Zin',

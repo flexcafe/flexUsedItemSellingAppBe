@@ -24,6 +24,7 @@ import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { hash } from 'bcrypt';
 import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
+import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
 
 function buildUser(overrides: Partial<ConstructorParameters<typeof UserEntity>[0]> = {}) {
   return new UserEntity({
@@ -114,17 +115,23 @@ function buildEmailSenderMock(): jest.Mocked<IEmailSender> {
   };
 }
 
+function buildSmsSenderMock(): jest.Mocked<ISmsSender> {
+  return {
+    send: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('Auth use-cases (registration + login + verification flows)', () => {
   describe(RegisterUseCase.name, () => {
     it('rejects when password != confirmPassword', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
-          registrationType: RegistrationType.PHONE_ONLY,
           nickname: 'Nick',
           phone: '+959123456789',
           email: 'john@example.com',
@@ -142,72 +149,18 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('requires facebookId for PHONE_AND_FACEBOOK', async () => {
+    it('rejects duplicate phone/email', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
-      const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
-
-      await expect(
-        useCase.execute({
-          registrationType: RegistrationType.PHONE_AND_FACEBOOK,
-          nickname: 'Nick',
-          phone: '+959123456789',
-          email: 'john@example.com',
-          password: 'password123',
-          confirmPassword: 'password123',
-          kbzPayName: 'Kyaw Zin',
-          kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('forbids facebookId for PHONE_ONLY', async () => {
-      const repo = buildRepoMock();
-      const emailSender = buildEmailSenderMock();
-      const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
-
-      await expect(
-        useCase.execute({
-          registrationType: RegistrationType.PHONE_ONLY,
-          nickname: 'Nick',
-          phone: '+959123456789',
-          email: 'john@example.com',
-          password: 'password123',
-          confirmPassword: 'password123',
-          facebookId: 'fb-1',
-          kbzPayName: 'Kyaw Zin',
-          kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('rejects duplicate phone/email/facebookId', async () => {
-      const repo = buildRepoMock();
-      const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
       repo.findByPhone.mockResolvedValue(buildUser());
       repo.findByEmail.mockResolvedValue(null);
-      repo.findByFacebookId.mockResolvedValue(null);
 
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
-          registrationType: RegistrationType.PHONE_ONLY,
           nickname: 'Nick',
           phone: '+959123456789',
           email: 'john@example.com',
@@ -228,15 +181,15 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
     it('rejects invalid referralId', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
       repo.findByPhone.mockResolvedValue(null);
       repo.findByEmail.mockResolvedValue(null);
       repo.findByReferralCode.mockResolvedValue(null);
       const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
-          registrationType: RegistrationType.PHONE_ONLY,
           nickname: 'Nick',
           phone: '+959123456789',
           email: 'john@example.com',
@@ -258,30 +211,27 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
     it('creates user + initializes OTP & email verification + returns token', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
       repo.findByPhone.mockResolvedValue(null);
       repo.findByEmail.mockResolvedValue(null);
-      repo.findByFacebookId.mockResolvedValue(null);
       repo.findByReferralCode.mockResolvedValue(null);
 
       const createdUser = buildUser({
         id: 'user-new',
-        registrationType: RegistrationType.PHONE_AND_FACEBOOK,
-        facebookId: 'fb-1',
+        registrationType: RegistrationType.PHONE_ONLY,
       });
       repo.create.mockResolvedValue(createdUser);
       repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(createdUser));
 
       const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender);
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       const res = await useCase.execute({
-        registrationType: RegistrationType.PHONE_AND_FACEBOOK,
         nickname: 'Nick',
         phone: '+959123456789',
         email: 'john@example.com',
         password: 'password123',
         confirmPassword: 'password123',
-        facebookId: 'fb-1',
         kbzPayName: 'Kyaw Zin',
         kbzPayPhoneNumber: '+959876543210',
         gender: Gender.MALE,
@@ -293,14 +243,19 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       });
 
       expect(repo.create).toHaveBeenCalledTimes(1);
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          registrationType: RegistrationType.PHONE_ONLY,
+        }),
+      );
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
       expect(repo.createEmailVerification).toHaveBeenCalledTimes(1);
+      expect(smsSender.send).toHaveBeenCalledTimes(1);
       expect(emailSender.send).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledTimes(1);
       expect(res.tokens.accessToken).toBe('access-token');
       expect(res.user.id).toBe('user-new');
-      expect(res.user.registrationType).toBe(RegistrationType.PHONE_AND_FACEBOOK);
-      expect(res.user.facebookId).toBe('fb-1');
+      expect(res.user.registrationType).toBe(RegistrationType.PHONE_ONLY);
     });
   });
 
@@ -400,13 +355,22 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
   });
 
   describe('OTP + Email + KBZPay flows are callable', () => {
-    it('SendPhoneOtpUseCase calls createPhoneOtp', async () => {
+    it('SendPhoneOtpUseCase persists OTP and sends SMS', async () => {
       const repo = buildRepoMock();
+      const smsSender = buildSmsSenderMock();
       repo.findByPhone.mockResolvedValue(buildUser());
-      const useCase = new SendPhoneOtpUseCase(repo);
+      const useCase = new SendPhoneOtpUseCase(repo, smsSender);
       const res = await useCase.execute({ phone: '+959123456789' });
       expect(res.action).toBe('PHONE_OTP_SENT');
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
+      expect(smsSender.send).toHaveBeenCalledTimes(1);
+      expect(smsSender.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: '+959123456789',
+          message: expect.stringMatching(/Your verification code is \d{6}\./),
+          clientReference: 'phone-otp:+959123456789',
+        }),
+      );
     });
 
     it('VerifyPhoneOtpUseCase verifies correct code', async () => {

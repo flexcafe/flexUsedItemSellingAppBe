@@ -18,7 +18,9 @@ import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/aut
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
+import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
 import { BrevoSmtpEmailSender } from '../../../infrastructure/email/brevo-smtp-email.sender.js';
+import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms.sender.js';
 
 @Module({
   imports: [
@@ -48,6 +50,10 @@ import { BrevoSmtpEmailSender } from '../../../infrastructure/email/brevo-smtp-e
     {
       provide: EMAIL_SENDER,
       useClass: BrevoSmtpEmailSender,
+    },
+    {
+      provide: SMS_SENDER,
+      useClass: SMSPohRestSmsSender,
     },
     {
       provide: USER_REPOSITORY,

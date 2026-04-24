@@ -13,6 +13,8 @@ import type { IUserRepository } from '../../../domain/repositories/user.reposito
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
 import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
 import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
+import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
+import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
 import {
   AuthResponseDto,
@@ -30,6 +32,8 @@ export class RegisterUseCase {
     private readonly jwtService: JwtService,
     @Inject(EMAIL_SENDER)
     private readonly emailSender: IEmailSender,
+    @Inject(SMS_SENDER)
+    private readonly smsSender: ISmsSender,
   ) {}
 
   async execute(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -37,12 +41,9 @@ export class RegisterUseCase {
 
     this.validateRegistrationRules(dto);
 
-    const [existingPhone, existingEmail, existingFb] = await Promise.all([
+    const [existingPhone, existingEmail] = await Promise.all([
       this.userRepository.findByPhone(dto.phone),
       this.userRepository.findByEmail(dto.email),
-      dto.facebookId
-        ? this.userRepository.findByFacebookId(dto.facebookId)
-        : Promise.resolve(null),
     ]);
 
     if (existingPhone) {
@@ -55,24 +56,17 @@ export class RegisterUseCase {
       throw new ConflictException('A user with this email already exists');
     }
 
-    if (existingFb) {
-      throw new ConflictException(
-        'A user with this Facebook ID already exists',
-      );
-    }
-
     const referredById = await this.resolveReferrer(dto.referralId);
 
     const hashedPassword = await hash(dto.password, 12);
     const referralCode = await this.generateUniqueReferralCode();
 
     const user = await this.userRepository.create({
-      registrationType: dto.registrationType,
+      registrationType: RegistrationType.PHONE_ONLY,
       phone: dto.phone,
       email: dto.email,
       password: hashedPassword,
       nickname: dto.nickname,
-      facebookId: dto.facebookId,
       referralCode,
       referredById: referredById ?? undefined,
       profile: {
@@ -95,6 +89,12 @@ export class RegisterUseCase {
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await this.userRepository.createPhoneOtp(dto.phone, otpCode, otpExpiresAt);
 
+    await this.smsSender.send({
+      to: dto.phone,
+      message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
+      clientReference: `register:${dto.phone}`,
+    });
+
     const emailToken = randomBytes(16).toString('hex');
     const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.userRepository.createEmailVerification(
@@ -103,7 +103,9 @@ export class RegisterUseCase {
       emailExpiresAt,
     );
 
-    this.logger.log(`OTP for ${dto.phone}: ${otpCode}`);
+    this.logger.log(
+      `Phone OTP SMS dispatched for ${this.maskPhone(dto.phone)}`,
+    );
     await this.emailSender.send({
       to: dto.email,
       subject: 'Verify your email',
@@ -131,24 +133,6 @@ export class RegisterUseCase {
   private validateRegistrationRules(dto: RegisterDto): void {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Password and confirmPassword must match');
-    }
-
-    if (
-      dto.registrationType === RegistrationType.PHONE_AND_FACEBOOK &&
-      !dto.facebookId
-    ) {
-      throw new BadRequestException(
-        'facebookId is required for PHONE_AND_FACEBOOK registration',
-      );
-    }
-
-    if (
-      dto.registrationType === RegistrationType.PHONE_ONLY &&
-      dto.facebookId
-    ) {
-      throw new BadRequestException(
-        'facebookId must not be provided for PHONE_ONLY registration',
-      );
     }
   }
 
@@ -179,5 +163,13 @@ export class RegisterUseCase {
 
   private generateOtpCode(): string {
     return randomInt(100000, 1000000).toString();
+  }
+
+  private maskPhone(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 4) {
+      return '***';
+    }
+    return `***${digits.slice(-4)}`;
   }
 }

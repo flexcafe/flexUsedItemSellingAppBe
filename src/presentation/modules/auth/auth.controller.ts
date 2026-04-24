@@ -58,9 +58,9 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Register user (PHONE_AND_FACEBOOK or PHONE_ONLY)',
+    summary: 'Register user with phone',
     description:
-      'PHONE_AND_FACEBOOK requires facebookId. PHONE_ONLY must not include facebookId. Registration stores profile, KBZPay account, creates pending phone OTP and email verification token, and returns access token.',
+      'Registration stores profile, KBZPay account, creates pending phone OTP and email verification token, sends the phone OTP via SMS (SMSPoh), sends the email verification message, and returns an access token.',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -69,12 +69,15 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description:
-      'Validation failure (password mismatch, invalid registrationType rules, invalid referralId)',
+    description: 'Validation failure (password mismatch, invalid referralId)',
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Phone/email/facebookId already exists',
+    description: 'Phone/email already exists',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_GATEWAY,
+    description: 'SMS provider (SMSPoh) rejected the request or returned an error',
   })
   async register(
     @Body() dto: RegisterDto,
@@ -111,15 +114,19 @@ export class AuthController {
   @ApiOperation({
     summary: 'Send phone OTP',
     description:
-      'Creates a fresh OTP for provided phone and expires previous pending OTP entries for the same phone.',
+      'Creates a fresh OTP for the provided phone (expiring previous pending OTP rows) and delivers the code via SMS using SMSPoh.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'OTP generated successfully',
+    description: 'OTP generated and SMS dispatch accepted',
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Phone does not belong to a registered user',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_GATEWAY,
+    description: 'SMS provider (SMSPoh) rejected the request or returned an error',
   })
   async sendPhoneOtp(
     @Body() dto: SendPhoneOtpDto,
