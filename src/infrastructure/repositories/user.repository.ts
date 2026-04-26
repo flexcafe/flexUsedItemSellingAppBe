@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  NotificationType,
-  VerificationStatus as PrismaVerificationStatus,
-} from '@prisma/client';
+import PrismaPkg from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
 import { UserMapper } from '../mappers/user.mapper.js';
 import { UserEntity } from '../../domain/entities/user.entity.js';
@@ -20,6 +17,9 @@ import type {
 import { Gender } from '../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../domain/enums/marital-status.enum.js';
 import { VerificationStatus } from '../../domain/enums/verification-status.enum.js';
+
+const { NotificationType, VerificationStatus: PrismaVerificationStatus } =
+  PrismaPkg;
 
 @Injectable()
 export class UserRepository implements IUserRepository {

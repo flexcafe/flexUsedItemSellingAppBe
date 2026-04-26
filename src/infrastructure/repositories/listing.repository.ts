@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import PrismaPkg from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
 import { ListingMapper } from '../mappers/listing.mapper.js';
 import { ListingEntity } from '../../domain/entities/listing.entity.js';
@@ -9,6 +10,8 @@ import type {
   UpdateListingData,
   ListingFilter,
 } from '../../domain/repositories/listing.repository.interface.js';
+
+const { Prisma: PrismaRuntime } = PrismaPkg;
 
 const WITH_RELATIONS = {
   seller: true,
@@ -138,11 +141,16 @@ export class ListingRepository implements IListingRepository {
         : {}),
       ...(search && {
         OR: [
-          { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            title: {
+              contains: search,
+              mode: PrismaRuntime.QueryMode.insensitive,
+            },
+          },
           {
             description: {
               contains: search,
-              mode: Prisma.QueryMode.insensitive,
+              mode: PrismaRuntime.QueryMode.insensitive,
             },
           },
         ],

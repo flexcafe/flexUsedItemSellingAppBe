@@ -1,4 +1,4 @@
-import {
+import type {
   Listing as PrismaListing,
   ListingImage as PrismaListingImage,
   User as PrismaUser,
