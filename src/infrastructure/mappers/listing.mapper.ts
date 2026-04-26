@@ -3,7 +3,7 @@ import {
   ListingImage as PrismaListingImage,
   User as PrismaUser,
   Category as PrismaCategory,
-} from '../../generated/prisma/client.js';
+} from '@prisma/client';
 import { ListingEntity } from '../../domain/entities/listing.entity.js';
 import { ListingStatus } from '../../domain/enums/listing-status.enum.js';
 import { ListingCondition } from '../../domain/enums/listing-condition.enum.js';

@@ -1,4 +1,4 @@
-import { Category as PrismaCategory } from '../../generated/prisma/client.js';
+import { Category as PrismaCategory } from '@prisma/client';
 import { CategoryEntity } from '../../domain/entities/category.entity.js';
 
 type PrismaCategoryWithRelations = PrismaCategory & {

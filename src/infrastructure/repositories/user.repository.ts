@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   NotificationType,
   VerificationStatus as PrismaVerificationStatus,
-} from '../../generated/prisma/client.js';
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
 import { UserMapper } from '../mappers/user.mapper.js';
 import { UserEntity } from '../../domain/entities/user.entity.js';

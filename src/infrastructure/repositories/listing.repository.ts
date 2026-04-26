@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
 import { ListingMapper } from '../mappers/listing.mapper.js';
 import { ListingEntity } from '../../domain/entities/listing.entity.js';

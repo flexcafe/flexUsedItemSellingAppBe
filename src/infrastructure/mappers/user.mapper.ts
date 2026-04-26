@@ -1,4 +1,4 @@
-import { User as PrismaUser } from '../../generated/prisma/client.js';
+import { User as PrismaUser } from '@prisma/client';
 import { UserEntity } from '../../domain/entities/user.entity.js';
 import { RegistrationType } from '../../domain/enums/registration-type.enum.js';
 import { RankTier } from '../../domain/enums/rank-tier.enum.js';
