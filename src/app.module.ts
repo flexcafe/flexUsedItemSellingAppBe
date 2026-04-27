@@ -16,7 +16,7 @@ import { ListingModule } from './presentation/modules/listing/listing.module.js'
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: ['.env'],
     }),
 
     // Infrastructure
