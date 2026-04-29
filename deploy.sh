@@ -33,6 +33,13 @@ npm run build
 echo "==> Run migrations (deploy-safe)"
 npm run db:migrate:deploy
 
+echo "==> Seed database (optional)"
+if [ "${SEED_ON_DEPLOY:-0}" = "1" ]; then
+  npm run db:seed
+else
+  echo "Skipping seed (set SEED_ON_DEPLOY=1 to enable)"
+fi
+
 echo "==> Restart PM2 (reload env too)"
 pm2 restart "$PM2_NAME" --update-env
 
