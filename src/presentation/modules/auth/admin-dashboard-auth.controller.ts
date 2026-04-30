@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
 import { SendKbzPayInstructionDto } from '../../../application/dtos/auth/send-kbzpay-instruction.dto.js';
@@ -17,6 +17,10 @@ import { ApiResponseDto } from '../../../application/dtos/common/api-response.dt
 import { VerificationActionResultDto } from '../../../application/dtos/auth/verification-action-result.dto.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 
@@ -37,11 +41,11 @@ export class AdminDashboardAuthController {
     description:
       'Admin sends phone number where user must transfer 100 MMK for manual KBZPay ownership verification.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'KBZPay transfer instruction sent to user notification',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.FORBIDDEN,
     description: 'Only admin users can perform this action',
   })
@@ -67,11 +71,11 @@ export class AdminDashboardAuthController {
     description:
       'After admin confirms 100 MMK receipt manually, this endpoint marks KBZPay verification status as VERIFIED.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'KBZPay marked as verified',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.FORBIDDEN,
     description: 'Only admin users can perform this action',
   })

@@ -10,7 +10,6 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { RegisterUseCase } from '../../../application/use-cases/auth/register.use-case.js';
@@ -37,6 +36,10 @@ import { VerificationActionResultDto } from '../../../application/dtos/auth/veri
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 
@@ -62,20 +65,20 @@ export class AuthController {
     description:
       'Registration stores profile, KBZPay account, creates pending phone OTP and email verification token, sends the phone OTP via SMS (SMSPoh), sends the email verification message, and returns an access token.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.CREATED,
     description:
       'User registered successfully and verification flows initialized',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Validation failure (password mismatch, invalid referralId)',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.CONFLICT,
     description: 'Phone/email already exists',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.BAD_GATEWAY,
     description: 'SMS provider (SMSPoh) rejected the request or returned an error',
   })
@@ -94,12 +97,15 @@ export class AuthController {
     description:
       'Exactly one login mode is allowed in each request: phone+password OR facebookId+password.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Login successful' })
-  @ApiResponse({
+  @ApiSuccessResponse(AuthResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Login successful',
+  })
+  @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Both or neither login identifiers were provided',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials or inactive account',
   })
@@ -116,15 +122,15 @@ export class AuthController {
     description:
       'Creates a fresh OTP for the provided phone (expiring previous pending OTP rows) and delivers the code via SMS using SMSPoh.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'OTP generated and SMS dispatch accepted',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Phone does not belong to a registered user',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.BAD_GATEWAY,
     description: 'SMS provider (SMSPoh) rejected the request or returned an error',
   })
@@ -143,15 +149,15 @@ export class AuthController {
     description:
       'Validates pending OTP code and marks user phone verification as completed on success.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'Phone verified successfully',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'No pending OTP or invalid payload',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'OTP expired, invalid code, or max attempts exceeded',
   })
@@ -170,11 +176,11 @@ export class AuthController {
     description:
       'Creates a fresh email verification token and expires previous pending token entries for the same email.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'Email verification token generated successfully',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Email does not belong to a registered user',
   })
@@ -196,15 +202,15 @@ export class AuthController {
     description:
       'Validates pending email verification token and marks user email verification as completed on success.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'Email verified successfully',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid or inactive token',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Verification token expired',
   })
@@ -224,7 +230,7 @@ export class AuthController {
     description:
       'Sets KBZPay status to PENDING. User will receive notification that admin will send transfer phone number for manual 100 MMK check.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
     description: 'KBZPay verification request created',
   })
@@ -250,7 +256,7 @@ export class AuthController {
     description:
       'Returns auth profile with phone/email verification states, KBZPay status, and profile details.',
   })
-  @ApiResponse({
+  @ApiSuccessResponse(UserProfileDto, {
     status: HttpStatus.OK,
     description: 'Current user profile retrieved',
   })

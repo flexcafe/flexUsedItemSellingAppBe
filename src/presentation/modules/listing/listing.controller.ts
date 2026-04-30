@@ -15,12 +15,18 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
+import {
+  ApiArraySuccessResponse,
+  ApiBooleanSuccessResponse,
+  ApiErrorResponse,
+  ApiPaginatedSuccessResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { PaginatedResponseDto } from '../../../application/dtos/common/pagination.dto.js';
@@ -50,7 +56,10 @@ export class ListingController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new listing' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Listing created' })
+  @ApiSuccessResponse(ListingResponseDto, {
+    status: HttpStatus.CREATED,
+    description: 'Listing created',
+  })
   async create(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateListingDto,
@@ -65,7 +74,10 @@ export class ListingController {
   @Public()
   @Get()
   @ApiOperation({ summary: 'Browse listings with filters and pagination' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Listings retrieved' })
+  @ApiPaginatedSuccessResponse(ListingResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Listings retrieved',
+  })
   async findAll(
     @Query() filter: ListingFilterDto,
   ): Promise<ApiResponseDto<PaginatedResponseDto<ListingResponseDto>>> {
@@ -94,7 +106,7 @@ export class ListingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user listings' })
-  @ApiResponse({
+  @ApiArraySuccessResponse(ListingResponseDto, {
     status: HttpStatus.OK,
     description: 'User listings retrieved',
   })
@@ -112,8 +124,11 @@ export class ListingController {
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a single listing by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Listing retrieved' })
-  @ApiResponse({
+  @ApiSuccessResponse(ListingResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Listing retrieved',
+  })
+  @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Listing not found',
   })
@@ -131,8 +146,14 @@ export class ListingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a listing (owner only)' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Listing updated' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Not the owner' })
+  @ApiSuccessResponse(ListingResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Listing updated',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Not the owner',
+  })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
@@ -149,8 +170,14 @@ export class ListingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft-delete a listing (owner only)' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Listing deleted' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Not the owner' })
+  @ApiBooleanSuccessResponse({
+    status: HttpStatus.OK,
+    description: 'Listing deleted',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Not the owner',
+  })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
