@@ -1,10 +1,9 @@
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ISmsSender, SendSmsOptions } from '../../domain/services/sms-sender.interface.js';
+import type {
+  ISmsSender,
+  SendSmsOptions,
+} from '../../domain/services/sms-sender.interface.js';
 
 interface SmspohSendResponse {
   messages?: Array<{ status?: string; message?: string }>;
@@ -23,7 +22,8 @@ export class SMSPohRestSmsSender implements ISmsSender {
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.getOrThrow<string>('SMSPOH_API_KEY');
-    const apiSecret = this.configService.getOrThrow<string>('SMSPOH_API_SECRET');
+    const apiSecret =
+      this.configService.getOrThrow<string>('SMSPOH_API_SECRET');
     this.from = this.configService.getOrThrow<string>('SMSPOH_SENDER_ID');
     this.baseUrl = this.configService.get<string>(
       'SMSPOH_API_BASE_URL',
@@ -47,7 +47,8 @@ export class SMSPohRestSmsSender implements ISmsSender {
       body.clientReference = options.clientReference;
     }
     if (this.test) {
-      body.test = true;
+      // SMSPoh expects `test` as a number (0/1), not a boolean.
+      body.test = 1;
     }
 
     const response = await fetch(url, {

@@ -29,13 +29,21 @@ export class SendPhoneOtpUseCase {
 
     await this.userRepository.createPhoneOtp(dto.phone, code, expiresAt);
 
-    await this.smsSender.send({
-      to: dto.phone,
-      message: `Your verification code is ${code}. It expires in 5 minutes. Do not share this code.`,
-      clientReference: `phone-otp:${dto.phone}`,
-    });
+    try {
+      await this.smsSender.send({
+        to: dto.phone,
+        message: `Your verification code is ${code}. It expires in 5 minutes. Do not share this code.`,
+        clientReference: `phone-otp:${dto.phone}`,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Phone OTP SMS failed for ${this.maskPhone(dto.phone)}: ${String(err)}`,
+      );
+    }
 
-    this.logger.log(`Phone OTP SMS dispatched for ${this.maskPhone(dto.phone)}`);
+    this.logger.log(
+      `Phone OTP SMS dispatched for ${this.maskPhone(dto.phone)}`,
+    );
 
     return new VerificationActionResultDto('PHONE_OTP_SENT');
   }
