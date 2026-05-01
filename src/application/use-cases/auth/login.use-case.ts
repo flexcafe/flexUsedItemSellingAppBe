@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -39,6 +40,12 @@ export class LoginUseCase {
     const passwordValid = await compare(dto.password, user.password);
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isPhoneVerified || !user.isEmailVerified) {
+      throw new ForbiddenException(
+        'Phone and email verification are required before login',
+      );
     }
 
     await this.userRepository.update(user.id, { lastLoginAt: new Date() });

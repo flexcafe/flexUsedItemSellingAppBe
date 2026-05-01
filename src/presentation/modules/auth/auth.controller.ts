@@ -7,11 +7,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RegisterUseCase } from '../../../application/use-cases/auth/register.use-case.js';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
 import { SendPhoneOtpUseCase } from '../../../application/use-cases/auth/send-phone-otp.use-case.js';
@@ -63,12 +59,11 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register user with phone',
     description:
-      'Registration stores profile, KBZPay account, creates pending phone OTP and email verification token, sends the phone OTP via SMS (SMSPoh), sends the email verification message, and returns an access token.',
+      'Registration stores profile + KBZPay account, initializes phone OTP + email verification flows, and returns a pending status. Access tokens are issued only after phone + email verification and login.',
   })
-  @ApiSuccessResponse(AuthResponseDto, {
+  @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.CREATED,
-    description:
-      'User registered successfully and verification flows initialized',
+    description: 'User registered successfully; verification flows initialized',
   })
   @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -80,11 +75,12 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.BAD_GATEWAY,
-    description: 'SMS provider (SMSPoh) rejected the request or returned an error',
+    description:
+      'SMS provider (SMSPoh) rejected the request or returned an error',
   })
   async register(
     @Body() dto: RegisterDto,
-  ): Promise<ApiResponseDto<AuthResponseDto>> {
+  ): Promise<ApiResponseDto<VerificationActionResultDto>> {
     const result = await this.registerUseCase.execute(dto);
     return ApiResponseDto.success(result, 'User registered successfully');
   }
@@ -132,7 +128,8 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.BAD_GATEWAY,
-    description: 'SMS provider (SMSPoh) rejected the request or returned an error',
+    description:
+      'SMS provider (SMSPoh) rejected the request or returned an error',
   })
   async sendPhoneOtp(
     @Body() dto: SendPhoneOtpDto,

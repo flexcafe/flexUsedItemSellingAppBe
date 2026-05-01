@@ -208,7 +208,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('creates user + initializes OTP & email verification + returns token', async () => {
+    it('creates user + initializes OTP & email verification + returns pending action (no token)', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
       const smsSender = buildSmsSenderMock();
@@ -221,7 +221,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         registrationType: RegistrationType.PHONE_ONLY,
       });
       repo.create.mockResolvedValue(createdUser);
-      repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(createdUser));
 
       const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
       const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
@@ -252,10 +251,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(repo.createEmailVerification).toHaveBeenCalledTimes(1);
       expect(smsSender.send).toHaveBeenCalledTimes(1);
       expect(emailSender.send).toHaveBeenCalledTimes(1);
-      expect(jwt.sign).toHaveBeenCalledTimes(1);
-      expect(res.tokens.accessToken).toBe('access-token');
-      expect(res.user.id).toBe('user-new');
-      expect(res.user.registrationType).toBe(RegistrationType.PHONE_ONLY);
+      expect(jwt.sign).toHaveBeenCalledTimes(0);
+      expect(res.action).toBe('REGISTRATION_PENDING_VERIFICATION');
     });
   });
 
@@ -308,7 +305,12 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
     it('logs in with phone+password and returns profile + token', async () => {
       const repo = buildRepoMock();
       const hashed = await hash('correct-password', 12);
-      const user = buildUser({ id: 'user-99', password: hashed });
+      const user = buildUser({
+        id: 'user-99',
+        password: hashed,
+        isPhoneVerified: true,
+        isEmailVerified: true,
+      });
       repo.findByPhone.mockResolvedValue(user);
       repo.update.mockResolvedValue(user);
       repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
@@ -335,6 +337,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         password: hashed,
         facebookId: 'fb-777',
         registrationType: RegistrationType.PHONE_AND_FACEBOOK,
+        isPhoneVerified: true,
+        isEmailVerified: true,
       });
       repo.findByFacebookId.mockResolvedValue(user);
       repo.update.mockResolvedValue(user);
