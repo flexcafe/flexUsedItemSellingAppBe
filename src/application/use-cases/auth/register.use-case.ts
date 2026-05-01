@@ -89,11 +89,17 @@ export class RegisterUseCase {
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await this.userRepository.createPhoneOtp(dto.phone, otpCode, otpExpiresAt);
 
-    await this.smsSender.send({
-      to: dto.phone,
-      message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
-      clientReference: `register:${dto.phone}`,
-    });
+    try {
+      await this.smsSender.send({
+        to: dto.phone,
+        message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
+        clientReference: `register:${dto.phone}`,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `OTP SMS failed for ${this.maskPhone(dto.phone)}: ${String(err)}`,
+      );
+    }
 
     const emailToken = randomBytes(16).toString('hex');
     const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -106,12 +112,18 @@ export class RegisterUseCase {
     this.logger.log(
       `Phone OTP SMS dispatched for ${this.maskPhone(dto.phone)}`,
     );
-    await this.emailSender.send({
-      to: dto.email,
-      subject: 'Verify your email',
-      text: `Your email verification token is: ${emailToken}`,
-      html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
-    });
+    try {
+      await this.emailSender.send({
+        to: dto.email,
+        subject: 'Verify your email',
+        text: `Your email verification token is: ${emailToken}`,
+        html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Email verification send failed for ${dto.email}: ${String(err)}`,
+      );
+    }
     this.logger.log(`Email verification token generated for ${dto.email}`);
 
     const accessToken = this.jwtService.sign({
