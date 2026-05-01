@@ -1,0 +1,25 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 47.82.249.130
+          username: root
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            cd /home/admin/flexusedmarket/flexUsedItemSellingAppBe
+            git pull origin main
+            npm ci
+            npm run build
+            sudo systemctl restart flex-used-market-be.service
+            sudo systemctl status flex-used-market-be.service --no-pager
