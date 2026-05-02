@@ -104,24 +104,6 @@ export interface CreateNotificationData {
 
 export interface IUserRepository {
   create(data: CreateUserData): Promise<UserEntity>;
-  /**
-   * Atomically creates the user + related rows needed for registration verification
-   * (profile + KBZPay + pending OTP + pending email verification) in a single DB transaction.
-   */
-  createWithRegistrationVerification(
-    data: CreateUserData,
-    otp: { code: string; expiresAt: Date },
-    emailVerification: { token: string; expiresAt: Date },
-  ): Promise<UserEntity>;
-  /**
-   * Hard-deletes a freshly created registration row plus OTP/email verification rows.
-   * Used when outbound SMS/email fails after the DB transaction committed.
-   */
-  deleteRegistrationDraft(
-    userId: string,
-    phone: string,
-    email: string,
-  ): Promise<void>;
   findById(id: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
   findByPhone(phone: string): Promise<UserEntity | null>;

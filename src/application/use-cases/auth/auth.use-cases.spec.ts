@@ -82,8 +82,6 @@ function buildAuthData(user: UserEntity): UserAuthData {
 function buildRepoMock(): jest.Mocked<IUserRepository> {
   return {
     create: jest.fn(),
-    createWithRegistrationVerification: jest.fn(),
-    deleteRegistrationDraft: jest.fn(),
     findById: jest.fn(),
     findByEmail: jest.fn(),
     findByPhone: jest.fn(),
@@ -129,7 +127,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
       const smsSender = buildSmsSenderMock();
-      const useCase = new RegisterUseCase(repo, emailSender, smsSender);
+      const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
@@ -157,7 +156,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       repo.findByPhone.mockResolvedValue(buildUser());
       repo.findByEmail.mockResolvedValue(null);
 
-      const useCase = new RegisterUseCase(repo, emailSender, smsSender);
+      const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
@@ -185,7 +185,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       repo.findByPhone.mockResolvedValue(null);
       repo.findByEmail.mockResolvedValue(null);
       repo.findByReferralCode.mockResolvedValue(null);
-      const useCase = new RegisterUseCase(repo, emailSender, smsSender);
+      const jwt = { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService;
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       await expect(
         useCase.execute({
@@ -219,9 +220,10 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         id: 'user-new',
         registrationType: RegistrationType.PHONE_ONLY,
       });
-      repo.createWithRegistrationVerification.mockResolvedValue(createdUser);
+      repo.create.mockResolvedValue(createdUser);
 
-      const useCase = new RegisterUseCase(repo, emailSender, smsSender);
+      const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
+      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
 
       const res = await useCase.execute({
         nickname: 'Nick',
@@ -239,65 +241,18 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         gpsLongitude: 96.17,
       });
 
-      expect(repo.createWithRegistrationVerification).toHaveBeenCalledTimes(1);
-      expect(repo.createWithRegistrationVerification).toHaveBeenCalledWith(
+      expect(repo.create).toHaveBeenCalledTimes(1);
+      expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           registrationType: RegistrationType.PHONE_ONLY,
         }),
-        expect.objectContaining({
-          code: expect.stringMatching(/^\d{6}$/),
-          expiresAt: expect.any(Date),
-        }),
-        expect.objectContaining({
-          token: expect.any(String),
-          expiresAt: expect.any(Date),
-        }),
       );
-      expect(repo.createPhoneOtp).toHaveBeenCalledTimes(0);
-      expect(repo.createEmailVerification).toHaveBeenCalledTimes(0);
+      expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
+      expect(repo.createEmailVerification).toHaveBeenCalledTimes(1);
       expect(smsSender.send).toHaveBeenCalledTimes(1);
       expect(emailSender.send).toHaveBeenCalledTimes(1);
+      expect(jwt.sign).toHaveBeenCalledTimes(0);
       expect(res.action).toBe('REGISTRATION_PENDING_VERIFICATION');
-    });
-
-    it('rolls back registration draft when SMS send fails', async () => {
-      const repo = buildRepoMock();
-      const emailSender = buildEmailSenderMock();
-      const smsSender = buildSmsSenderMock();
-      repo.findByPhone.mockResolvedValue(null);
-      repo.findByEmail.mockResolvedValue(null);
-      repo.findByReferralCode.mockResolvedValue(null);
-      repo.createWithRegistrationVerification.mockResolvedValue(
-        buildUser({ id: 'user-new' }),
-      );
-      smsSender.send.mockRejectedValueOnce(new Error('sms down'));
-
-      const useCase = new RegisterUseCase(repo, emailSender, smsSender);
-
-      await expect(
-        useCase.execute({
-          nickname: 'Nick',
-          phone: '+959123456789',
-          email: 'john@example.com',
-          password: 'password123',
-          confirmPassword: 'password123',
-          kbzPayName: 'Kyaw Zin',
-          kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
-        }),
-      ).rejects.toBeInstanceOf(Error);
-
-      expect(repo.deleteRegistrationDraft).toHaveBeenCalledWith(
-        'user-new',
-        '+959123456789',
-        'john@example.com',
-      );
-      expect(emailSender.send).toHaveBeenCalledTimes(0);
     });
   });
 

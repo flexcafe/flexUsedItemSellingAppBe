@@ -18,8 +18,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
   private readonly baseUrl: string;
   private readonly bearerToken: string;
   private readonly from: string;
-  /** When true, SMSPoh should not charge / should use sandbox-style delivery (see SMSPOH_TEST). */
-  private readonly isTestMode: boolean;
+  private readonly test: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.getOrThrow<string>('SMSPOH_API_KEY');
@@ -33,18 +32,8 @@ export class SMSPohRestSmsSender implements ISmsSender {
     this.bearerToken = Buffer.from(`${apiKey}:${apiSecret}`, 'utf8').toString(
       'base64',
     );
-    this.isTestMode = SMSPohRestSmsSender.parseEnvFlag(
-      this.configService.get<string>('SMSPOH_TEST', 'false'),
-    );
-  }
-
-  /** SMSPoh live API validates `test` as a numeric flag (like `encrypt: 1`), not JSON booleans. */
-  private static parseEnvFlag(raw: string | undefined): boolean {
-    if (raw == null || raw === '') {
-      return false;
-    }
-    const v = raw.trim().toLowerCase();
-    return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+    this.test =
+      this.configService.get<string>('SMSPOH_TEST', 'false') === 'true';
   }
 
   async send(options: SendSmsOptions): Promise<void> {
@@ -53,11 +42,13 @@ export class SMSPohRestSmsSender implements ISmsSender {
       to: options.to,
       message: options.message,
       from: this.from,
-      // Always send 0 | 1: omitting `test` or sending `true`/`false` triggers "Test must be a number" on v3.
-      test: this.isTestMode ? 1 : 0,
     };
     if (options.clientReference) {
       body.clientReference = options.clientReference;
+    }
+    if (this.test) {
+      // SMSPoh expects `test` as a number (0/1), not a boolean.
+      body.test = 1;
     }
 
     const response = await fetch(url, {

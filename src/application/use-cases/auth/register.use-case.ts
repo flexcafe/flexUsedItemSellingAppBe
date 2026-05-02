@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { randomBytes, randomInt } from 'crypto';
 import { hash } from 'bcrypt';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
@@ -26,6 +27,7 @@ export class RegisterUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly jwtService: JwtService,
     @Inject(EMAIL_SENDER)
     private readonly emailSender: IEmailSender,
     @Inject(SMS_SENDER)
@@ -57,38 +59,33 @@ export class RegisterUseCase {
     const hashedPassword = await hash(dto.password, 12);
     const referralCode = await this.generateUniqueReferralCode();
 
+    await this.userRepository.create({
+      registrationType: RegistrationType.PHONE_ONLY,
+      phone: dto.phone,
+      email: dto.email,
+      password: hashedPassword,
+      nickname: dto.nickname,
+      referralCode,
+      referredById: referredById ?? undefined,
+      profile: {
+        gender: dto.gender,
+        age: dto.age,
+        maritalStatus: dto.maritalStatus,
+        inputRegion: dto.region,
+        gpsLatitude: dto.gpsLatitude,
+        gpsLongitude: dto.gpsLongitude,
+        isRegionVerified: true,
+        gpsVerifiedAt: new Date(),
+      },
+      kbzPayAccount: {
+        accountName: dto.kbzPayName,
+        phoneNumber: dto.kbzPayPhoneNumber,
+      },
+    });
+
     const otpCode = this.generateOtpCode();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    const emailToken = randomBytes(16).toString('hex');
-    const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    const user = await this.userRepository.createWithRegistrationVerification(
-      {
-        registrationType: RegistrationType.PHONE_ONLY,
-        phone: dto.phone,
-        email: dto.email,
-        password: hashedPassword,
-        nickname: dto.nickname,
-        referralCode,
-        referredById: referredById ?? undefined,
-        profile: {
-          gender: dto.gender,
-          age: dto.age,
-          maritalStatus: dto.maritalStatus,
-          inputRegion: dto.region,
-          gpsLatitude: dto.gpsLatitude,
-          gpsLongitude: dto.gpsLongitude,
-          isRegionVerified: true,
-          gpsVerifiedAt: new Date(),
-        },
-        kbzPayAccount: {
-          accountName: dto.kbzPayName,
-          phoneNumber: dto.kbzPayPhoneNumber,
-        },
-      },
-      { code: otpCode, expiresAt: otpExpiresAt },
-      { token: emailToken, expiresAt: emailExpiresAt },
-    );
+    await this.userRepository.createPhoneOtp(dto.phone, otpCode, otpExpiresAt);
 
     try {
       await this.smsSender.send({
@@ -97,9 +94,18 @@ export class RegisterUseCase {
         clientReference: `register:${dto.phone}`,
       });
     } catch (err) {
-      await this.safeDeleteRegistrationDraft(user.id, dto.phone, dto.email);
-      throw err;
+      this.logger.warn(
+        `OTP SMS failed for ${this.maskPhone(dto.phone)}: ${String(err)}`,
+      );
     }
+
+    const emailToken = randomBytes(16).toString('hex');
+    const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.userRepository.createEmailVerification(
+      dto.email,
+      emailToken,
+      emailExpiresAt,
+    );
 
     this.logger.log(
       `Phone OTP SMS dispatched for ${this.maskPhone(dto.phone)}`,
@@ -112,26 +118,13 @@ export class RegisterUseCase {
         html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
       });
     } catch (err) {
-      await this.safeDeleteRegistrationDraft(user.id, dto.phone, dto.email);
-      throw err;
+      this.logger.warn(
+        `Email verification send failed for ${dto.email}: ${String(err)}`,
+      );
     }
     this.logger.log(`Email verification token generated for ${dto.email}`);
 
     return new VerificationActionResultDto('REGISTRATION_PENDING_VERIFICATION');
-  }
-
-  private async safeDeleteRegistrationDraft(
-    userId: string,
-    phone: string,
-    email: string,
-  ): Promise<void> {
-    try {
-      await this.userRepository.deleteRegistrationDraft(userId, phone, email);
-    } catch (err) {
-      this.logger.error(
-        `Failed to roll back registration draft for user ${userId}: ${String(err)}`,
-      );
-    }
   }
 
   private validateRegistrationRules(dto: RegisterDto): void {
