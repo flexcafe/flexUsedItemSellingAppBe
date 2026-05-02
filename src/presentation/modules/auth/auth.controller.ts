@@ -59,7 +59,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register user with phone',
     description:
-      'Registration stores profile + KBZPay account, initializes phone OTP + email verification flows, and returns a pending status. Access tokens are issued only after phone + email verification and login.',
+      'Creates the user + verification rows in one DB transaction, then sends phone OTP (SMS) and email verification. If SMS/email delivery fails, the draft registration is removed and the request fails (no successful registration). On success, returns pending verification; access tokens are issued only after phone + email verification and login.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.CREATED,
@@ -77,6 +77,11 @@ export class AuthController {
     status: HttpStatus.BAD_GATEWAY,
     description:
       'SMS provider (SMSPoh) rejected the request or returned an error',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description:
+      'Email provider failed to send verification mail (registration draft is rolled back)',
   })
   async register(
     @Body() dto: RegisterDto,
@@ -104,6 +109,11 @@ export class AuthController {
   @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials or inactive account',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description:
+      'Phone and email verification are required before login (unverified accounts)',
   })
   async login(@Body() dto: LoginDto): Promise<ApiResponseDto<AuthResponseDto>> {
     const result = await this.loginUseCase.execute(dto);

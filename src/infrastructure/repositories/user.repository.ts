@@ -62,6 +62,99 @@ export class UserRepository implements IUserRepository {
     return UserMapper.toDomain(user);
   }
 
+  async createWithRegistrationVerification(
+    data: CreateUserData,
+    otp: { code: string; expiresAt: Date },
+    emailVerification: { token: string; expiresAt: Date },
+  ): Promise<UserEntity> {
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          registrationType: data.registrationType,
+          phone: data.phone,
+          email: data.email,
+          password: data.password,
+          nickname: data.nickname,
+          facebookId: data.facebookId,
+          referralCode: data.referralCode,
+          referredById: data.referredById,
+          profile: {
+            create: {
+              gender: data.profile.gender,
+              age: data.profile.age,
+              maritalStatus: data.profile.maritalStatus,
+              inputRegion: data.profile.inputRegion,
+              gpsLatitude: data.profile.gpsLatitude,
+              gpsLongitude: data.profile.gpsLongitude,
+              isRegionVerified: data.profile.isRegionVerified,
+              gpsVerifiedAt: data.profile.gpsVerifiedAt,
+            },
+          },
+          kbzPayAccount: {
+            create: {
+              accountName: data.kbzPayAccount.accountName,
+              phoneNumber: data.kbzPayAccount.phoneNumber,
+              status: PrismaVerificationStatus.PENDING,
+              isVerified: false,
+            },
+          },
+        },
+      });
+
+      await tx.otpVerification.updateMany({
+        where: {
+          phone: data.phone,
+          status: PrismaVerificationStatus.PENDING,
+        },
+        data: {
+          status: PrismaVerificationStatus.EXPIRED,
+        },
+      });
+      await tx.otpVerification.create({
+        data: {
+          phone: data.phone,
+          code: otp.code,
+          expiresAt: otp.expiresAt,
+          status: PrismaVerificationStatus.PENDING,
+        },
+      });
+
+      await tx.emailVerification.updateMany({
+        where: {
+          email: data.email,
+          status: PrismaVerificationStatus.PENDING,
+        },
+        data: {
+          status: PrismaVerificationStatus.EXPIRED,
+        },
+      });
+      await tx.emailVerification.create({
+        data: {
+          email: data.email,
+          token: emailVerification.token,
+          expiresAt: emailVerification.expiresAt,
+          status: PrismaVerificationStatus.PENDING,
+        },
+      });
+
+      return created;
+    });
+
+    return UserMapper.toDomain(user);
+  }
+
+  async deleteRegistrationDraft(
+    userId: string,
+    phone: string,
+    email: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.otpVerification.deleteMany({ where: { phone } });
+      await tx.emailVerification.deleteMany({ where: { email } });
+      await tx.user.delete({ where: { id: userId } });
+    });
+  }
+
   async findById(id: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     return user ? UserMapper.toDomain(user) : null;
