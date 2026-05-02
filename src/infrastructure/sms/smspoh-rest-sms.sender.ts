@@ -12,14 +12,13 @@ interface SmspohSendResponse {
   status?: number;
 }
 
+type RestTestPayload = 'boolean' | 'number' | 'omit';
+
 /**
- * SMSPoh v3 exposes two send styles:
- * - REST JSON: `POST https://v3.smspoh.com/api/rest/send` (Bearer auth, JSON body)
- * - HTTP query: `POST https://v3.smspoh.com/api/http/send?...&accessToken=...` (no JSON body)
- *
- * Live deployments have been returning `Test must be a number` on REST JSON and on
- * HTTP-query sends that included `test=0`/`test=1` (query values are strings). Default path
- * is HTTP-query **without** the `test` query parameter.
+ * SMSPoh v3 `/api/rest/send` and `/api/http/send` are inconsistent in the wild: some accounts
+ * return `Test must be a number` for JSON booleans, JSON numbers, omitted `test`, or HTTP query
+ * `test=…` (query values are always strings). We try a short ladder of shapes, then throw the
+ * last upstream message.
  */
 @Injectable()
 export class SMSPohRestSmsSender implements ISmsSender {
@@ -27,8 +26,8 @@ export class SMSPohRestSmsSender implements ISmsSender {
   private readonly bearerToken: string;
   private readonly from: string;
   private readonly isTestMode: boolean;
-  /** When true, use REST JSON send (optional `test` boolean only if SMSPOH_TEST is on). */
-  private readonly useRestJsonSend: boolean;
+  /** When true, only the legacy REST path (no ladder). */
+  private readonly useRestJsonSendOnly: boolean;
   private readonly restBaseUrl: string;
   private readonly httpQueryBaseUrl: string;
 
@@ -47,7 +46,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
     this.isTestMode = SMSPohRestSmsSender.parseEnvFlag(
       this.configService.get<string>('SMSPOH_TEST', 'false'),
     );
-    this.useRestJsonSend = SMSPohRestSmsSender.parseEnvFlag(
+    this.useRestJsonSendOnly = SMSPohRestSmsSender.parseEnvFlag(
       this.configService.get<string>('SMSPOH_USE_REST_JSON_SEND', 'false'),
     );
 
@@ -55,7 +54,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
       this.httpQueryBaseUrl = configuredApiBase;
       this.restBaseUrl = 'https://v3.smspoh.com/api/rest';
       this.logger.warn(
-        'SMSPOH_API_BASE_URL points at the HTTP API (/api/http). Using HTTP query send; set SMSPOH_API_BASE_URL to https://v3.smspoh.com/api/rest if you intended REST JSON.',
+        'SMSPOH_API_BASE_URL points at the HTTP API (/api/http). Using that as HTTP-query base; REST uses https://v3.smspoh.com/api/rest.',
       );
     } else {
       this.restBaseUrl = configuredApiBase;
@@ -65,7 +64,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
     }
 
     this.logger.log(
-      `SMSPoh client: transport=${this.useRestJsonSend ? 'rest-json' : 'http-query'}, httpBase=${this.httpQueryBaseUrl}, restBase=${this.restBaseUrl}`,
+      `SMSPoh client: mode=${this.useRestJsonSendOnly ? 'rest-only' : 'ladder'}, restBase=${this.restBaseUrl}, httpBase=${this.httpQueryBaseUrl}`,
     );
   }
 
@@ -78,24 +77,139 @@ export class SMSPohRestSmsSender implements ISmsSender {
   }
 
   async send(options: SendSmsOptions): Promise<void> {
-    if (this.useRestJsonSend) {
-      await this.sendViaRestJson(options);
+    if (this.useRestJsonSendOnly) {
+      await this.sendViaRestJsonLegacy(options);
       return;
     }
+
+    const restAttempts: Array<{
+      label: string;
+      auth: 'bearer' | 'basic';
+      test: RestTestPayload;
+    }> = [
+      { label: 'rest+bearer+test:boolean', auth: 'bearer', test: 'boolean' },
+      { label: 'rest+bearer+test:number', auth: 'bearer', test: 'number' },
+      { label: 'rest+bearer+test:omit', auth: 'bearer', test: 'omit' },
+      { label: 'rest+basic+test:boolean', auth: 'basic', test: 'boolean' },
+    ];
+
+    let lastTestShapeError: BadGatewayException | null = null;
+
+    for (const attempt of restAttempts) {
+      try {
+        await this.sendViaRestJsonWithShape(
+          options,
+          attempt.auth,
+          attempt.test,
+        );
+        return;
+      } catch (err) {
+        if (!(err instanceof BadGatewayException)) {
+          throw err;
+        }
+        if (!SMSPohRestSmsSender.isTestMustBeNumberMessage(err.message)) {
+          throw err;
+        }
+        lastTestShapeError = err;
+        this.logger.warn(
+          `SMSPoh ${attempt.label} failed (${err.message}); trying next strategy.`,
+        );
+      }
+    }
+
+    if (lastTestShapeError) {
+      this.logger.warn(
+        `All REST /send variants failed with test validation; trying HTTP-query without test. Last: ${lastTestShapeError.message}`,
+      );
+    }
+
     await this.sendViaHttpQuery(options);
   }
 
+  private static isTestMustBeNumberMessage(
+    msg: string | object | undefined,
+  ): boolean {
+    if (typeof msg !== 'string') {
+      return false;
+    }
+    return msg.toLowerCase().includes('test must be a number');
+  }
+
+  private buildRestBody(
+    options: SendSmsOptions,
+    test: RestTestPayload,
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+      to: options.to,
+      message: options.message,
+      from: this.from,
+    };
+    if (options.clientReference) {
+      body.clientReference = options.clientReference;
+    }
+    if (test === 'boolean') {
+      body.test = this.isTestMode;
+    } else if (test === 'number') {
+      body.test = this.isTestMode ? 1 : 0;
+    }
+    return body;
+  }
+
+  private authHeader(kind: 'bearer' | 'basic'): string {
+    // Per SMSPoh docs, Bearer token is base64(apiKey:apiSecret); Basic uses the same encoding.
+    return kind === 'bearer'
+      ? `Bearer ${this.bearerToken}`
+      : `Basic ${this.bearerToken}`;
+  }
+
+  private async sendViaRestJsonWithShape(
+    options: SendSmsOptions,
+    auth: 'bearer' | 'basic',
+    test: RestTestPayload,
+  ): Promise<void> {
+    const url = `${this.restBaseUrl}/send`;
+    const body = this.buildRestBody(options, test);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.authHeader(auth),
+      },
+      body: JSON.stringify(body),
+    });
+    await this.assertSmspohSuccess(
+      response,
+      `rest-json(${auth},test=${test})`,
+      options.to,
+    );
+  }
+
+  /** Legacy: REST omit `test`, then HTTP-query if SMSPoh only complains about `test`. */
+  private async sendViaRestJsonLegacy(options: SendSmsOptions): Promise<void> {
+    try {
+      await this.sendViaRestJsonWithShape(options, 'bearer', 'omit');
+    } catch (err) {
+      if (
+        err instanceof BadGatewayException &&
+        SMSPohRestSmsSender.isTestMustBeNumberMessage(err.message)
+      ) {
+        this.logger.warn(
+          'SMSPoh REST omit-test failed; falling back to HTTP-query /send once.',
+        );
+        await this.sendViaHttpQuery(options);
+        return;
+      }
+      throw err;
+    }
+  }
+
   /**
-   * POST with query string (SMSPoh “Send via HTTP Over Query Parameters”).
-   *
-   * Do not send `test` in the query string: every query value is a string, and SMSPoh’s live API
-   * responds with `Test must be a number` when `test=0` / `test=1` is parsed as a non-number type
-   * on their side. Omit the flag; use the SMSPoh dashboard / account for sandbox vs live traffic.
+   * HTTP query send — no `test` param (string query values break their validator).
    */
   private async sendViaHttpQuery(options: SendSmsOptions): Promise<void> {
     if (this.isTestMode) {
       this.logger.warn(
-        'SMSPOH_TEST is enabled but HTTP-query sends omit the `test` query flag (SMSPoh rejects it). Unset SMSPOH_TEST for normal live sends.',
+        'SMSPOH_TEST is true; HTTP-query send cannot pass a reliable `test` flag. Prefer SMSPoh dashboard sandbox or set SMSPOH_TEST=false for live sends.',
       );
     }
 
@@ -111,60 +225,6 @@ export class SMSPohRestSmsSender implements ISmsSender {
     const url = `${this.httpQueryBaseUrl}/send?${params.toString()}`;
     const response = await fetch(url, { method: 'POST' });
     await this.assertSmspohSuccess(response, 'http-query', options.to);
-  }
-
-  /**
-   * Optional: JSON REST send (Laravel channel omits `test` unless explicitly set).
-   * If SMSPoh still returns the `test` validation error, callers can leave REST off (default).
-   */
-  private async sendViaRestJson(options: SendSmsOptions): Promise<void> {
-    const url = `${this.restBaseUrl}/send`;
-    const body: Record<string, unknown> = {
-      to: options.to,
-      message: options.message,
-      from: this.from,
-    };
-    if (options.clientReference) {
-      body.clientReference = options.clientReference;
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.bearerToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    const raw = await response.text();
-    let parsed: SmspohSendResponse | null = null;
-    try {
-      parsed = raw ? (JSON.parse(raw) as SmspohSendResponse) : null;
-    } catch {
-      parsed = null;
-    }
-
-    if (!response.ok) {
-      const msg =
-        parsed?.message ??
-        parsed?.name ??
-        `SMSPoh request failed with HTTP ${response.status}`;
-      if (
-        typeof msg === 'string' &&
-        msg.toLowerCase().includes('test must be a number')
-      ) {
-        this.logger.warn(
-          'SMSPoh REST /send rejected `test`; falling back to HTTP query /send once.',
-        );
-        await this.sendViaHttpQuery(options);
-        return;
-      }
-      this.logger.warn(`SMSPoh send failed (rest-json): ${msg}`);
-      throw new BadGatewayException(msg);
-    }
-
-    this.finishSuccessResponse(parsed, 'rest-json', options.to);
   }
 
   private async assertSmspohSuccess(
