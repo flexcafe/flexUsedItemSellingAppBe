@@ -17,9 +17,9 @@ interface SmspohSendResponse {
  * - REST JSON: `POST https://v3.smspoh.com/api/rest/send` (Bearer auth, JSON body)
  * - HTTP query: `POST https://v3.smspoh.com/api/http/send?...&accessToken=...` (no JSON body)
  *
- * Live deployments have been returning `Test must be a number` on REST JSON even when
- * `test` is sent as JSON numbers. The HTTP-query API documents the same flags and
- * passes `test` as a normal query value (`0` / `1`), which matches how their stack validates it.
+ * Live deployments have been returning `Test must be a number` on REST JSON and on
+ * HTTP-query sends that included `test=0`/`test=1` (query values are strings). Default path
+ * is HTTP-query **without** the `test` query parameter.
  */
 @Injectable()
 export class SMSPohRestSmsSender implements ISmsSender {
@@ -63,6 +63,10 @@ export class SMSPohRestSmsSender implements ISmsSender {
         .get<string>('SMSPOH_HTTP_BASE_URL', 'https://v3.smspoh.com/api/http')
         .replace(/\/$/, '');
     }
+
+    this.logger.log(
+      `SMSPoh client: transport=${this.useRestJsonSend ? 'rest-json' : 'http-query'}, httpBase=${this.httpQueryBaseUrl}, restBase=${this.restBaseUrl}`,
+    );
   }
 
   private static parseEnvFlag(raw: string | undefined): boolean {
@@ -81,14 +85,25 @@ export class SMSPohRestSmsSender implements ISmsSender {
     await this.sendViaHttpQuery(options);
   }
 
-  /** POST with query string (SMSPoh “Send via HTTP Over Query Parameters”). */
+  /**
+   * POST with query string (SMSPoh “Send via HTTP Over Query Parameters”).
+   *
+   * Do not send `test` in the query string: every query value is a string, and SMSPoh’s live API
+   * responds with `Test must be a number` when `test=0` / `test=1` is parsed as a non-number type
+   * on their side. Omit the flag; use the SMSPoh dashboard / account for sandbox vs live traffic.
+   */
   private async sendViaHttpQuery(options: SendSmsOptions): Promise<void> {
+    if (this.isTestMode) {
+      this.logger.warn(
+        'SMSPOH_TEST is enabled but HTTP-query sends omit the `test` query flag (SMSPoh rejects it). Unset SMSPOH_TEST for normal live sends.',
+      );
+    }
+
     const params = new URLSearchParams();
     params.set('accessToken', this.bearerToken);
     params.set('to', options.to);
     params.set('message', options.message);
     params.set('from', this.from);
-    params.set('test', this.isTestMode ? '1' : '0');
     if (options.clientReference) {
       params.set('clientReference', options.clientReference);
     }
@@ -111,9 +126,6 @@ export class SMSPohRestSmsSender implements ISmsSender {
     };
     if (options.clientReference) {
       body.clientReference = options.clientReference;
-    }
-    if (this.isTestMode) {
-      body.test = true;
     }
 
     const response = await fetch(url, {
