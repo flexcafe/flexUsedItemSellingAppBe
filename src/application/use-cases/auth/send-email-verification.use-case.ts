@@ -34,13 +34,26 @@ export class SendEmailVerificationUseCase {
       token,
       expiresAt,
     );
+    this.logger.warn(
+      `[TEST_LOG] EMAIL TOKEN GENERATED email=${dto.email} token=${token} expiresAt=${expiresAt.toISOString()}`,
+    );
 
-    await this.emailSender.send({
-      to: dto.email,
-      subject: 'Verify your email',
-      text: `Your email verification token is: ${token}`,
-      html: `<p>Your email verification token is:</p><p><b>${token}</b></p>`,
-    });
+    try {
+      await this.emailSender.send({
+        to: dto.email,
+        subject: 'Verify your email',
+        text: `Your email verification token is: ${token}`,
+        html: `<p>Your email verification token is:</p><p><b>${token}</b></p>`,
+      });
+      this.logger.warn(
+        `[TEST_LOG] EMAIL TOKEN SEND SUCCESS email=${dto.email} token=${token}`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `[TEST_LOG] EMAIL TOKEN SEND FAILED email=${dto.email} token=${token} error=${String(err)}`,
+      );
+      throw err;
+    }
 
     this.logger.log(`Email verification token generated for ${dto.email}`);
 

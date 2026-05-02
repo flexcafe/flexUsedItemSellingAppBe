@@ -86,6 +86,9 @@ export class RegisterUseCase {
     const otpCode = this.generateOtpCode();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await this.userRepository.createPhoneOtp(dto.phone, otpCode, otpExpiresAt);
+    this.logger.warn(
+      `[TEST_LOG] REGISTER SMS OTP GENERATED phone=${dto.phone} otp=${otpCode} expiresAt=${otpExpiresAt.toISOString()}`,
+    );
 
     try {
       await this.smsSender.send({
@@ -93,9 +96,15 @@ export class RegisterUseCase {
         message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
         clientReference: `register:${dto.phone}`,
       });
+      this.logger.warn(
+        `[TEST_LOG] REGISTER SMS OTP SEND SUCCESS phone=${dto.phone} otp=${otpCode}`,
+      );
     } catch (err) {
       this.logger.warn(
         `OTP SMS failed for ${this.maskPhone(dto.phone)}: ${String(err)}`,
+      );
+      this.logger.warn(
+        `[TEST_LOG] REGISTER SMS OTP SEND FAILED phone=${dto.phone} otp=${otpCode} error=${String(err)}`,
       );
     }
 
@@ -105,6 +114,9 @@ export class RegisterUseCase {
       dto.email,
       emailToken,
       emailExpiresAt,
+    );
+    this.logger.warn(
+      `[TEST_LOG] REGISTER EMAIL TOKEN GENERATED email=${dto.email} token=${emailToken} expiresAt=${emailExpiresAt.toISOString()}`,
     );
 
     this.logger.log(
@@ -117,9 +129,15 @@ export class RegisterUseCase {
         text: `Your email verification token is: ${emailToken}`,
         html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
       });
+      this.logger.warn(
+        `[TEST_LOG] REGISTER EMAIL TOKEN SEND SUCCESS email=${dto.email} token=${emailToken}`,
+      );
     } catch (err) {
       this.logger.warn(
         `Email verification send failed for ${dto.email}: ${String(err)}`,
+      );
+      this.logger.warn(
+        `[TEST_LOG] REGISTER EMAIL TOKEN SEND FAILED email=${dto.email} token=${emailToken} error=${String(err)}`,
       );
     }
     this.logger.log(`Email verification token generated for ${dto.email}`);
