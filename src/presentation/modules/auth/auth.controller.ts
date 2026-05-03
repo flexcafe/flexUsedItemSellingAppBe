@@ -270,6 +270,14 @@ export class AuthController {
     status: HttpStatus.OK,
     description: 'KBZPay verification request created',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'KBZPay is already verified',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User or KBZPay account not found',
+  })
   async requestKbzPayVerification(
     @CurrentUser() user: JwtPayload,
     @Body() dto: RequestKbzPayVerificationDto,

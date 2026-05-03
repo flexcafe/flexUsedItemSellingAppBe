@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { RegisterUseCase } from './register.use-case.js';
@@ -429,12 +430,46 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('KBZPay request sets pending and notifies user', async () => {
       const repo = buildRepoMock();
-      repo.findById.mockResolvedValue(buildUser());
+      const user = buildUser({ id: 'user-1' });
+      repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
       const useCase = new RequestKbzPayVerificationUseCase(repo);
       const res = await useCase.execute('user-1', { message: 'pls' });
       expect(res.action).toBe('KBZPAY_VERIFICATION_REQUESTED');
       expect(repo.requestKbzPayVerification).toHaveBeenCalledWith('user-1');
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
+    });
+
+    it('KBZPay request rejects when already verified', async () => {
+      const repo = buildRepoMock();
+      const user = buildUser({ id: 'user-1' });
+      const authData = buildAuthData(user);
+      authData.kbzPayAccount = {
+        ...authData.kbzPayAccount!,
+        isVerified: true,
+        status: VerificationStatus.VERIFIED,
+      };
+      repo.getAuthDataByUserId.mockResolvedValue(authData);
+      const useCase = new RequestKbzPayVerificationUseCase(repo);
+
+      await expect(
+        useCase.execute('user-1', {}),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(repo.requestKbzPayVerification).not.toHaveBeenCalled();
+      expect(repo.createNotification).not.toHaveBeenCalled();
+    });
+
+    it('KBZPay request rejects when KBZPay account row missing', async () => {
+      const repo = buildRepoMock();
+      const user = buildUser({ id: 'user-1' });
+      const authData = buildAuthData(user);
+      authData.kbzPayAccount = null;
+      repo.getAuthDataByUserId.mockResolvedValue(authData);
+      const useCase = new RequestKbzPayVerificationUseCase(repo);
+
+      await expect(useCase.execute('user-1', {})).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.requestKbzPayVerification).not.toHaveBeenCalled();
     });
 
     it('Admin KBZPay instruction requires admin user', async () => {

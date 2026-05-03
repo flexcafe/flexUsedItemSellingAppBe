@@ -1,6 +1,12 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { RequestKbzPayVerificationDto } from '../../dtos/auth/request-kbzpay-verification.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
 
@@ -15,9 +21,21 @@ export class RequestKbzPayVerificationUseCase {
     userId: string,
     dto: RequestKbzPayVerificationDto,
   ): Promise<VerificationActionResultDto> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
+    const authData = await this.userRepository.getAuthDataByUserId(userId);
+    if (!authData) {
       throw new NotFoundException('User not found');
+    }
+
+    const kbz = authData.kbzPayAccount;
+    if (!kbz) {
+      throw new NotFoundException('KBZPay account not found');
+    }
+
+    if (
+      kbz.isVerified ||
+      kbz.status === VerificationStatus.VERIFIED
+    ) {
+      throw new ConflictException('KBZPay is already verified');
     }
 
     await this.userRepository.requestKbzPayVerification(userId);
