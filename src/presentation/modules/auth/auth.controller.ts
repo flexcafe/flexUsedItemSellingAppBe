@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RegisterUseCase } from '../../../application/use-cases/auth/register.use-case.js';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
 import { SendPhoneOtpUseCase } from '../../../application/use-cases/auth/send-phone-otp.use-case.js';
@@ -54,6 +55,11 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({
+    'auth-ip': { limit: 15, ttl: 60_000 },
+    'auth-id': { limit: 6, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -78,6 +84,10 @@ export class AuthController {
     description:
       'SMS provider (SMSPoh) rejected the request or returned an error',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or phone/email',
+  })
   async register(
     @Body() dto: RegisterDto,
   ): Promise<ApiResponseDto<VerificationActionResultDto>> {
@@ -86,6 +96,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    'auth-ip': { limit: 30, ttl: 60_000 },
+    'auth-id': { limit: 15, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -105,6 +120,10 @@ export class AuthController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials or inactive account',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or phone',
+  })
   async login(
     @Body() dto: ClientLoginDto,
   ): Promise<ApiResponseDto<AuthResponseDto>> {
@@ -113,6 +132,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    'auth-ip': { limit: 10, ttl: 60_000 },
+    'auth-id': { limit: 4, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -132,6 +156,10 @@ export class AuthController {
     status: HttpStatus.BAD_GATEWAY,
     description:
       'SMS provider (SMSPoh) rejected the request or returned an error',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or phone',
   })
   async sendPhoneOtp(
     @Body() dto: SendPhoneOtpDto,
@@ -168,6 +196,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    'auth-ip': { limit: 10, ttl: 60_000 },
+    'auth-id': { limit: 4, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @Post('email/send-verification')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -182,6 +215,10 @@ export class AuthController {
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Email does not belong to a registered user',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or email',
   })
   async sendEmailVerification(
     @Body() dto: SendEmailVerificationDto,

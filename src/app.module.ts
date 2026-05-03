@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import {
+  authBodyIdentifierTracker,
+  authIpTracker,
+} from './common/throttler/auth-throttle.helpers.js';
 
 // Infrastructure
 import { DatabaseModule } from './infrastructure/database/database.module.js';
@@ -17,6 +22,23 @@ import { ListingModule } from './presentation/modules/listing/listing.module.js'
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env'],
+    }),
+
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'auth-ip',
+          ttl: 60_000,
+          limit: 30,
+          getTracker: authIpTracker,
+        },
+        {
+          name: 'auth-id',
+          ttl: 60_000,
+          limit: 10,
+          getTracker: authBodyIdentifierTracker,
+        },
+      ],
     }),
 
     // Infrastructure

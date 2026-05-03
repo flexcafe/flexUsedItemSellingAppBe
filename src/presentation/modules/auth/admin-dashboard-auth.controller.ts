@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
@@ -40,6 +41,11 @@ export class AdminDashboardAuthController {
   ) {}
 
   @Public()
+  @Throttle({
+    'auth-ip': { limit: 20, ttl: 60_000 },
+    'auth-id': { limit: 12, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -58,6 +64,10 @@ export class AdminDashboardAuthController {
   @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials or inactive account',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or email',
   })
   async login(
     @Body() dto: AdminLoginDto,
