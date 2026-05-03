@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -10,7 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcrypt';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
-import { LoginDto } from '../../dtos/auth/login.dto.js';
+import {
+  AdminLoginDto,
+  ClientLoginDto,
+} from '../../dtos/auth/login.dto.js';
 import {
   AuthResponseDto,
   AuthTokensDto,
@@ -28,16 +30,43 @@ export class LoginUseCase {
     private readonly jwtService: JwtService,
   ) {}
 
-  async execute(dto: LoginDto): Promise<AuthResponseDto> {
-    this.validateLoginMode(dto);
+  async loginClient(dto: ClientLoginDto): Promise<AuthResponseDto> {
+    this.logger.log(`Client login attempt: phone=${dto.phone}`);
+    const user = await this.userRepository.findByPhone(dto.phone);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (user.isAdmin()) {
+      throw new ForbiddenException(
+        'Admin accounts must sign in via the admin dashboard using email',
+      );
+    }
+    return this.finalizeLogin(user, dto.password);
+  }
 
-    const user = await this.resolveUser(dto);
+  async loginAdmin(dto: AdminLoginDto): Promise<AuthResponseDto> {
+    this.logger.log(`Admin login attempt: email=${dto.email}`);
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.isAdmin()) {
+      throw new ForbiddenException(
+        'This sign-in is for admin accounts only. Clients must use phone login.',
+      );
+    }
+    return this.finalizeLogin(user, dto.password);
+  }
 
+  private async finalizeLogin(
+    user: UserEntity,
+    plainPassword: string,
+  ): Promise<AuthResponseDto> {
     if (!user.isActiveUser()) {
       throw new UnauthorizedException('Account is deactivated or banned');
     }
 
-    const passwordValid = await compare(dto.password, user.password);
+    const passwordValid = await compare(plainPassword, user.password);
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -64,34 +93,5 @@ export class LoginUseCase {
       new UserProfileDto(authData),
       new AuthTokensDto(accessToken),
     );
-  }
-
-  private validateLoginMode(dto: LoginDto): void {
-    const hasPhone = Boolean(dto.phone);
-    const hasFacebook = Boolean(dto.facebookId);
-
-    if (hasPhone === hasFacebook) {
-      throw new BadRequestException(
-        'Provide exactly one login method: phone or facebookId',
-      );
-    }
-  }
-
-  private async resolveUser(dto: LoginDto): Promise<UserEntity> {
-    let user: UserEntity | null = null;
-
-    if (dto.phone) {
-      this.logger.log(`Login attempt via phone: ${dto.phone}`);
-      user = await this.userRepository.findByPhone(dto.phone);
-    } else if (dto.facebookId) {
-      this.logger.log('Login attempt via Facebook ID');
-      user = await this.userRepository.findByFacebookId(dto.facebookId);
-    }
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    return user;
   }
 }

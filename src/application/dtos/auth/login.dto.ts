@@ -1,27 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
-export class LoginDto {
+/** Client app: phone + password only. */
+export class ClientLoginDto {
   @ApiProperty({
     example: '+959123456789',
-    required: false,
-    description: 'Use this with password for phone-based login',
+    description: 'Registered client phone number',
   })
   @IsString()
-  @IsOptional()
-  phone?: string;
-
-  @ApiProperty({
-    example: '100012345678901',
-    required: false,
-    description: 'Use this with password for Facebook ID-based login',
-  })
-  @IsString()
-  @IsOptional()
-  facebookId?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @ApiProperty({ example: 'secureP@ss123' })
   @IsString()
   @IsNotEmpty()
   password: string;
 }
+
+/** Admin dashboard: email + password only (any user with an admin role). */
+export class AdminLoginDto {
+  @ApiProperty({
+    example: 'admin@example.com',
+    description: 'Admin account email',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({ example: 'secureP@ss123' })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+
+// Facebook ID login — not supported yet; use phone (clients) or email (admins).

@@ -17,7 +17,7 @@ import { VerifyEmailVerificationUseCase } from '../../../application/use-cases/a
 import { RequestKbzPayVerificationUseCase } from '../../../application/use-cases/auth/request-kbzpay-verification.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
 import { RegisterDto } from '../../../application/dtos/auth/register.dto.js';
-import { LoginDto } from '../../../application/dtos/auth/login.dto.js';
+import { ClientLoginDto } from '../../../application/dtos/auth/login.dto.js';
 import { SendPhoneOtpDto } from '../../../application/dtos/auth/send-phone-otp.dto.js';
 import { VerifyPhoneOtpDto } from '../../../application/dtos/auth/verify-phone-otp.dto.js';
 import { SendEmailVerificationDto } from '../../../application/dtos/auth/send-email-verification.dto.js';
@@ -89,24 +89,26 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Login with phone+password or facebookId+password',
+    summary: 'Client login (phone + password)',
     description:
-      'Exactly one login mode is allowed in each request: phone+password OR facebookId+password.',
+      'Clients sign in with phone and password. Admin users must use POST /admin/dashboard/auth/login with email.',
   })
   @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.OK,
     description: 'Login successful',
   })
   @ApiErrorResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Both or neither login identifiers were provided',
+    status: HttpStatus.FORBIDDEN,
+    description: 'Admin account (use admin dashboard email login)',
   })
   @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials or inactive account',
   })
-  async login(@Body() dto: LoginDto): Promise<ApiResponseDto<AuthResponseDto>> {
-    const result = await this.loginUseCase.execute(dto);
+  async login(
+    @Body() dto: ClientLoginDto,
+  ): Promise<ApiResponseDto<AuthResponseDto>> {
+    const result = await this.loginUseCase.loginClient(dto);
     return ApiResponseDto.success(result, 'Login successful');
   }
 

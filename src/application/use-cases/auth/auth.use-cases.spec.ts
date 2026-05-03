@@ -257,38 +257,42 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
   });
 
   describe(LoginUseCase.name, () => {
-    it('rejects when both phone and facebookId provided', async () => {
+    it('rejects client login when user is an admin', async () => {
       const repo = buildRepoMock();
+      const user = buildUser({ adminRoleId: 'role-root' });
+      repo.findByPhone.mockResolvedValue(user);
       const jwt = { sign: jest.fn().mockReturnValue('t') } as unknown as JwtService;
       const useCase = new LoginUseCase(repo, jwt);
 
       await expect(
-        useCase.execute({ phone: '+1', facebookId: 'fb', password: 'pw' }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+        useCase.loginClient({ phone: user.phone, password: 'pw' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('rejects when neither phone nor facebookId provided', async () => {
+    it('rejects admin login when user is not an admin', async () => {
       const repo = buildRepoMock();
+      const user = buildUser({ email: 'client@example.com', adminRoleId: null });
+      repo.findByEmail.mockResolvedValue(user);
       const jwt = { sign: jest.fn().mockReturnValue('t') } as unknown as JwtService;
       const useCase = new LoginUseCase(repo, jwt);
 
-      await expect(useCase.execute({ password: 'pw' })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        useCase.loginAdmin({ email: 'client@example.com', password: 'pw' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('rejects inactive/banned account', async () => {
+    it('rejects inactive/banned account (client)', async () => {
       const repo = buildRepoMock();
       repo.findByPhone.mockResolvedValue(buildUser({ isBanned: true }));
       const jwt = { sign: jest.fn().mockReturnValue('t') } as unknown as JwtService;
       const useCase = new LoginUseCase(repo, jwt);
 
       await expect(
-        useCase.execute({ phone: '+959123456789', password: 'pw' }),
+        useCase.loginClient({ phone: '+959123456789', password: 'pw' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('rejects when password is invalid (phone mode)', async () => {
+    it('rejects when password is invalid (client)', async () => {
       const repo = buildRepoMock();
       const hashed = await hash('correct-password', 12);
       const user = buildUser({ password: hashed });
@@ -298,11 +302,11 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const useCase = new LoginUseCase(repo, jwt);
 
       await expect(
-        useCase.execute({ phone: user.phone, password: 'wrong-password' }),
+        useCase.loginClient({ phone: user.phone, password: 'wrong-password' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('logs in with phone+password and returns profile + token', async () => {
+    it('logs in client with phone+password and returns profile + token', async () => {
       const repo = buildRepoMock();
       const hashed = await hash('correct-password', 12);
       const user = buildUser({
@@ -310,6 +314,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         password: hashed,
         isPhoneVerified: true,
         isEmailVerified: true,
+        adminRoleId: null,
       });
       repo.findByPhone.mockResolvedValue(user);
       repo.update.mockResolvedValue(user);
@@ -318,7 +323,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
       const useCase = new LoginUseCase(repo, jwt);
 
-      const res = await useCase.execute({
+      const res = await useCase.loginClient({
         phone: user.phone,
         password: 'correct-password',
       });
@@ -329,32 +334,32 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(res.user.phone).toBe(user.phone);
     });
 
-    it('logs in with facebookId+password and returns profile + token', async () => {
+    it('logs in admin with email+password and returns profile + token', async () => {
       const repo = buildRepoMock();
       const hashed = await hash('correct-password', 12);
       const user = buildUser({
-        id: 'user-fb',
+        id: 'user-admin',
+        email: 'admin@example.com',
         password: hashed,
-        facebookId: 'fb-777',
-        registrationType: RegistrationType.PHONE_AND_FACEBOOK,
         isPhoneVerified: true,
         isEmailVerified: true,
+        adminRoleId: 'role-root',
       });
-      repo.findByFacebookId.mockResolvedValue(user);
+      repo.findByEmail.mockResolvedValue(user);
       repo.update.mockResolvedValue(user);
       repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
 
       const jwt = { sign: jest.fn().mockReturnValue('access-token') } as unknown as JwtService;
       const useCase = new LoginUseCase(repo, jwt);
 
-      const res = await useCase.execute({
-        facebookId: 'fb-777',
+      const res = await useCase.loginAdmin({
+        email: 'admin@example.com',
         password: 'correct-password',
       });
 
-      expect(repo.update).toHaveBeenCalledWith('user-fb', expect.objectContaining({ lastLoginAt: expect.any(Date) }));
+      expect(repo.update).toHaveBeenCalledWith('user-admin', expect.objectContaining({ lastLoginAt: expect.any(Date) }));
       expect(res.tokens.accessToken).toBe('access-token');
-      expect(res.user.facebookId).toBe('fb-777');
+      expect(res.user.email).toBe('admin@example.com');
     });
   });
 

@@ -9,13 +9,19 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
+import { AdminLoginDto } from '../../../application/dtos/auth/login.dto.js';
 import { SendKbzPayInstructionDto } from '../../../application/dtos/auth/send-kbzpay-instruction.dto.js';
 import { AdminVerifyKbzPayDto } from '../../../application/dtos/auth/admin-verify-kbzpay.dto.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
+import {
+  AuthResponseDto,
+} from '../../../application/dtos/auth/auth-response.dto.js';
 import { VerificationActionResultDto } from '../../../application/dtos/auth/verification-action-result.dto.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
+import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import {
   ApiErrorResponse,
@@ -28,9 +34,37 @@ import { ROUTE_PREFIX } from '../../routing.paths.js';
 @Controller(`${ROUTE_PREFIX.adminDashboard}/auth`)
 export class AdminDashboardAuthController {
   constructor(
+    private readonly loginUseCase: LoginUseCase,
     private readonly sendKbzPayInstructionUseCase: SendKbzPayInstructionUseCase,
     private readonly adminVerifyKbzPayUseCase: AdminVerifyKbzPayUseCase,
   ) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Admin dashboard login (email + password)',
+    description:
+      'Root and staff admins sign in with email and password. Client accounts must use client phone login.',
+  })
+  @ApiSuccessResponse(AuthResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Login successful',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Not an admin account',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid credentials or inactive account',
+  })
+  async login(
+    @Body() dto: AdminLoginDto,
+  ): Promise<ApiResponseDto<AuthResponseDto>> {
+    const result = await this.loginUseCase.loginAdmin(dto);
+    return ApiResponseDto.success(result, 'Login successful');
+  }
 
   @Post('kbzpay/:userId/send-instruction')
   @UseGuards(JwtAuthGuard)
