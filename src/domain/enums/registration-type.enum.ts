@@ -1,4 +1,5 @@
 export enum RegistrationType {
+  EMAIL_ONLY = 'EMAIL_ONLY',
   PHONE_AND_FACEBOOK = 'PHONE_AND_FACEBOOK',
   PHONE_ONLY = 'PHONE_ONLY',
 }

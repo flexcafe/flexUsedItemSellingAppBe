@@ -46,11 +46,11 @@ async function main() {
   const phone = process.env.ROOT_ADMIN_PHONE || '+959000000000';
   const nickname = process.env.ROOT_ADMIN_NICKNAME || 'Root Admin';
 
-  const clientPhone =
+  const rawClientPhone =
     process.env.TEST_CLIENT_PHONE ||
     process.env.DATABASE_SEED_PHONE ||
     '+959111111111';
-  const clientEmail =
+  const rawClientEmail =
     process.env.TEST_CLIENT_EMAIL ||
     process.env.DATABASE_SEED_EMAIL ||
     'client@example.com';
@@ -69,7 +69,42 @@ async function main() {
   const clientKbzPayPhone =
     process.env.TEST_CLIENT_KBZ_PAY_PHONE ||
     process.env.DATABASE_SEED_KBZ_PAY_PHONE ||
-    clientPhone;
+    rawClientPhone;
+
+  const normalizeEmail = (v: string) => v.trim().toLowerCase();
+  const normalizePhone = (v: string) => v.trim();
+
+  const rootEmailNorm = normalizeEmail(email);
+  const rootPhoneNorm = normalizePhone(phone);
+
+  let clientPhone = normalizePhone(rawClientPhone);
+  let clientEmail = normalizeEmail(rawClientEmail);
+
+  // Prevent the test client seed from overwriting the root admin row.
+  if (clientPhone === rootPhoneNorm) {
+    const m = clientPhone.match(/^(.*?)(\d)$/);
+    if (m) {
+      const prefix = m[1];
+      const last = Number(m[2]);
+      clientPhone = `${prefix}${(last + 1) % 10}`;
+    } else {
+      clientPhone = `${clientPhone}-client`;
+    }
+    console.warn(
+      `[warn] TEST_CLIENT_PHONE conflicted with ROOT_ADMIN_PHONE; using ${clientPhone} for seeded client`,
+    );
+  }
+
+  if (clientEmail === rootEmailNorm) {
+    const at = clientEmail.indexOf('@');
+    clientEmail =
+      at > 0
+        ? `${clientEmail.slice(0, at)}+client${clientEmail.slice(at)}`
+        : `${clientEmail}.client`;
+    console.warn(
+      `[warn] TEST_CLIENT_EMAIL conflicted with ROOT_ADMIN_EMAIL; using ${clientEmail} for seeded client`,
+    );
+  }
 
   if (!dbUrl) {
     throw new Error('DATABASE_URL environment variable is required');
@@ -138,7 +173,7 @@ async function main() {
   await prisma.user.upsert({
     where: { email },
     create: {
-      registrationType: 'PHONE_ONLY',
+      registrationType: 'EMAIL_ONLY',
       phone,
       email,
       password: passwordHash,
@@ -157,6 +192,7 @@ async function main() {
       adminRoleId: rootRole.id,
     },
     update: {
+      registrationType: 'EMAIL_ONLY',
       phone,
       password: passwordHash,
       nickname,

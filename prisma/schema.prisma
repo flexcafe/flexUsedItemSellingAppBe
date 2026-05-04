@@ -13,6 +13,7 @@ datasource db {
 // ── Auth & User ──────────────────────────────────────────────────────────────
 
 enum RegistrationType {
+  EMAIL_ONLY
   PHONE_AND_FACEBOOK
   PHONE_ONLY
 }
