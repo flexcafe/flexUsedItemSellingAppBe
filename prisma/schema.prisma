@@ -314,6 +314,7 @@ model KbzPayAccount {
 
   accountName String             @map("account_name")
   phoneNumber String             @map("phone_number")
+  kbzTransactionId String?       @map("kbz_transaction_id")
   status      VerificationStatus @default(PENDING)
   isVerified  Boolean            @default(false) @map("is_verified")
 

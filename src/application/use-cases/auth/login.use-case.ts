@@ -9,10 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcrypt';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
-import {
-  AdminLoginDto,
-  ClientLoginDto,
-} from '../../dtos/auth/login.dto.js';
+import { AdminLoginDto, ClientLoginDto } from '../../dtos/auth/login.dto.js';
 import {
   AuthResponseDto,
   AuthTokensDto,
@@ -41,7 +38,7 @@ export class LoginUseCase {
         'Admin accounts must sign in via the admin dashboard using email',
       );
     }
-    return this.finalizeLogin(user, dto.password);
+    return this.finalizeLogin(user, dto.password, false);
   }
 
   async loginAdmin(dto: AdminLoginDto): Promise<AuthResponseDto> {
@@ -55,12 +52,13 @@ export class LoginUseCase {
         'This sign-in is for admin accounts only. Clients must use phone login.',
       );
     }
-    return this.finalizeLogin(user, dto.password);
+    return this.finalizeLogin(user, dto.password, true);
   }
 
   private async finalizeLogin(
     user: UserEntity,
     plainPassword: string,
+    requireContactVerification: boolean,
   ): Promise<AuthResponseDto> {
     if (!user.isActiveUser()) {
       throw new UnauthorizedException('Account is deactivated or banned');
@@ -71,7 +69,10 @@ export class LoginUseCase {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (!user.isPhoneVerified || !user.isEmailVerified) {
+    if (
+      requireContactVerification &&
+      (!user.isPhoneVerified || !user.isEmailVerified)
+    ) {
       throw new ForbiddenException(
         'Phone and email verification are required before login',
       );

@@ -12,6 +12,7 @@ import { VerifyPhoneOtpUseCase } from '../../../application/use-cases/auth/verif
 import { SendEmailVerificationUseCase } from '../../../application/use-cases/auth/send-email-verification.use-case.js';
 import { VerifyEmailVerificationUseCase } from '../../../application/use-cases/auth/verify-email-verification.use-case.js';
 import { RequestKbzPayVerificationUseCase } from '../../../application/use-cases/auth/request-kbzpay-verification.use-case.js';
+import { ListPendingKbzPayVerificationsUseCase } from '../../../application/use-cases/auth/list-pending-kbzpay-verifications.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
@@ -43,6 +44,7 @@ import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms
     SendEmailVerificationUseCase,
     VerifyEmailVerificationUseCase,
     RequestKbzPayVerificationUseCase,
+    ListPendingKbzPayVerificationsUseCase,
     SendKbzPayInstructionUseCase,
     AdminVerifyKbzPayUseCase,
     GetCurrentUserProfileUseCase,

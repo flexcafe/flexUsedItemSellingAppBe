@@ -65,7 +65,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register user with phone',
     description:
-      'Registration stores profile + KBZPay account, initializes phone OTP + email verification flows, and returns a pending status. Access tokens are issued only after phone + email verification and login.',
+      'Registration stores profile + KBZPay account and initializes phone OTP + email verification flows. Users can sign in with phone+password and complete verification from profile when needed.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.CREATED,
@@ -264,7 +264,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Request KBZPay verification (user action)',
     description:
-      'Sets KBZPay status to PENDING. User will receive notification that admin will send transfer phone number for manual 100 MMK check.',
+      'Sets KBZPay status to PENDING. Users can optionally submit their KBZPay transfer transaction number in this request. Admin will send transfer phone number and manually verify ownership + transfer proof.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,

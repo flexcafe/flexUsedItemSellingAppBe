@@ -80,12 +80,28 @@ export interface UserProfileData {
 export interface KbzPayAccountData {
   accountName: string;
   phoneNumber: string;
+  kbzTransactionId: string | null;
   status: VerificationStatus;
   isVerified: boolean;
   verifyRequestedAt: Date | null;
   adminPhoneForTransfer: string | null;
   adminInstructionSentAt: Date | null;
   verifiedAt: Date | null;
+  adminNote: string | null;
+}
+
+export interface PendingKbzPayVerificationData {
+  userId: string;
+  nickname: string;
+  phone: string;
+  email: string | null;
+  accountName: string;
+  kbzPayPhoneNumber: string;
+  kbzTransactionId: string | null;
+  status: VerificationStatus;
+  verifyRequestedAt: Date | null;
+  adminPhoneForTransfer: string | null;
+  adminInstructionSentAt: Date | null;
   adminNote: string | null;
 }
 
@@ -133,7 +149,10 @@ export interface IUserRepository {
   markEmailVerificationVerified(id: string): Promise<void>;
   markUserEmailVerified(email: string): Promise<void>;
 
-  requestKbzPayVerification(userId: string): Promise<void>;
+  requestKbzPayVerification(
+    userId: string,
+    kbzTransactionId?: string,
+  ): Promise<void>;
   setKbzPayVerificationInstruction(
     userId: string,
     adminPhoneForTransfer: string,
@@ -147,6 +166,7 @@ export interface IUserRepository {
 
   createNotification(data: CreateNotificationData): Promise<void>;
   getAuthDataByUserId(userId: string): Promise<UserAuthData | null>;
+  findPendingKbzPayVerifications(): Promise<PendingKbzPayVerificationData[]>;
 }
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -11,20 +12,21 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
+import { ListPendingKbzPayVerificationsUseCase } from '../../../application/use-cases/auth/list-pending-kbzpay-verifications.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
 import { AdminLoginDto } from '../../../application/dtos/auth/login.dto.js';
+import { PendingKbzPayVerificationDto } from '../../../application/dtos/auth/pending-kbzpay-verification.dto.js';
 import { SendKbzPayInstructionDto } from '../../../application/dtos/auth/send-kbzpay-instruction.dto.js';
 import { AdminVerifyKbzPayDto } from '../../../application/dtos/auth/admin-verify-kbzpay.dto.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
-import {
-  AuthResponseDto,
-} from '../../../application/dtos/auth/auth-response.dto.js';
+import { AuthResponseDto } from '../../../application/dtos/auth/auth-response.dto.js';
 import { VerificationActionResultDto } from '../../../application/dtos/auth/verification-action-result.dto.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import {
+  ApiArraySuccessResponse,
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '../../../common/decorators/api-response.decorator.js';
@@ -36,6 +38,7 @@ import { ROUTE_PREFIX } from '../../routing.paths.js';
 export class AdminDashboardAuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
+    private readonly listPendingKbzPayVerificationsUseCase: ListPendingKbzPayVerificationsUseCase,
     private readonly sendKbzPayInstructionUseCase: SendKbzPayInstructionUseCase,
     private readonly adminVerifyKbzPayUseCase: AdminVerifyKbzPayUseCase,
   ) {}
@@ -74,6 +77,35 @@ export class AdminDashboardAuthController {
   ): Promise<ApiResponseDto<AuthResponseDto>> {
     const result = await this.loginUseCase.loginAdmin(dto);
     return ApiResponseDto.success(result, 'Login successful');
+  }
+
+  @Get('kbzpay/pending-verifications')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List pending KBZPay verification requests',
+    description:
+      'Returns pending KBZPay verification rows with user, account, transfer-instruction, and submitted transaction-number details for manual admin review.',
+  })
+  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
+    status: HttpStatus.OK,
+    description: 'Pending KBZPay verification list retrieved',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Only admin users can perform this action',
+  })
+  async listPendingKbzPayVerifications(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
+    const pendingRows =
+      await this.listPendingKbzPayVerificationsUseCase.execute(user.sub);
+
+    return ApiResponseDto.success(
+      pendingRows.map((row) => new PendingKbzPayVerificationDto(row)),
+      'Pending KBZPay verification list retrieved',
+    );
   }
 
   @Post('kbzpay/:userId/send-instruction')
@@ -136,4 +168,3 @@ export class AdminDashboardAuthController {
     return ApiResponseDto.success(result, 'KBZPay verified successfully');
   }
 }
-

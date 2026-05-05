@@ -31,22 +31,26 @@ export class RequestKbzPayVerificationUseCase {
       throw new NotFoundException('KBZPay account not found');
     }
 
-    if (
-      kbz.isVerified ||
-      kbz.status === VerificationStatus.VERIFIED
-    ) {
+    if (kbz.isVerified || kbz.status === VerificationStatus.VERIFIED) {
       throw new ConflictException('KBZPay is already verified');
     }
 
-    await this.userRepository.requestKbzPayVerification(userId);
+    await this.userRepository.requestKbzPayVerification(
+      userId,
+      dto.kbzTransactionId,
+    );
 
     const extraMessage = dto.message ? `\n\nUser message: ${dto.message}` : '';
+    const transactionMessage = dto.kbzTransactionId
+      ? `\n\nSubmitted KBZPay transaction number: ${dto.kbzTransactionId}`
+      : '';
 
     await this.userRepository.createNotification({
       userId,
       title: 'KBZPay Verification Pending',
       message:
         'Your KBZPay verification request is now pending. An admin will send the transfer phone number by notification. Please transfer exactly 100 MMK once you receive it.' +
+        transactionMessage +
         extraMessage,
       referenceId: userId,
     });

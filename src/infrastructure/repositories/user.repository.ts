@@ -10,6 +10,7 @@ import type {
   IUserRepository,
   KbzPayAccountData,
   OtpVerificationData,
+  PendingKbzPayVerificationData,
   UpdateUserData,
   UserAuthData,
   UserProfileData,
@@ -281,13 +282,17 @@ export class UserRepository implements IUserRepository {
     });
   }
 
-  async requestKbzPayVerification(userId: string): Promise<void> {
+  async requestKbzPayVerification(
+    userId: string,
+    kbzTransactionId?: string,
+  ): Promise<void> {
     await this.prisma.kbzPayAccount.update({
       where: { userId },
       data: {
         status: PrismaVerificationStatus.PENDING,
         isVerified: false,
         verifyRequestedAt: new Date(),
+        ...(kbzTransactionId !== undefined ? { kbzTransactionId } : {}),
       },
     });
   }
@@ -367,6 +372,7 @@ export class UserRepository implements IUserRepository {
       ? {
           accountName: user.kbzPayAccount.accountName,
           phoneNumber: user.kbzPayAccount.phoneNumber,
+          kbzTransactionId: user.kbzPayAccount.kbzTransactionId,
           status: user.kbzPayAccount.status as VerificationStatus,
           isVerified: user.kbzPayAccount.isVerified,
           verifyRequestedAt: user.kbzPayAccount.verifyRequestedAt,
@@ -382,5 +388,42 @@ export class UserRepository implements IUserRepository {
       profile,
       kbzPayAccount,
     };
+  }
+
+  async findPendingKbzPayVerifications(): Promise<
+    PendingKbzPayVerificationData[]
+  > {
+    const rows = await this.prisma.kbzPayAccount.findMany({
+      where: {
+        isVerified: false,
+        status: PrismaVerificationStatus.PENDING,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            nickname: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: [{ verifyRequestedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    return rows.map((row) => ({
+      userId: row.userId,
+      nickname: row.user.nickname,
+      phone: row.user.phone,
+      email: row.user.email,
+      accountName: row.accountName,
+      kbzPayPhoneNumber: row.phoneNumber,
+      kbzTransactionId: row.kbzTransactionId,
+      status: row.status as VerificationStatus,
+      verifyRequestedAt: row.verifyRequestedAt,
+      adminPhoneForTransfer: row.adminPhoneForTransfer,
+      adminInstructionSentAt: row.adminInstructionSentAt,
+      adminNote: row.adminNote,
+    }));
   }
 }
