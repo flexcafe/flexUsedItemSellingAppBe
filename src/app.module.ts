@@ -15,6 +15,7 @@ import { SupabaseModule } from './infrastructure/supabase/supabase.module.js';
 // Presentation (feature modules)
 import { AuthModule } from './presentation/modules/auth/auth.module.js';
 import { ListingModule } from './presentation/modules/listing/listing.module.js';
+import { PointsModule } from './presentation/modules/points/points.module.js';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ListingModule } from './presentation/modules/listing/listing.module.js'
     // Features
     AuthModule,
     ListingModule,
+    PointsModule,
     // ─── Future feature modules ───
     // CategoryModule,
     // OfferModule,

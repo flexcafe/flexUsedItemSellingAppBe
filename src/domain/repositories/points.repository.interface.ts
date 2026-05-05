@@ -1,0 +1,126 @@
+import { RankTier } from '../enums/rank-tier.enum.js';
+import { WithdrawalStatus } from '../enums/withdrawal-status.enum.js';
+import { TransactionStatus } from '../enums/transaction-status.enum.js';
+
+export interface RankConfigData {
+  tier: RankTier;
+  minPoints: number;
+  maxPoints: number | null;
+  label: string;
+  badgeUrl: string | null;
+  sortOrder: number;
+}
+
+export interface StarPointConfigData {
+  starCount: number;
+  pointsAwarded: number;
+}
+
+export interface UserPointsSummaryData {
+  userId: string;
+  nickname: string;
+  totalPoints: number;
+  availableWithdrawalPoints: number;
+  currentRank: RankTier;
+  currentRankConfig: RankConfigData | null;
+  nextRankConfig: RankConfigData | null;
+  pendingWithdrawalAmount: number;
+}
+
+export interface WithdrawalRequestData {
+  id: string;
+  userId: string;
+  nickname: string;
+  phone: string;
+  kbzPayAccountName: string | null;
+  kbzPayPhoneNumber: string | null;
+  amount: number;
+  status: WithdrawalStatus;
+  adminNote: string | null;
+  processedById: string | null;
+  processedAt: Date | null;
+  kbzTransferRef: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReviewData {
+  id: string;
+  transactionId: string;
+  reviewerId: string;
+  revieweeId: string;
+  stars: number;
+  comment: string | null;
+  pointsAwarded: number;
+  createdAt: Date;
+}
+
+export interface TransactionReviewContextData {
+  id: string;
+  status: TransactionStatus;
+  buyerId: string;
+  sellerId: string;
+}
+
+export interface CreateReviewData {
+  transactionId: string;
+  reviewerId: string;
+  revieweeId: string;
+  stars: number;
+  comment?: string;
+}
+
+export interface CreateWithdrawalRequestData {
+  userId: string;
+  amount: number;
+}
+
+export interface AdminRejectWithdrawalData {
+  withdrawalId: string;
+  adminId: string;
+  adminNote?: string;
+}
+
+export interface AdminMarkWithdrawalPaidData {
+  withdrawalId: string;
+  adminId: string;
+  kbzTransferRef: string;
+  adminNote?: string;
+}
+
+export interface IPointsRepository {
+  getUserPointsSummary(userId: string): Promise<UserPointsSummaryData | null>;
+  getStarPointConfigs(): Promise<StarPointConfigData[]>;
+  upsertStarPointConfigs(
+    configs: StarPointConfigData[],
+  ): Promise<StarPointConfigData[]>;
+  getRankConfigs(): Promise<RankConfigData[]>;
+  upsertRankConfigs(configs: RankConfigData[]): Promise<RankConfigData[]>;
+
+  findTransactionReviewContext(
+    transactionId: string,
+  ): Promise<TransactionReviewContextData | null>;
+  hasReview(transactionId: string, reviewerId: string): Promise<boolean>;
+  createReviewAndAwardPoints(data: CreateReviewData): Promise<ReviewData>;
+
+  createWithdrawalRequest(
+    data: CreateWithdrawalRequestData,
+  ): Promise<WithdrawalRequestData>;
+  findUserWithdrawalRequests(userId: string): Promise<WithdrawalRequestData[]>;
+  findWithdrawalRequests(
+    status?: WithdrawalStatus,
+  ): Promise<WithdrawalRequestData[]>;
+  approveWithdrawal(
+    withdrawalId: string,
+    adminId: string,
+    adminNote?: string,
+  ): Promise<WithdrawalRequestData>;
+  rejectWithdrawal(
+    data: AdminRejectWithdrawalData,
+  ): Promise<WithdrawalRequestData>;
+  markWithdrawalPaid(
+    data: AdminMarkWithdrawalPaidData,
+  ): Promise<WithdrawalRequestData>;
+}
+
+export const POINTS_REPOSITORY = Symbol('POINTS_REPOSITORY');
