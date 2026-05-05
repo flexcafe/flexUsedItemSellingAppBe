@@ -282,17 +282,25 @@ export class UserRepository implements IUserRepository {
     });
   }
 
-  async requestKbzPayVerification(
-    userId: string,
-    kbzTransactionId?: string,
-  ): Promise<void> {
+  async requestKbzPayVerification(userId: string): Promise<void> {
     await this.prisma.kbzPayAccount.update({
       where: { userId },
       data: {
         status: PrismaVerificationStatus.PENDING,
         isVerified: false,
         verifyRequestedAt: new Date(),
-        ...(kbzTransactionId !== undefined ? { kbzTransactionId } : {}),
+      },
+    });
+  }
+
+  async setKbzPayTransactionId(
+    userId: string,
+    kbzTransactionId: string,
+  ): Promise<void> {
+    await this.prisma.kbzPayAccount.update({
+      where: { userId },
+      data: {
+        kbzTransactionId,
       },
     });
   }

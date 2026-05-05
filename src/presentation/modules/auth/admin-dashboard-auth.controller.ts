@@ -32,6 +32,11 @@ import {
 } from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
+import {
+  KBZPAY_ADMIN_VERIFY_DOC,
+  KBZPAY_PENDING_LIST_DOC,
+  KBZPAY_SEND_INSTRUCTION_DOC,
+} from './kbzpay-verification-flow.swagger.js';
 
 @ApiTags('Admin Dashboard Auth')
 @Controller(`${ROUTE_PREFIX.adminDashboard}/auth`)
@@ -85,8 +90,7 @@ export class AdminDashboardAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List pending KBZPay verification requests',
-    description:
-      'Returns pending KBZPay verification rows with user, account, transfer-instruction, and submitted transaction-number details for manual admin review.',
+    description: KBZPAY_PENDING_LIST_DOC,
   })
   @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
     status: HttpStatus.OK,
@@ -114,8 +118,7 @@ export class AdminDashboardAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Admin sends KBZPay transfer instruction (100 MMK)',
-    description:
-      'Admin sends phone number where user must transfer 100 MMK for manual KBZPay ownership verification.',
+    description: KBZPAY_SEND_INSTRUCTION_DOC,
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
@@ -144,8 +147,7 @@ export class AdminDashboardAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Admin marks KBZPay as VERIFIED',
-    description:
-      'After admin confirms 100 MMK receipt manually, this endpoint marks KBZPay verification status as VERIFIED.',
+    description: KBZPAY_ADMIN_VERIFY_DOC,
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,

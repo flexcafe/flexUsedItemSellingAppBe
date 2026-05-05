@@ -5,6 +5,7 @@ export * from './verify-phone-otp.use-case.js';
 export * from './send-email-verification.use-case.js';
 export * from './verify-email-verification.use-case.js';
 export * from './request-kbzpay-verification.use-case.js';
+export * from './submit-kbzpay-transaction.use-case.js';
 export * from './list-pending-kbzpay-verifications.use-case.js';
 export * from './send-kbzpay-instruction.use-case.js';
 export * from './admin-verify-kbzpay.use-case.js';

@@ -14,6 +14,7 @@ import { VerifyPhoneOtpUseCase } from './verify-phone-otp.use-case.js';
 import { SendEmailVerificationUseCase } from './send-email-verification.use-case.js';
 import { VerifyEmailVerificationUseCase } from './verify-email-verification.use-case.js';
 import { RequestKbzPayVerificationUseCase } from './request-kbzpay-verification.use-case.js';
+import { SubmitKbzPayTransactionUseCase } from './submit-kbzpay-transaction.use-case.js';
 import { ListPendingKbzPayVerificationsUseCase } from './list-pending-kbzpay-verifications.use-case.js';
 import { SendKbzPayInstructionUseCase } from './send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from './admin-verify-kbzpay.use-case.js';
@@ -116,6 +117,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     markEmailVerificationVerified: jest.fn(),
     markUserEmailVerified: jest.fn(),
     requestKbzPayVerification: jest.fn(),
+    setKbzPayTransactionId: jest.fn(),
     findPendingKbzPayVerifications: jest.fn(),
     setKbzPayVerificationInstruction: jest.fn(),
     markKbzPayVerified: jest.fn(),
@@ -651,28 +653,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const useCase = new RequestKbzPayVerificationUseCase(repo);
       const res = await useCase.execute('user-1', { message: 'pls' });
       expect(res.action).toBe('KBZPAY_VERIFICATION_REQUESTED');
-      expect(repo.requestKbzPayVerification).toHaveBeenCalledWith(
-        'user-1',
-        undefined,
-      );
+      expect(repo.requestKbzPayVerification).toHaveBeenCalledWith('user-1');
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
-    });
-
-    it('KBZPay request stores submitted KBZ transaction number', async () => {
-      const repo = buildRepoMock();
-      const user = buildUser({ id: 'user-1' });
-      repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
-      const useCase = new RequestKbzPayVerificationUseCase(repo);
-
-      const res = await useCase.execute('user-1', {
-        kbzTransactionId: 'KBZ-TXN-10001',
-      });
-
-      expect(res.action).toBe('KBZPAY_VERIFICATION_REQUESTED');
-      expect(repo.requestKbzPayVerification).toHaveBeenCalledWith(
-        'user-1',
-        'KBZ-TXN-10001',
-      );
     });
 
     it('KBZPay request rejects when already verified', async () => {
@@ -706,6 +688,66 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         NotFoundException,
       );
       expect(repo.requestKbzPayVerification).not.toHaveBeenCalled();
+    });
+
+    it('KBZPay transaction submission saves submitted transaction number', async () => {
+      const repo = buildRepoMock();
+      const user = buildUser({ id: 'user-1' });
+      const authData = buildAuthData(user);
+      authData.kbzPayAccount = {
+        ...authData.kbzPayAccount!,
+        verifyRequestedAt: new Date('2026-01-02'),
+        adminPhoneForTransfer: '+959700000000',
+        adminInstructionSentAt: new Date('2026-01-03'),
+      };
+      repo.getAuthDataByUserId.mockResolvedValue(authData);
+      const useCase = new SubmitKbzPayTransactionUseCase(repo);
+
+      const res = await useCase.execute('user-1', {
+        kbzTransactionId: 'KBZ-TXN-10001',
+      });
+
+      expect(res.action).toBe('KBZPAY_TRANSACTION_SUBMITTED');
+      expect(repo.setKbzPayTransactionId).toHaveBeenCalledWith(
+        'user-1',
+        'KBZ-TXN-10001',
+      );
+    });
+
+    it('KBZPay transaction submission rejects when request not created first', async () => {
+      const repo = buildRepoMock();
+      const user = buildUser({ id: 'user-1' });
+      const authData = buildAuthData(user);
+      authData.kbzPayAccount = {
+        ...authData.kbzPayAccount!,
+        verifyRequestedAt: null,
+      };
+      repo.getAuthDataByUserId.mockResolvedValue(authData);
+      const useCase = new SubmitKbzPayTransactionUseCase(repo);
+
+      await expect(
+        useCase.execute('user-1', { kbzTransactionId: 'KBZ-TXN-10001' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.setKbzPayTransactionId).not.toHaveBeenCalled();
+    });
+
+    it('KBZPay transaction submission rejects before admin instruction is sent', async () => {
+      const repo = buildRepoMock();
+      const user = buildUser({ id: 'user-1' });
+      const authData = buildAuthData(user);
+      authData.kbzPayAccount = {
+        ...authData.kbzPayAccount!,
+        verifyRequestedAt: new Date('2026-01-02'),
+        adminPhoneForTransfer: null,
+        adminInstructionSentAt: null,
+      };
+      repo.getAuthDataByUserId.mockResolvedValue(authData);
+      const useCase = new SubmitKbzPayTransactionUseCase(repo);
+
+      await expect(
+        useCase.execute('user-1', { kbzTransactionId: 'KBZ-TXN-10001' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.setKbzPayTransactionId).not.toHaveBeenCalled();
     });
 
     it('Admin KBZPay instruction requires admin user', async () => {

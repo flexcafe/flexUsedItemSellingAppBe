@@ -6,6 +6,7 @@ export * from './verify-phone-otp.dto.js';
 export * from './send-email-verification.dto.js';
 export * from './verify-email-verification.dto.js';
 export * from './request-kbzpay-verification.dto.js';
+export * from './submit-kbzpay-transaction.dto.js';
 export * from './pending-kbzpay-verification.dto.js';
 export * from './send-kbzpay-instruction.dto.js';
 export * from './admin-verify-kbzpay.dto.js';

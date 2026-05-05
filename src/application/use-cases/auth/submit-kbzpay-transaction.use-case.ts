@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -7,11 +8,11 @@ import {
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
-import { RequestKbzPayVerificationDto } from '../../dtos/auth/request-kbzpay-verification.dto.js';
+import { SubmitKbzPayTransactionDto } from '../../dtos/auth/submit-kbzpay-transaction.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
 
 @Injectable()
-export class RequestKbzPayVerificationUseCase {
+export class SubmitKbzPayTransactionUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
@@ -19,7 +20,7 @@ export class RequestKbzPayVerificationUseCase {
 
   async execute(
     userId: string,
-    dto: RequestKbzPayVerificationDto,
+    dto: SubmitKbzPayTransactionDto,
   ): Promise<VerificationActionResultDto> {
     const authData = await this.userRepository.getAuthDataByUserId(userId);
     if (!authData) {
@@ -35,19 +36,23 @@ export class RequestKbzPayVerificationUseCase {
       throw new ConflictException('KBZPay is already verified');
     }
 
-    await this.userRepository.requestKbzPayVerification(userId);
+    if (!kbz.verifyRequestedAt) {
+      throw new BadRequestException(
+        'KBZPay verification request must be created first',
+      );
+    }
 
-    const extraMessage = dto.message ? `\n\nUser message: ${dto.message}` : '';
+    if (!kbz.adminInstructionSentAt || !kbz.adminPhoneForTransfer) {
+      throw new BadRequestException(
+        'Admin transfer instruction has not been sent yet',
+      );
+    }
 
-    await this.userRepository.createNotification({
+    await this.userRepository.setKbzPayTransactionId(
       userId,
-      title: 'KBZPay Verification Pending',
-      message:
-        'Your KBZPay verification request is now pending. An admin will send the transfer phone number by notification. Please transfer exactly 100 MMK once you receive it.' +
-        extraMessage,
-      referenceId: userId,
-    });
+      dto.kbzTransactionId,
+    );
 
-    return new VerificationActionResultDto('KBZPAY_VERIFICATION_REQUESTED');
+    return new VerificationActionResultDto('KBZPAY_TRANSACTION_SUBMITTED');
   }
 }

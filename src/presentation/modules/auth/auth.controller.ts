@@ -7,7 +7,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RegisterUseCase } from '../../../application/use-cases/auth/register.use-case.js';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
@@ -16,6 +16,7 @@ import { VerifyPhoneOtpUseCase } from '../../../application/use-cases/auth/verif
 import { SendEmailVerificationUseCase } from '../../../application/use-cases/auth/send-email-verification.use-case.js';
 import { VerifyEmailVerificationUseCase } from '../../../application/use-cases/auth/verify-email-verification.use-case.js';
 import { RequestKbzPayVerificationUseCase } from '../../../application/use-cases/auth/request-kbzpay-verification.use-case.js';
+import { SubmitKbzPayTransactionUseCase } from '../../../application/use-cases/auth/submit-kbzpay-transaction.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
 import { RegisterDto } from '../../../application/dtos/auth/register.dto.js';
 import { ClientLoginDto } from '../../../application/dtos/auth/login.dto.js';
@@ -24,6 +25,7 @@ import { VerifyPhoneOtpDto } from '../../../application/dtos/auth/verify-phone-o
 import { SendEmailVerificationDto } from '../../../application/dtos/auth/send-email-verification.dto.js';
 import { VerifyEmailVerificationDto } from '../../../application/dtos/auth/verify-email-verification.dto.js';
 import { RequestKbzPayVerificationDto } from '../../../application/dtos/auth/request-kbzpay-verification.dto.js';
+import { SubmitKbzPayTransactionDto } from '../../../application/dtos/auth/submit-kbzpay-transaction.dto.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import {
   AuthResponseDto,
@@ -39,6 +41,11 @@ import {
 } from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
+import {
+  KBZPAY_PROFILE_STATUS_DOC,
+  KBZPAY_REQUEST_VERIFICATION_DOC,
+  KBZPAY_SUBMIT_TRANSACTION_DOC,
+} from './kbzpay-verification-flow.swagger.js';
 
 @ApiTags('Client Auth')
 @Controller(`${ROUTE_PREFIX.client}/auth`)
@@ -51,6 +58,7 @@ export class AuthController {
     private readonly sendEmailVerificationUseCase: SendEmailVerificationUseCase,
     private readonly verifyEmailVerificationUseCase: VerifyEmailVerificationUseCase,
     private readonly requestKbzPayVerificationUseCase: RequestKbzPayVerificationUseCase,
+    private readonly submitKbzPayTransactionUseCase: SubmitKbzPayTransactionUseCase,
     private readonly getCurrentUserProfileUseCase: GetCurrentUserProfileUseCase,
   ) {}
 
@@ -263,8 +271,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request KBZPay verification (user action)',
+    description: KBZPAY_REQUEST_VERIFICATION_DOC,
+  })
+  @ApiBody({
+    required: false,
+    type: RequestKbzPayVerificationDto,
     description:
-      'Sets KBZPay status to PENDING. Users can optionally submit their KBZPay transfer transaction number in this request. Admin will send transfer phone number and manually verify ownership + transfer proof.',
+      'Optional payload with message only. Do not include kbzTransactionId here.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
@@ -292,13 +305,54 @@ export class AuthController {
     );
   }
 
+  @Post('kbzpay/submit-transaction')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Submit KBZPay transfer transaction number (user action)',
+    description: KBZPAY_SUBMIT_TRANSACTION_DOC,
+  })
+  @ApiSuccessResponse(VerificationActionResultDto, {
+    status: HttpStatus.OK,
+    description: 'KBZPay transaction number submitted',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Request flow not ready (missing request or admin instruction)',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'KBZPay is already verified',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User or KBZPay account not found',
+  })
+  async submitKbzPayTransaction(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: SubmitKbzPayTransactionDto,
+  ): Promise<ApiResponseDto<VerificationActionResultDto>> {
+    const result = await this.submitKbzPayTransactionUseCase.execute(
+      user.sub,
+      dto,
+    );
+    return ApiResponseDto.success(
+      result,
+      'KBZPay transaction number submitted successfully',
+    );
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current authenticated user profile',
     description:
-      'Returns auth profile with phone/email verification states, KBZPay status, and profile details.',
+      `Returns auth profile with phone/email verification states, KBZPay status, and profile details.
+
+${KBZPAY_PROFILE_STATUS_DOC}`,
   })
   @ApiSuccessResponse(UserProfileDto, {
     status: HttpStatus.OK,

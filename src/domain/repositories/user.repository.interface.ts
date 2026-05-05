@@ -149,9 +149,10 @@ export interface IUserRepository {
   markEmailVerificationVerified(id: string): Promise<void>;
   markUserEmailVerified(email: string): Promise<void>;
 
-  requestKbzPayVerification(
+  requestKbzPayVerification(userId: string): Promise<void>;
+  setKbzPayTransactionId(
     userId: string,
-    kbzTransactionId?: string,
+    kbzTransactionId: string,
   ): Promise<void>;
   setKbzPayVerificationInstruction(
     userId: string,
