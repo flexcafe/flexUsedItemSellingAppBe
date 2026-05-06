@@ -20,6 +20,7 @@ import type {
   StarPointConfigData,
   TransactionReviewContextData,
   UserPointsSummaryData,
+  UserTransactionStatsData,
   WithdrawalRequestData,
 } from '../../domain/repositories/points.repository.interface.js';
 
@@ -123,6 +124,46 @@ export class PointsRepository implements IPointsRepository {
       currentRankConfig,
       nextRankConfig,
       pendingWithdrawalAmount,
+    };
+  }
+
+  async getUserTransactionStats(
+    userId: string,
+  ): Promise<UserTransactionStatsData | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      return null;
+    }
+
+    const [totalTransactionsMade, completedSales, completedPurchases] =
+      await Promise.all([
+        this.prisma.transaction.count({
+          where: {
+            OR: [{ buyerId: userId }, { sellerId: userId }],
+          },
+        }),
+        this.prisma.transaction.count({
+          where: {
+            sellerId: userId,
+            status: PrismaTransactionStatus.COMPLETED,
+          },
+        }),
+        this.prisma.transaction.count({
+          where: {
+            buyerId: userId,
+            status: PrismaTransactionStatus.COMPLETED,
+          },
+        }),
+      ]);
+
+    return {
+      userId,
+      totalTransactionsMade,
+      completedSales,
+      completedPurchases,
     };
   }
 

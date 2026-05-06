@@ -21,6 +21,7 @@ import {
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { GetPointsSummaryUseCase } from '../../../application/use-cases/points/get-points-summary.use-case.js';
+import { GetTransactionStatsUseCase } from '../../../application/use-cases/points/get-transaction-stats.use-case.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
@@ -29,8 +30,16 @@ import {
   PointsSummaryDto,
   RequestWithdrawalDto,
   ReviewResponseDto,
+  TransactionStatsDto,
   WithdrawalRequestDto,
 } from '../../../application/dtos/points/index.js';
+import {
+  CLIENT_CREATE_REVIEW_DOC,
+  CLIENT_POINTS_SUMMARY_DOC,
+  CLIENT_REQUEST_WITHDRAWAL_DOC,
+  CLIENT_TRANSACTION_STATS_DOC,
+  CLIENT_WITHDRAWAL_HISTORY_DOC,
+} from './points-system.swagger.js';
 
 @ApiTags('Client Points & Profile')
 @Controller(ROUTE_PREFIX.client)
@@ -39,6 +48,7 @@ import {
 export class ClientPointsController {
   constructor(
     private readonly getPointsSummaryUseCase: GetPointsSummaryUseCase,
+    private readonly getTransactionStatsUseCase: GetTransactionStatsUseCase,
     private readonly createTransactionReviewUseCase: CreateTransactionReviewUseCase,
     private readonly requestWithdrawalUseCase: RequestWithdrawalUseCase,
     private readonly listMyWithdrawalsUseCase: ListMyWithdrawalsUseCase,
@@ -47,8 +57,7 @@ export class ClientPointsController {
   @Get('profile/points')
   @ApiOperation({
     summary: 'Get profile points and rank summary',
-    description:
-      'Returns nickname, total points, available withdrawal points, current rank, current rank config, next rank config, and pending withdrawal amount for the profile section.',
+    description: CLIENT_POINTS_SUMMARY_DOC,
   })
   @ApiSuccessResponse(PointsSummaryDto, {
     status: HttpStatus.OK,
@@ -61,12 +70,27 @@ export class ClientPointsController {
     return ApiResponseDto.success(summary, 'Profile points summary retrieved');
   }
 
+  @Get('profile/stats')
+  @ApiOperation({
+    summary: 'Get profile transaction stats',
+    description: CLIENT_TRANSACTION_STATS_DOC,
+  })
+  @ApiSuccessResponse(TransactionStatsDto, {
+    status: HttpStatus.OK,
+    description: 'Profile transaction stats retrieved',
+  })
+  async getProfileStats(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<TransactionStatsDto>> {
+    const stats = await this.getTransactionStatsUseCase.execute(user.sub);
+    return ApiResponseDto.success(stats, 'Profile transaction stats retrieved');
+  }
+
   @Post('profile/withdrawals')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Request point withdrawal',
-    description:
-      'Client submits a point withdrawal amount from profile. KBZPay must already be verified. Admin later approves/rejects, then marks paid after manual KBZPay transfer.',
+    description: CLIENT_REQUEST_WITHDRAWAL_DOC,
   })
   @ApiSuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.CREATED,
@@ -85,7 +109,10 @@ export class ClientPointsController {
   }
 
   @Get('profile/withdrawals')
-  @ApiOperation({ summary: 'List current user withdrawal requests' })
+  @ApiOperation({
+    summary: 'List current user withdrawal requests',
+    description: CLIENT_WITHDRAWAL_HISTORY_DOC,
+  })
   @ApiArraySuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.OK,
     description: 'Withdrawal requests retrieved',
@@ -101,8 +128,7 @@ export class ClientPointsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Review buyer or seller after completed transaction',
-    description:
-      'Buyer and seller can each review the other side once after transaction status is COMPLETED. Stars must be 1-5 and points are awarded to the reviewed user using admin star-point config.',
+    description: CLIENT_CREATE_REVIEW_DOC,
   })
   @ApiSuccessResponse(ReviewResponseDto, {
     status: HttpStatus.CREATED,

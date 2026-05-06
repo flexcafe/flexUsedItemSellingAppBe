@@ -38,6 +38,14 @@ import {
   WithdrawalFilterDto,
   WithdrawalRequestDto,
 } from '../../../application/dtos/points/index.js';
+import {
+  ADMIN_APPROVE_WITHDRAWAL_DOC,
+  ADMIN_MARK_WITHDRAWAL_PAID_DOC,
+  ADMIN_RANK_CONFIG_DOC,
+  ADMIN_REJECT_WITHDRAWAL_DOC,
+  ADMIN_STAR_CONFIG_DOC,
+  ADMIN_WITHDRAWAL_LIST_DOC,
+} from './points-system.swagger.js';
 
 @ApiTags('Admin Dashboard Points')
 @Controller(`${ROUTE_PREFIX.adminDashboard}`)
@@ -55,8 +63,7 @@ export class AdminPointsController {
   @Get('points/star-config')
   @ApiOperation({
     summary: 'List star-to-point configuration',
-    description:
-      'Admin dashboard config for how many points 1-star through 5-star reviews award to the reviewed user.',
+    description: ADMIN_STAR_CONFIG_DOC,
   })
   @ApiArraySuccessResponse(StarPointConfigDto, {
     status: HttpStatus.OK,
@@ -72,7 +79,10 @@ export class AdminPointsController {
   }
 
   @Put('points/star-config')
-  @ApiOperation({ summary: 'Update star-to-point configuration' })
+  @ApiOperation({
+    summary: 'Update star-to-point configuration',
+    description: ADMIN_STAR_CONFIG_DOC,
+  })
   @ApiArraySuccessResponse(StarPointConfigDto, {
     status: HttpStatus.OK,
     description: 'Star point configs updated',
@@ -91,8 +101,7 @@ export class AdminPointsController {
   @Get('points/rank-config')
   @ApiOperation({
     summary: 'List rank configuration',
-    description:
-      'Admin dashboard config for point thresholds that produce NEWBIE, BRONZE, SILVER, GOLD, and VIP ranks.',
+    description: ADMIN_RANK_CONFIG_DOC,
   })
   @ApiArraySuccessResponse(RankConfigResponseDto, {
     status: HttpStatus.OK,
@@ -108,7 +117,10 @@ export class AdminPointsController {
   }
 
   @Put('points/rank-config')
-  @ApiOperation({ summary: 'Update rank configuration' })
+  @ApiOperation({
+    summary: 'Update rank configuration',
+    description: ADMIN_RANK_CONFIG_DOC,
+  })
   @ApiArraySuccessResponse(RankConfigResponseDto, {
     status: HttpStatus.OK,
     description: 'Rank configs updated',
@@ -127,8 +139,7 @@ export class AdminPointsController {
   @Get('withdrawals')
   @ApiOperation({
     summary: 'List withdrawal requests',
-    description:
-      'Admin dashboard list of user point withdrawal requests. Optional status query can filter PENDING, APPROVED, REJECTED, or TRANSFERRED.',
+    description: ADMIN_WITHDRAWAL_LIST_DOC,
   })
   @ApiArraySuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.OK,
@@ -153,8 +164,7 @@ export class AdminPointsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Approve withdrawal request',
-    description:
-      'Admin approves a pending withdrawal. Points are deducted at approval time and user is notified that KBZPay transfer is pending.',
+    description: ADMIN_APPROVE_WITHDRAWAL_DOC,
   })
   @ApiSuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.OK,
@@ -175,7 +185,10 @@ export class AdminPointsController {
 
   @Post('withdrawals/:withdrawalId/reject')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reject withdrawal request' })
+  @ApiOperation({
+    summary: 'Reject withdrawal request',
+    description: ADMIN_REJECT_WITHDRAWAL_DOC,
+  })
   @ApiSuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.OK,
     description: 'Withdrawal rejected',
@@ -197,8 +210,7 @@ export class AdminPointsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Mark approved withdrawal as paid',
-    description:
-      'After admin manually sends money via KBZPay, admin submits KBZPay transfer reference. User receives notification with that transaction number.',
+    description: ADMIN_MARK_WITHDRAWAL_PAID_DOC,
   })
   @ApiSuccessResponse(WithdrawalRequestDto, {
     status: HttpStatus.OK,

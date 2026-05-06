@@ -27,6 +27,13 @@ export interface UserPointsSummaryData {
   pendingWithdrawalAmount: number;
 }
 
+export interface UserTransactionStatsData {
+  userId: string;
+  totalTransactionsMade: number;
+  completedSales: number;
+  completedPurchases: number;
+}
+
 export interface WithdrawalRequestData {
   id: string;
   userId: string;
@@ -90,6 +97,9 @@ export interface AdminMarkWithdrawalPaidData {
 
 export interface IPointsRepository {
   getUserPointsSummary(userId: string): Promise<UserPointsSummaryData | null>;
+  getUserTransactionStats(
+    userId: string,
+  ): Promise<UserTransactionStatsData | null>;
   getStarPointConfigs(): Promise<StarPointConfigData[]>;
   upsertStarPointConfigs(
     configs: StarPointConfigData[],
