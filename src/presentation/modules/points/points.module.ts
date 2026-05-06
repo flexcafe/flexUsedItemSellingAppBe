@@ -3,6 +3,7 @@ import { ClientPointsController } from './client-points.controller.js';
 import { AdminPointsController } from './admin-points.controller.js';
 import { GetPointsSummaryUseCase } from '../../../application/use-cases/points/get-points-summary.use-case.js';
 import { GetTransactionStatsUseCase } from '../../../application/use-cases/points/get-transaction-stats.use-case.js';
+import { GetPublicUserProfileUseCase } from '../../../application/use-cases/points/get-public-user-profile.use-case.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
@@ -21,6 +22,7 @@ import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.in
   providers: [
     GetPointsSummaryUseCase,
     GetTransactionStatsUseCase,
+    GetPublicUserProfileUseCase,
     CreateTransactionReviewUseCase,
     RequestWithdrawalUseCase,
     ListMyWithdrawalsUseCase,

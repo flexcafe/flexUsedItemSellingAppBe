@@ -1,5 +1,6 @@
 export * from './get-points-summary.use-case.js';
 export * from './get-transaction-stats.use-case.js';
+export * from './get-public-user-profile.use-case.js';
 export * from './create-transaction-review.use-case.js';
 export * from './request-withdrawal.use-case.js';
 export * from './list-my-withdrawals.use-case.js';

@@ -34,6 +34,19 @@ export interface UserTransactionStatsData {
   completedPurchases: number;
 }
 
+export interface PublicUserProfileData {
+  userId: string;
+  nickname: string;
+  avatar: string | null;
+  region: string | null;
+  currentRank: RankTier;
+  averageStars: number;
+  totalReviews: number;
+  completedSales: number;
+  completedPurchases: number;
+  memberSince: Date;
+}
+
 export interface WithdrawalRequestData {
   id: string;
   userId: string;
@@ -100,6 +113,7 @@ export interface IPointsRepository {
   getUserTransactionStats(
     userId: string,
   ): Promise<UserTransactionStatsData | null>;
+  getPublicUserProfile(userId: string): Promise<PublicUserProfileData | null>;
   getStarPointConfigs(): Promise<StarPointConfigData[]>;
   upsertStarPointConfigs(
     configs: StarPointConfigData[],

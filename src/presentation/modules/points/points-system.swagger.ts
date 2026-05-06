@@ -28,6 +28,14 @@ Frontend transaction stats usage:
 - completedSales counts COMPLETED transactions where user is seller.
 - completedPurchases counts COMPLETED transactions where user is buyer.`;
 
+export const CLIENT_PUBLIC_PROFILE_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
+
+Public profile visibility policy:
+- This endpoint is for viewing another user's public profile card.
+- It intentionally excludes private account data (phone, email, KBZ verification tags, withdrawal history, admin notes, transaction references, referral data, and point ledger details).
+- It returns trust-facing fields only: nickname, avatar, region, rank, average stars, total reviews, completed sales, completed purchases, and memberSince.
+- Use this endpoint for other-user profile screens, seller/buyer mini cards, or trust summary panels.`;
+
 export const CLIENT_REQUEST_WITHDRAWAL_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 
 Frontend withdrawal usage:

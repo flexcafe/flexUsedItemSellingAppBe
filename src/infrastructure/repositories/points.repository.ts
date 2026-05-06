@@ -15,6 +15,7 @@ import type {
   CreateReviewData,
   CreateWithdrawalRequestData,
   IPointsRepository,
+  PublicUserProfileData,
   RankConfigData,
   ReviewData,
   StarPointConfigData,
@@ -164,6 +165,63 @@ export class PointsRepository implements IPointsRepository {
       totalTransactionsMade,
       completedSales,
       completedPurchases,
+    };
+  }
+
+  async getPublicUserProfile(
+    userId: string,
+  ): Promise<PublicUserProfileData | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        nickname: true,
+        currentRank: true,
+        createdAt: true,
+        profile: {
+          select: {
+            avatar: true,
+            inputRegion: true,
+          },
+        },
+      },
+    });
+    if (!user) {
+      return null;
+    }
+
+    const [reviewAggregate, completedSales, completedPurchases] =
+      await Promise.all([
+        this.prisma.review.aggregate({
+          where: { revieweeId: userId },
+          _avg: { stars: true },
+          _count: { stars: true },
+        }),
+        this.prisma.transaction.count({
+          where: {
+            sellerId: userId,
+            status: PrismaTransactionStatus.COMPLETED,
+          },
+        }),
+        this.prisma.transaction.count({
+          where: {
+            buyerId: userId,
+            status: PrismaTransactionStatus.COMPLETED,
+          },
+        }),
+      ]);
+
+    return {
+      userId: user.id,
+      nickname: user.nickname,
+      avatar: user.profile?.avatar ?? null,
+      region: user.profile?.inputRegion ?? null,
+      currentRank: user.currentRank as RankTier,
+      averageStars: Number(reviewAggregate._avg.stars ?? 0),
+      totalReviews: reviewAggregate._count.stars ?? 0,
+      completedSales,
+      completedPurchases,
+      memberSince: user.createdAt,
     };
   }
 

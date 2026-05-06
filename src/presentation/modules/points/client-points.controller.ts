@@ -22,12 +22,14 @@ import { ApiResponseDto } from '../../../application/dtos/common/api-response.dt
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { GetPointsSummaryUseCase } from '../../../application/use-cases/points/get-points-summary.use-case.js';
 import { GetTransactionStatsUseCase } from '../../../application/use-cases/points/get-transaction-stats.use-case.js';
+import { GetPublicUserProfileUseCase } from '../../../application/use-cases/points/get-public-user-profile.use-case.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
 import {
   CreateReviewDto,
   PointsSummaryDto,
+  PublicUserProfileDto,
   RequestWithdrawalDto,
   ReviewResponseDto,
   TransactionStatsDto,
@@ -36,6 +38,7 @@ import {
 import {
   CLIENT_CREATE_REVIEW_DOC,
   CLIENT_POINTS_SUMMARY_DOC,
+  CLIENT_PUBLIC_PROFILE_DOC,
   CLIENT_REQUEST_WITHDRAWAL_DOC,
   CLIENT_TRANSACTION_STATS_DOC,
   CLIENT_WITHDRAWAL_HISTORY_DOC,
@@ -49,6 +52,7 @@ export class ClientPointsController {
   constructor(
     private readonly getPointsSummaryUseCase: GetPointsSummaryUseCase,
     private readonly getTransactionStatsUseCase: GetTransactionStatsUseCase,
+    private readonly getPublicUserProfileUseCase: GetPublicUserProfileUseCase,
     private readonly createTransactionReviewUseCase: CreateTransactionReviewUseCase,
     private readonly requestWithdrawalUseCase: RequestWithdrawalUseCase,
     private readonly listMyWithdrawalsUseCase: ListMyWithdrawalsUseCase,
@@ -84,6 +88,22 @@ export class ClientPointsController {
   ): Promise<ApiResponseDto<TransactionStatsDto>> {
     const stats = await this.getTransactionStatsUseCase.execute(user.sub);
     return ApiResponseDto.success(stats, 'Profile transaction stats retrieved');
+  }
+
+  @Get('users/:userId/public-profile')
+  @ApiOperation({
+    summary: 'Get public profile for another user',
+    description: CLIENT_PUBLIC_PROFILE_DOC,
+  })
+  @ApiSuccessResponse(PublicUserProfileDto, {
+    status: HttpStatus.OK,
+    description: 'Public user profile retrieved',
+  })
+  async getPublicProfile(
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<ApiResponseDto<PublicUserProfileDto>> {
+    const profile = await this.getPublicUserProfileUseCase.execute(userId);
+    return ApiResponseDto.success(profile, 'Public user profile retrieved');
   }
 
   @Post('profile/withdrawals')
