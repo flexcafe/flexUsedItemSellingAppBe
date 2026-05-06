@@ -32,7 +32,7 @@ import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get('JWT_EXPIRATION', '7d') },
+        signOptions: { expiresIn: config.get('JWT_EXPIRATION', '2h') },
       }),
     }),
   ],
