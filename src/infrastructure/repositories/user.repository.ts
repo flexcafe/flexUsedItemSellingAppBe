@@ -486,48 +486,6 @@ export class UserRepository implements IUserRepository {
     };
   }
 
-  async findPendingKbzPayVerifications(): Promise<
-    PendingKbzPayVerificationData[]
-  > {
-    const rows = (await this.prisma.kbzPayAccount.findMany({
-      where: {
-        isVerified: false,
-        status: PrismaVerificationStatus.PENDING,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nickname: true,
-            phone: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: [{ verifyRequestedAt: 'desc' }, { createdAt: 'desc' }],
-    })) as PendingKbzPayVerificationRow[];
-
-    return rows.map((row) => {
-      const rowWithTx = row as typeof row & {
-        kbzTransactionId?: string | null;
-      };
-      return {
-        userId: row.userId,
-        nickname: row.user.nickname,
-        phone: row.user.phone,
-        email: row.user.email,
-        accountName: row.accountName,
-        kbzPayPhoneNumber: row.phoneNumber,
-        kbzTransactionId: rowWithTx.kbzTransactionId ?? null,
-        status: row.status as VerificationStatus,
-        verifyRequestedAt: row.verifyRequestedAt,
-        adminPhoneForTransfer: row.adminPhoneForTransfer,
-        adminInstructionSentAt: row.adminInstructionSentAt,
-        adminNote: row.adminNote,
-      };
-    });
-  }
-
   async findKbzPayVerificationRequested(): Promise<
     PendingKbzPayVerificationData[]
   > {

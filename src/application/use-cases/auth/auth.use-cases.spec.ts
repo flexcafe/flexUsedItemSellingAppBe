@@ -20,9 +20,9 @@ import { SendEmailVerificationUseCase } from './send-email-verification.use-case
 import { VerifyEmailVerificationUseCase } from './verify-email-verification.use-case.js';
 import { RequestKbzPayVerificationUseCase } from './request-kbzpay-verification.use-case.js';
 import { SubmitKbzPayTransactionUseCase } from './submit-kbzpay-transaction.use-case.js';
-import { ListPendingKbzPayVerificationsUseCase } from './list-pending-kbzpay-verifications.use-case.js';
 import { SendKbzPayInstructionUseCase } from './send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from './admin-verify-kbzpay.use-case.js';
+import { ListKbzPayVerificationRequestedUseCase } from './list-kbzpay-verification-requested.use-case.js';
 import type {
   IUserRepository,
   UserAuthData,
@@ -123,7 +123,6 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     markUserEmailVerified: jest.fn(),
     requestKbzPayVerification: jest.fn(),
     setKbzPayTransactionId: jest.fn(),
-    findPendingKbzPayVerifications: jest.fn(),
     findAdminUserIds: jest.fn().mockResolvedValue([]),
     setKbzPayVerificationInstruction: jest.fn(),
     markKbzPayVerified: jest.fn(),
@@ -794,12 +793,12 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
     });
 
-    it('Admin can list pending KBZPay verifications', async () => {
+    it('Admin can list KBZPay verification requested list', async () => {
       const repo = buildRepoMock();
       repo.findById.mockResolvedValue(
         buildUser({ id: 'admin-1', adminRoleId: 'role-1' }),
       );
-      repo.findPendingKbzPayVerifications.mockResolvedValue([
+      repo.findKbzPayVerificationRequested.mockResolvedValue([
         {
           userId: 'user-1',
           nickname: 'Nick',
@@ -807,21 +806,21 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           email: 'nick@example.com',
           accountName: 'Nick Aung',
           kbzPayPhoneNumber: '+959222222222',
-          kbzTransactionId: 'KBZ-TXN-10001',
+          kbzTransactionId: null,
           status: VerificationStatus.PENDING,
           verifyRequestedAt: new Date('2026-01-02'),
-          adminPhoneForTransfer: '+959333333333',
-          adminInstructionSentAt: new Date('2026-01-03'),
+          adminPhoneForTransfer: null,
+          adminInstructionSentAt: null,
           adminNote: 'Check transfer screenshot',
         },
       ]);
-      const useCase = new ListPendingKbzPayVerificationsUseCase(repo);
+      const useCase = new ListKbzPayVerificationRequestedUseCase(repo);
 
       const rows = await useCase.execute('admin-1');
 
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.kbzTransactionId).toBe('KBZ-TXN-10001');
-      expect(repo.findPendingKbzPayVerifications).toHaveBeenCalledTimes(1);
+      expect(rows[0]?.userId).toBe('user-1');
+      expect(repo.findKbzPayVerificationRequested).toHaveBeenCalledTimes(1);
     });
   });
 });

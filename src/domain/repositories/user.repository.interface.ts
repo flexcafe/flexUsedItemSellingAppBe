@@ -187,7 +187,6 @@ export interface IUserRepository {
   ): Promise<NotificationData[]>;
   markNotificationRead(notificationId: string, userId: string): Promise<void>;
   getAuthDataByUserId(userId: string): Promise<UserAuthData | null>;
-  findPendingKbzPayVerifications(): Promise<PendingKbzPayVerificationData[]>;
   findKbzPayVerificationRequested(): Promise<PendingKbzPayVerificationData[]>;
   findKbzPayMoneyCheckList(): Promise<PendingKbzPayVerificationData[]>;
   findKbzPayVerifiedUsers(): Promise<PendingKbzPayVerificationData[]>;

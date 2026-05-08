@@ -12,7 +12,6 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
-import { ListPendingKbzPayVerificationsUseCase } from '../../../application/use-cases/auth/list-pending-kbzpay-verifications.use-case.js';
 import { ListKbzPayVerificationRequestedUseCase } from '../../../application/use-cases/auth/list-kbzpay-verification-requested.use-case.js';
 import { ListKbzPayMoneyCheckUseCase } from '../../../application/use-cases/auth/list-kbzpay-money-check.use-case.js';
 import { ListKbzPayVerifiedUsersUseCase } from '../../../application/use-cases/auth/list-kbzpay-verified-users.use-case.js';
@@ -38,7 +37,6 @@ import type { JwtPayload } from '../../../common/decorators/current-user.decorat
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import {
   KBZPAY_ADMIN_VERIFY_DOC,
-  KBZPAY_PENDING_LIST_DOC,
   KBZPAY_SEND_INSTRUCTION_DOC,
 } from './kbzpay-verification-flow.swagger.js';
 
@@ -47,7 +45,6 @@ import {
 export class AdminDashboardAuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
-    private readonly listPendingKbzPayVerificationsUseCase: ListPendingKbzPayVerificationsUseCase,
     private readonly listKbzPayVerificationRequestedUseCase: ListKbzPayVerificationRequestedUseCase,
     private readonly listKbzPayMoneyCheckUseCase: ListKbzPayMoneyCheckUseCase,
     private readonly listKbzPayVerifiedUsersUseCase: ListKbzPayVerifiedUsersUseCase,
@@ -90,34 +87,6 @@ export class AdminDashboardAuthController {
   ): Promise<ApiResponseDto<AuthResponseDto>> {
     const result = await this.loginUseCase.loginAdmin(dto);
     return ApiResponseDto.success(result, 'Login successful');
-  }
-
-  @Get('kbzpay/pending-verifications')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'List pending KBZPay verification requests',
-    description: KBZPAY_PENDING_LIST_DOC,
-  })
-  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
-    status: HttpStatus.OK,
-    description: 'Pending KBZPay verification list retrieved',
-  })
-  @ApiErrorResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Only admin users can perform this action',
-  })
-  async listPendingKbzPayVerifications(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
-    const pendingRows =
-      await this.listPendingKbzPayVerificationsUseCase.execute(user.sub);
-
-    return ApiResponseDto.success(
-      pendingRows.map((row) => new PendingKbzPayVerificationDto(row)),
-      'Pending KBZPay verification list retrieved',
-    );
   }
 
   @Post('kbzpay/:userId/send-instruction')
