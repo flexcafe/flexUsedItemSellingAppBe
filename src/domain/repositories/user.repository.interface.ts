@@ -67,6 +67,7 @@ export interface EmailVerificationData {
 }
 
 export interface UserProfileData {
+  avatar: string | null;
   gender: Gender | null;
   age: number | null;
   maritalStatus: MaritalStatus | null;
@@ -128,6 +129,7 @@ export interface IUserRepository {
   findAll(): Promise<UserEntity[]>;
   update(id: string, data: UpdateUserData): Promise<UserEntity>;
   delete(id: string): Promise<boolean>;
+  setProfileAvatar(userId: string, avatarUrl: string | null): Promise<void>;
 
   createPhoneOtp(phone: string, code: string, expiresAt: Date): Promise<void>;
   findLatestActivePhoneOtp(phone: string): Promise<OtpVerificationData | null>;

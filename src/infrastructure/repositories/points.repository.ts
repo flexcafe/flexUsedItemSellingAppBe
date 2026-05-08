@@ -103,9 +103,8 @@ export class PointsRepository implements IPointsRepository {
       return null;
     }
 
-    const pendingWithdrawalAmount = await this.getPendingWithdrawalAmount(
-      userId,
-    );
+    const pendingWithdrawalAmount =
+      await this.getPendingWithdrawalAmount(userId);
     const rankConfigs = await this.getRankConfigs();
     const sorted = this.sortRankConfigs(rankConfigs);
     const currentRankConfig =
@@ -276,7 +275,9 @@ export class PointsRepository implements IPointsRepository {
     }));
   }
 
-  async upsertRankConfigs(configs: RankConfigData[]): Promise<RankConfigData[]> {
+  async upsertRankConfigs(
+    configs: RankConfigData[],
+  ): Promise<RankConfigData[]> {
     await this.prisma.$transaction(
       configs.map((config) =>
         this.prisma.rankConfig.upsert({
@@ -334,7 +335,9 @@ export class PointsRepository implements IPointsRepository {
     return count > 0;
   }
 
-  async createReviewAndAwardPoints(data: CreateReviewData): Promise<ReviewData> {
+  async createReviewAndAwardPoints(
+    data: CreateReviewData,
+  ): Promise<ReviewData> {
     const starConfigs = await this.getStarPointConfigs();
     const rankConfigs = await this.getRankConfigs();
     const pointsAwarded =
@@ -548,8 +551,7 @@ export class PointsRepository implements IPointsRepository {
           type: NotificationType.WITHDRAWAL,
           title: 'Withdrawal rejected',
           message:
-            data.adminNote ??
-            'Your withdrawal request was rejected by admin.',
+            data.adminNote ?? 'Your withdrawal request was rejected by admin.',
           referenceId: withdrawal.id,
         },
       });

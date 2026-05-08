@@ -10,4 +10,3 @@ export interface IEmailSender {
 }
 
 export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
-

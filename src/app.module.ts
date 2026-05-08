@@ -16,6 +16,7 @@ import { SupabaseModule } from './infrastructure/supabase/supabase.module.js';
 import { AuthModule } from './presentation/modules/auth/auth.module.js';
 import { ListingModule } from './presentation/modules/listing/listing.module.js';
 import { PointsModule } from './presentation/modules/points/points.module.js';
+import { ProfileModule } from './presentation/modules/profile/profile.module.js';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { PointsModule } from './presentation/modules/points/points.module.js';
     AuthModule,
     ListingModule,
     PointsModule,
+    ProfileModule,
     // ─── Future feature modules ───
     // CategoryModule,
     // OfferModule,

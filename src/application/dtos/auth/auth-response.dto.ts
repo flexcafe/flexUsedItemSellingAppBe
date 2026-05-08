@@ -35,6 +35,9 @@ export class AuthTokensDto {
 }
 
 export class ProfileDetailsDto {
+  @ApiProperty({ nullable: true })
+  avatar: string | null;
+
   @ApiProperty({ enum: Gender, nullable: true })
   gender: Gender | null;
 
@@ -57,6 +60,7 @@ export class ProfileDetailsDto {
   isRegionVerified: boolean;
 
   constructor(data: UserAuthData['profile']) {
+    this.avatar = data?.avatar ?? null;
     this.gender = data?.gender ?? null;
     this.age = data?.age ?? null;
     this.maritalStatus = data?.maritalStatus ?? null;

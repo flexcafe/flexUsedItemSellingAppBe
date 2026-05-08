@@ -1,3 +1,8 @@
+/* eslint-disable
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/require-await,
+  @typescript-eslint/unbound-method
+*/
 import { jest } from '@jest/globals';
 import { JwtService } from '@nestjs/jwt';
 import {

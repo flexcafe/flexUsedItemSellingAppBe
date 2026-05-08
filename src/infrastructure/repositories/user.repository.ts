@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import PrismaPkg from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
 import { UserMapper } from '../mappers/user.mapper.js';
 import { UserEntity } from '../../domain/entities/user.entity.js';
@@ -21,6 +22,16 @@ import { VerificationStatus } from '../../domain/enums/verification-status.enum.
 
 const { NotificationType, VerificationStatus: PrismaVerificationStatus } =
   PrismaPkg;
+
+type UserWithAuthIncludes = Prisma.UserGetPayload<{
+  include: { profile: true; kbzPayAccount: true };
+}>;
+
+type PendingKbzPayVerificationRow = Prisma.KbzPayAccountGetPayload<{
+  include: {
+    user: { select: { id: true; nickname: true; phone: true; email: true } };
+  };
+}>;
 
 @Injectable()
 export class UserRepository implements IUserRepository {
@@ -106,6 +117,16 @@ export class UserRepository implements IUserRepository {
       data: { isActive: false },
     });
     return true;
+  }
+
+  async setProfileAvatar(
+    userId: string,
+    avatarUrl: string | null,
+  ): Promise<void> {
+    await this.prisma.userProfile.update({
+      where: { userId },
+      data: { avatar: avatarUrl },
+    });
   }
 
   async createPhoneOtp(
@@ -301,7 +322,7 @@ export class UserRepository implements IUserRepository {
       where: { userId },
       data: {
         kbzTransactionId,
-      },
+      } as Prisma.KbzPayAccountUpdateInput,
     });
   }
 
@@ -351,13 +372,13 @@ export class UserRepository implements IUserRepository {
   }
 
   async getAuthDataByUserId(userId: string): Promise<UserAuthData | null> {
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         profile: true,
         kbzPayAccount: true,
       },
-    });
+    })) as UserWithAuthIncludes | null;
 
     if (!user) {
       return null;
@@ -365,6 +386,7 @@ export class UserRepository implements IUserRepository {
 
     const profile: UserProfileData | null = user.profile
       ? {
+          avatar: user.profile.avatar,
           gender: user.profile.gender as Gender | null,
           age: user.profile.age,
           maritalStatus: user.profile.maritalStatus as MaritalStatus | null,
@@ -376,18 +398,22 @@ export class UserRepository implements IUserRepository {
         }
       : null;
 
-    const kbzPayAccount: KbzPayAccountData | null = user.kbzPayAccount
+    const kbzRow = user.kbzPayAccount as
+      | (typeof user.kbzPayAccount & { kbzTransactionId?: string | null })
+      | null;
+
+    const kbzPayAccount: KbzPayAccountData | null = kbzRow
       ? {
-          accountName: user.kbzPayAccount.accountName,
-          phoneNumber: user.kbzPayAccount.phoneNumber,
-          kbzTransactionId: user.kbzPayAccount.kbzTransactionId,
-          status: user.kbzPayAccount.status as VerificationStatus,
-          isVerified: user.kbzPayAccount.isVerified,
-          verifyRequestedAt: user.kbzPayAccount.verifyRequestedAt,
-          adminPhoneForTransfer: user.kbzPayAccount.adminPhoneForTransfer,
-          adminInstructionSentAt: user.kbzPayAccount.adminInstructionSentAt,
-          verifiedAt: user.kbzPayAccount.verifiedAt,
-          adminNote: user.kbzPayAccount.adminNote,
+          accountName: kbzRow.accountName,
+          phoneNumber: kbzRow.phoneNumber,
+          kbzTransactionId: kbzRow.kbzTransactionId ?? null,
+          status: kbzRow.status as VerificationStatus,
+          isVerified: kbzRow.isVerified,
+          verifyRequestedAt: kbzRow.verifyRequestedAt,
+          adminPhoneForTransfer: kbzRow.adminPhoneForTransfer,
+          adminInstructionSentAt: kbzRow.adminInstructionSentAt,
+          verifiedAt: kbzRow.verifiedAt,
+          adminNote: kbzRow.adminNote,
         }
       : null;
 
@@ -401,7 +427,7 @@ export class UserRepository implements IUserRepository {
   async findPendingKbzPayVerifications(): Promise<
     PendingKbzPayVerificationData[]
   > {
-    const rows = await this.prisma.kbzPayAccount.findMany({
+    const rows = (await this.prisma.kbzPayAccount.findMany({
       where: {
         isVerified: false,
         status: PrismaVerificationStatus.PENDING,
@@ -417,21 +443,26 @@ export class UserRepository implements IUserRepository {
         },
       },
       orderBy: [{ verifyRequestedAt: 'desc' }, { createdAt: 'desc' }],
-    });
+    })) as PendingKbzPayVerificationRow[];
 
-    return rows.map((row) => ({
-      userId: row.userId,
-      nickname: row.user.nickname,
-      phone: row.user.phone,
-      email: row.user.email,
-      accountName: row.accountName,
-      kbzPayPhoneNumber: row.phoneNumber,
-      kbzTransactionId: row.kbzTransactionId,
-      status: row.status as VerificationStatus,
-      verifyRequestedAt: row.verifyRequestedAt,
-      adminPhoneForTransfer: row.adminPhoneForTransfer,
-      adminInstructionSentAt: row.adminInstructionSentAt,
-      adminNote: row.adminNote,
-    }));
+    return rows.map((row) => {
+      const rowWithTx = row as typeof row & {
+        kbzTransactionId?: string | null;
+      };
+      return {
+        userId: row.userId,
+        nickname: row.user.nickname,
+        phone: row.user.phone,
+        email: row.user.email,
+        accountName: row.accountName,
+        kbzPayPhoneNumber: row.phoneNumber,
+        kbzTransactionId: rowWithTx.kbzTransactionId ?? null,
+        status: row.status as VerificationStatus,
+        verifyRequestedAt: row.verifyRequestedAt,
+        adminPhoneForTransfer: row.adminPhoneForTransfer,
+        adminInstructionSentAt: row.adminInstructionSentAt,
+        adminNote: row.adminNote,
+      };
+    });
   }
 }

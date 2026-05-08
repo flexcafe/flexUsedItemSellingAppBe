@@ -11,7 +11,10 @@ import {
   type IPointsRepository,
 } from '../../../domain/repositories/points.repository.interface.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
-import { CreateReviewDto, ReviewResponseDto } from '../../dtos/points/review.dto.js';
+import {
+  CreateReviewDto,
+  ReviewResponseDto,
+} from '../../dtos/points/review.dto.js';
 
 @Injectable()
 export class CreateTransactionReviewUseCase {
@@ -41,7 +44,9 @@ export class CreateTransactionReviewUseCase {
       transaction.buyerId !== reviewerId &&
       transaction.sellerId !== reviewerId
     ) {
-      throw new ForbiddenException('Only buyer or seller can review this trade');
+      throw new ForbiddenException(
+        'Only buyer or seller can review this trade',
+      );
     }
 
     const alreadyReviewed = await this.pointsRepository.hasReview(

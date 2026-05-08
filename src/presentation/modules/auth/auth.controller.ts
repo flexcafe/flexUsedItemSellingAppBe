@@ -349,8 +349,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current authenticated user profile',
-    description:
-      `Returns auth profile with phone/email verification states, KBZPay status, and profile details.
+    description: `Returns auth profile with phone/email verification states, KBZPay status, and profile details.
 
 ${KBZPAY_PROFILE_STATUS_DOC}`,
   })

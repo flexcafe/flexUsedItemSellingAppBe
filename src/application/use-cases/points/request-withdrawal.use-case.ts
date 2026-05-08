@@ -43,7 +43,9 @@ export class RequestWithdrawalUseCase {
     }
 
     if (dto.amount > summary.availableWithdrawalPoints) {
-      throw new BadRequestException('Withdrawal amount exceeds available points');
+      throw new BadRequestException(
+        'Withdrawal amount exceeds available points',
+      );
     }
 
     const request = await this.pointsRepository.createWithdrawalRequest({

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
-import type { IEmailSender, SendEmailOptions } from '../../domain/services/email-sender.interface.js';
+import type {
+  IEmailSender,
+  SendEmailOptions,
+} from '../../domain/services/email-sender.interface.js';
 
 @Injectable()
 export class BrevoSmtpEmailSender implements IEmailSender {
@@ -17,7 +20,10 @@ export class BrevoSmtpEmailSender implements IEmailSender {
     const pass = this.configService.getOrThrow<string>('BREVO_SMTP_PASS');
 
     this.fromEmail = this.configService.getOrThrow<string>('BREVO_FROM_EMAIL');
-    this.fromName = this.configService.get<string>('BREVO_FROM_NAME', 'FlexCafe');
+    this.fromName = this.configService.get<string>(
+      'BREVO_FROM_NAME',
+      'FlexCafe',
+    );
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -37,7 +43,8 @@ export class BrevoSmtpEmailSender implements IEmailSender {
     });
 
     // Do not log sensitive content (tokens/OTP). Only log high-level delivery info.
-    this.logger.log(`Email sent to ${options.to} (subject: ${options.subject})`);
+    this.logger.log(
+      `Email sent to ${options.to} (subject: ${options.subject})`,
+    );
   }
 }
-

@@ -9,7 +9,9 @@ type ResponseOptions = {
   description: string;
 };
 
-function baseResponseSchema(dataSchema?: Record<string, unknown>): any {
+function baseResponseSchema(
+  dataSchema?: Record<string, unknown>,
+): Record<string, unknown> {
   return {
     allOf: [
       { $ref: getSchemaPath(ApiResponseDto) },
@@ -39,7 +41,9 @@ export function ApiSuccessResponse<TModel extends Type<unknown>>(
     ApiResponse({
       status: options.status ?? HttpStatus.OK,
       description: options.description,
-      schema: baseResponseSchema({ $ref: getSchemaPath(model) }),
+      schema: baseResponseSchema({
+        $ref: getSchemaPath(model) as unknown as string,
+      }),
     }),
   );
 }
@@ -55,7 +59,7 @@ export function ApiArraySuccessResponse<TModel extends Type<unknown>>(
       description: options.description,
       schema: baseResponseSchema({
         type: 'array',
-        items: { $ref: getSchemaPath(model) },
+        items: { $ref: getSchemaPath(model) as unknown as string },
       }),
     }),
   );
@@ -77,7 +81,7 @@ export function ApiPaginatedSuccessResponse<TModel extends Type<unknown>>(
             properties: {
               items: {
                 type: 'array',
-                items: { $ref: getSchemaPath(model) },
+                items: { $ref: getSchemaPath(model) as unknown as string },
               },
             },
           },
