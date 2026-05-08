@@ -900,6 +900,8 @@ model Notification {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   type        NotificationType
+  eventKey    String?          @map("event_key")
+  metadata    Json?            @map("metadata")
   title       String
   message     String           @db.Text
   referenceId String?          @map("reference_id") // polymorphic pointer to related entity
@@ -910,6 +912,7 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@index([referenceId])
+  @@index([eventKey])
   @@map("notifications")
 }
 

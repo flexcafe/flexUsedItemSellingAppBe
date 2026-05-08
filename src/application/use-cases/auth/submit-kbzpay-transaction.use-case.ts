@@ -58,6 +58,13 @@ export class SubmitKbzPayTransactionUseCase {
       adminIds.map((adminId) =>
         this.userRepository.createNotification({
           userId: adminId,
+          eventKey: 'KBZPAY_TRANSACTION_SUBMITTED_ADMIN',
+          metadata: {
+            targetUserId: userId,
+            nickname: authData.user.nickname,
+            phone: authData.user.phone,
+            kbzTransactionId: dto.kbzTransactionId,
+          },
           title: 'KBZPay Transaction Submitted',
           message: `A user submitted KBZPay transaction ID for verification.\n\nUser: ${authData.user.nickname} (${authData.user.phone})\nTransaction: ${dto.kbzTransactionId}`,
           referenceId: userId,
@@ -67,6 +74,10 @@ export class SubmitKbzPayTransactionUseCase {
 
     await this.userRepository.createNotification({
       userId,
+      eventKey: 'KBZPAY_TRANSACTION_SUBMITTED_CLIENT',
+      metadata: {
+        kbzTransactionId: dto.kbzTransactionId,
+      },
       title: 'KBZPay Transaction Submitted',
       message:
         'Your KBZPay transaction ID has been submitted. Admin will manually confirm the transfer and mark your KBZPay as verified.',

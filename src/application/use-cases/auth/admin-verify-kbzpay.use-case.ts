@@ -43,6 +43,10 @@ export class AdminVerifyKbzPayUseCase {
 
     await this.userRepository.createNotification({
       userId: targetUserId,
+      eventKey: 'KBZPAY_VERIFIED_CLIENT',
+      metadata: {
+        adminNote: dto.adminNote ?? null,
+      },
       title: 'KBZPay Verified',
       message: `Your KBZPay verification is approved by admin.${dto.adminNote ? `\n\nAdmin note: ${dto.adminNote}` : ''}`,
       referenceId: targetUserId,

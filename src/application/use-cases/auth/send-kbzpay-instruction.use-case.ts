@@ -43,6 +43,12 @@ export class SendKbzPayInstructionUseCase {
 
     await this.userRepository.createNotification({
       userId: targetUserId,
+      eventKey: 'KBZPAY_INSTRUCTION_SENT_CLIENT',
+      metadata: {
+        transferPhone: dto.adminPhoneForTransfer,
+        amount: 100,
+        adminNote: dto.adminNote ?? null,
+      },
       title: 'KBZPay Verification Transfer Instruction',
       message: `Please transfer 100 MMK to ${dto.adminPhoneForTransfer}. After admin confirms receipt, your KBZPay account will be marked as verified.${dto.adminNote ? `\n\nAdmin note: ${dto.adminNote}` : ''}`,
       referenceId: targetUserId,
@@ -50,6 +56,13 @@ export class SendKbzPayInstructionUseCase {
 
     await this.userRepository.createNotification({
       userId: adminUserId,
+      eventKey: 'KBZPAY_INSTRUCTION_SENT_ADMIN',
+      metadata: {
+        targetUserId,
+        targetPhone: targetUser.phone,
+        transferPhone: dto.adminPhoneForTransfer,
+        amount: 100,
+      },
       title: 'KBZPay Instruction Sent',
       message: `Transfer instruction sent to user ${targetUser.phone}.\n\nTransfer phone: ${dto.adminPhoneForTransfer}`,
       referenceId: targetUserId,

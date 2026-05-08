@@ -44,6 +44,13 @@ export class RequestKbzPayVerificationUseCase {
       adminIds.map((adminId) =>
         this.userRepository.createNotification({
           userId: adminId,
+          eventKey: 'KBZPAY_VERIFICATION_REQUESTED_ADMIN',
+          metadata: {
+            targetUserId: userId,
+            nickname: authData.user.nickname,
+            phone: authData.user.phone,
+            kbzPhoneNumber: kbz.phoneNumber,
+          },
           title: 'KBZPay Verification Requested',
           message: `A user requested KBZPay verification.\n\nUser: ${authData.user.nickname} (${authData.user.phone})\nKBZPay: ${kbz.phoneNumber}`,
           referenceId: userId,
@@ -53,6 +60,10 @@ export class RequestKbzPayVerificationUseCase {
 
     await this.userRepository.createNotification({
       userId,
+      eventKey: 'KBZPAY_VERIFICATION_REQUESTED_CLIENT',
+      metadata: {
+        message: dto.message ?? null,
+      },
       title: 'KBZPay Verification Pending',
       message:
         'Your KBZPay verification request is now pending. An admin will send the transfer phone number by notification. Please transfer exactly 100 MMK once you receive it.' +

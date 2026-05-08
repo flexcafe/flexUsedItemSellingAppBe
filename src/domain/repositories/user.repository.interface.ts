@@ -4,6 +4,14 @@ import { MaritalStatus } from '../enums/marital-status.enum.js';
 import { RegistrationType } from '../enums/registration-type.enum.js';
 import { VerificationStatus } from '../enums/verification-status.enum.js';
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[];
+
 export interface CreateUserData {
   registrationType: RegistrationType;
   phone: string;
@@ -114,6 +122,8 @@ export interface UserAuthData {
 
 export interface CreateNotificationData {
   userId: string;
+  eventKey?: string;
+  metadata?: JsonValue;
   title: string;
   message: string;
   referenceId?: string;
@@ -123,6 +133,8 @@ export interface NotificationData {
   id: string;
   userId: string;
   type: string;
+  eventKey: string | null;
+  metadata: JsonValue | null;
   title: string;
   message: string;
   referenceId: string | null;

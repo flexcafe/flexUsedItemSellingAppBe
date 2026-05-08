@@ -9,6 +9,7 @@ import type {
   CreateUserData,
   EmailVerificationData,
   IUserRepository,
+  JsonValue,
   KbzPayAccountData,
   NotificationData,
   OtpVerificationData,
@@ -370,6 +371,10 @@ export class UserRepository implements IUserRepository {
     const row = await this.prisma.notification.create({
       data: {
         userId: data.userId,
+        eventKey: data.eventKey ?? null,
+        metadata:
+          (data.metadata as Prisma.InputJsonValue | undefined) ??
+          PrismaPkg.Prisma.JsonNull,
         title: data.title,
         message: data.message,
         referenceId: data.referenceId,
@@ -384,6 +389,10 @@ export class UserRepository implements IUserRepository {
         id: row.id,
         userId: row.userId,
         type: String(row.type),
+        eventKey:
+          (row as unknown as { eventKey?: string | null }).eventKey ?? null,
+        metadata:
+          (row as unknown as { metadata?: JsonValue | null }).metadata ?? null,
         title: row.title,
         message: row.message,
         referenceId: row.referenceId,
@@ -415,6 +424,9 @@ export class UserRepository implements IUserRepository {
       id: n.id,
       userId: n.userId,
       type: String(n.type),
+      eventKey: (n as unknown as { eventKey?: string | null }).eventKey ?? null,
+      metadata:
+        (n as unknown as { metadata?: JsonValue | null }).metadata ?? null,
       title: n.title,
       message: n.message,
       referenceId: n.referenceId,
