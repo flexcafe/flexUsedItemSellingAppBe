@@ -661,11 +661,24 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const repo = buildRepoMock();
       const user = buildUser({ id: 'user-1' });
       repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
+      repo.findAdminUserIds.mockResolvedValue(['admin-1']);
       const useCase = new RequestKbzPayVerificationUseCase(repo);
       const res = await useCase.execute('user-1', { message: 'pls' });
       expect(res.action).toBe('KBZPAY_VERIFICATION_REQUESTED');
       expect(repo.requestKbzPayVerification).toHaveBeenCalledWith('user-1');
-      expect(repo.createNotification).toHaveBeenCalledTimes(1);
+      expect(repo.createNotification).toHaveBeenCalledTimes(2);
+      expect(repo.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'admin-1',
+          eventKey: 'KBZPAY_VERIFICATION_REQUESTED_ADMIN',
+        }),
+      );
+      expect(repo.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          eventKey: 'KBZPAY_VERIFICATION_REQUESTED_CLIENT',
+        }),
+      );
     });
 
     it('KBZPay request rejects when already verified', async () => {
@@ -791,6 +804,12 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         undefined,
       );
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
+      expect(repo.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          eventKey: 'KBZPAY_VERIFIED_CLIENT',
+        }),
+      );
     });
 
     it('Admin can list KBZPay verification requested list', async () => {

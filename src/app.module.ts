@@ -20,6 +20,7 @@ import { PointsModule } from './presentation/modules/points/points.module.js';
 import { ProfileModule } from './presentation/modules/profile/profile.module.js';
 import { NotificationsModule } from './presentation/modules/notifications/notifications.module.js';
 import { RealtimePresentationModule } from './presentation/modules/realtime/realtime.module.js';
+import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.module.js';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { RealtimePresentationModule } from './presentation/modules/realtime/real
     ProfileModule,
     NotificationsModule,
     RealtimePresentationModule,
+    SliderAdsModule,
     // ─── Future feature modules ───
     // CategoryModule,
     // OfferModule,
