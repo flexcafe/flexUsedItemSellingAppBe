@@ -36,4 +36,11 @@ export class PusherService {
     }
     await this.client.trigger(channel, event, payload);
   }
+
+  authorizePrivateChannel(socketId: string, channelName: string) {
+    if (!this.client) {
+      return { auth: '' };
+    }
+    return this.client.authorizeChannel(socketId, channelName);
+  }
 }
