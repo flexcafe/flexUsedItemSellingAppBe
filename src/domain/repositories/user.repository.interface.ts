@@ -119,6 +119,17 @@ export interface CreateNotificationData {
   referenceId?: string;
 }
 
+export interface NotificationData {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  referenceId: string | null;
+  isRead: boolean;
+  createdAt: Date;
+}
+
 export interface IUserRepository {
   create(data: CreateUserData): Promise<UserEntity>;
   findById(id: string): Promise<UserEntity | null>;
@@ -167,9 +178,20 @@ export interface IUserRepository {
     adminNote?: string,
   ): Promise<void>;
 
+  findAdminUserIds(): Promise<string[]>;
+
   createNotification(data: CreateNotificationData): Promise<void>;
+  listNotificationsByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<NotificationData[]>;
+  markNotificationRead(notificationId: string, userId: string): Promise<void>;
   getAuthDataByUserId(userId: string): Promise<UserAuthData | null>;
   findPendingKbzPayVerifications(): Promise<PendingKbzPayVerificationData[]>;
+  findKbzPayVerificationRequested(): Promise<PendingKbzPayVerificationData[]>;
+  findKbzPayMoneyCheckList(): Promise<PendingKbzPayVerificationData[]>;
+  findKbzPayVerifiedUsers(): Promise<PendingKbzPayVerificationData[]>;
+  findKbzPayRegisteredAccounts(): Promise<PendingKbzPayVerificationData[]>;
 }
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');

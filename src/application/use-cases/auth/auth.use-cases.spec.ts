@@ -124,9 +124,16 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     requestKbzPayVerification: jest.fn(),
     setKbzPayTransactionId: jest.fn(),
     findPendingKbzPayVerifications: jest.fn(),
+    findAdminUserIds: jest.fn().mockResolvedValue([]),
     setKbzPayVerificationInstruction: jest.fn(),
     markKbzPayVerified: jest.fn(),
     createNotification: jest.fn(),
+    listNotificationsByUserId: jest.fn(),
+    markNotificationRead: jest.fn(),
+    findKbzPayVerificationRequested: jest.fn(),
+    findKbzPayMoneyCheckList: jest.fn(),
+    findKbzPayVerifiedUsers: jest.fn(),
+    findKbzPayRegisteredAccounts: jest.fn(),
     getAuthDataByUserId: jest.fn(),
   };
 }

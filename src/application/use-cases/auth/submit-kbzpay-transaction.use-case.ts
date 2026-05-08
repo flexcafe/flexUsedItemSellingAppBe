@@ -53,6 +53,26 @@ export class SubmitKbzPayTransactionUseCase {
       dto.kbzTransactionId,
     );
 
+    const adminIds = await this.userRepository.findAdminUserIds();
+    await Promise.all(
+      adminIds.map((adminId) =>
+        this.userRepository.createNotification({
+          userId: adminId,
+          title: 'KBZPay Transaction Submitted',
+          message: `A user submitted KBZPay transaction ID for verification.\n\nUser: ${authData.user.nickname} (${authData.user.phone})\nTransaction: ${dto.kbzTransactionId}`,
+          referenceId: userId,
+        }),
+      ),
+    );
+
+    await this.userRepository.createNotification({
+      userId,
+      title: 'KBZPay Transaction Submitted',
+      message:
+        'Your KBZPay transaction ID has been submitted. Admin will manually confirm the transfer and mark your KBZPay as verified.',
+      referenceId: userId,
+    });
+
     return new VerificationActionResultDto('KBZPAY_TRANSACTION_SUBMITTED');
   }
 }

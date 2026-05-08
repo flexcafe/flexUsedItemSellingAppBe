@@ -16,6 +16,10 @@ import { SubmitKbzPayTransactionUseCase } from '../../../application/use-cases/a
 import { ListPendingKbzPayVerificationsUseCase } from '../../../application/use-cases/auth/list-pending-kbzpay-verifications.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
+import { ListKbzPayVerificationRequestedUseCase } from '../../../application/use-cases/auth/list-kbzpay-verification-requested.use-case.js';
+import { ListKbzPayMoneyCheckUseCase } from '../../../application/use-cases/auth/list-kbzpay-money-check.use-case.js';
+import { ListKbzPayVerifiedUsersUseCase } from '../../../application/use-cases/auth/list-kbzpay-verified-users.use-case.js';
+import { ListKbzPayRegisteredAccountsUseCase } from '../../../application/use-cases/auth/list-kbzpay-registered-accounts.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
@@ -49,6 +53,10 @@ import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms
     ListPendingKbzPayVerificationsUseCase,
     SendKbzPayInstructionUseCase,
     AdminVerifyKbzPayUseCase,
+    ListKbzPayVerificationRequestedUseCase,
+    ListKbzPayMoneyCheckUseCase,
+    ListKbzPayVerifiedUsersUseCase,
+    ListKbzPayRegisteredAccountsUseCase,
     GetCurrentUserProfileUseCase,
     JwtStrategy,
     {

@@ -13,6 +13,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case.js';
 import { ListPendingKbzPayVerificationsUseCase } from '../../../application/use-cases/auth/list-pending-kbzpay-verifications.use-case.js';
+import { ListKbzPayVerificationRequestedUseCase } from '../../../application/use-cases/auth/list-kbzpay-verification-requested.use-case.js';
+import { ListKbzPayMoneyCheckUseCase } from '../../../application/use-cases/auth/list-kbzpay-money-check.use-case.js';
+import { ListKbzPayVerifiedUsersUseCase } from '../../../application/use-cases/auth/list-kbzpay-verified-users.use-case.js';
+import { ListKbzPayRegisteredAccountsUseCase } from '../../../application/use-cases/auth/list-kbzpay-registered-accounts.use-case.js';
 import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/auth/send-kbzpay-instruction.use-case.js';
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
 import { AdminLoginDto } from '../../../application/dtos/auth/login.dto.js';
@@ -44,6 +48,10 @@ export class AdminDashboardAuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
     private readonly listPendingKbzPayVerificationsUseCase: ListPendingKbzPayVerificationsUseCase,
+    private readonly listKbzPayVerificationRequestedUseCase: ListKbzPayVerificationRequestedUseCase,
+    private readonly listKbzPayMoneyCheckUseCase: ListKbzPayMoneyCheckUseCase,
+    private readonly listKbzPayVerifiedUsersUseCase: ListKbzPayVerifiedUsersUseCase,
+    private readonly listKbzPayRegisteredAccountsUseCase: ListKbzPayRegisteredAccountsUseCase,
     private readonly sendKbzPayInstructionUseCase: SendKbzPayInstructionUseCase,
     private readonly adminVerifyKbzPayUseCase: AdminVerifyKbzPayUseCase,
   ) {}
@@ -168,5 +176,93 @@ export class AdminDashboardAuthController {
       dto,
     );
     return ApiResponseDto.success(result, 'KBZPay verified successfully');
+  }
+
+  @Get('kbzpay/verification-requested')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List KBZPay verification requested (awaiting admin instruction)',
+  })
+  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
+    status: HttpStatus.OK,
+    description: 'KBZPay verification requested list retrieved',
+  })
+  async listVerificationRequested(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
+    const rows = await this.listKbzPayVerificationRequestedUseCase.execute(
+      user.sub,
+    );
+    return ApiResponseDto.success(
+      rows.map((row) => new PendingKbzPayVerificationDto(row)),
+      'KBZPay verification requested list retrieved',
+    );
+  }
+
+  @Get('kbzpay/money-check')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List KBZPay money check list (transaction submitted)',
+  })
+  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
+    status: HttpStatus.OK,
+    description: 'KBZPay money check list retrieved',
+  })
+  async listMoneyCheck(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
+    const rows = await this.listKbzPayMoneyCheckUseCase.execute(user.sub);
+    return ApiResponseDto.success(
+      rows.map((row) => new PendingKbzPayVerificationDto(row)),
+      'KBZPay money check list retrieved',
+    );
+  }
+
+  @Get('kbzpay/verified-users')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List KBZPay verified users',
+  })
+  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
+    status: HttpStatus.OK,
+    description: 'KBZPay verified users list retrieved',
+  })
+  async listVerifiedUsers(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
+    const rows = await this.listKbzPayVerifiedUsersUseCase.execute(user.sub);
+    return ApiResponseDto.success(
+      rows.map((row) => new PendingKbzPayVerificationDto(row)),
+      'KBZPay verified users list retrieved',
+    );
+  }
+
+  @Get('kbzpay/registered-accounts')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List KBZPay accounts registered (no verification request yet)',
+  })
+  @ApiArraySuccessResponse(PendingKbzPayVerificationDto, {
+    status: HttpStatus.OK,
+    description: 'KBZPay registered accounts list retrieved',
+  })
+  async listRegisteredAccounts(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ApiResponseDto<PendingKbzPayVerificationDto[]>> {
+    const rows = await this.listKbzPayRegisteredAccountsUseCase.execute(
+      user.sub,
+    );
+    return ApiResponseDto.success(
+      rows.map((row) => new PendingKbzPayVerificationDto(row)),
+      'KBZPay registered accounts list retrieved',
+    );
   }
 }

@@ -39,6 +39,18 @@ export class RequestKbzPayVerificationUseCase {
 
     const extraMessage = dto.message ? `\n\nUser message: ${dto.message}` : '';
 
+    const adminIds = await this.userRepository.findAdminUserIds();
+    await Promise.all(
+      adminIds.map((adminId) =>
+        this.userRepository.createNotification({
+          userId: adminId,
+          title: 'KBZPay Verification Requested',
+          message: `A user requested KBZPay verification.\n\nUser: ${authData.user.nickname} (${authData.user.phone})\nKBZPay: ${kbz.phoneNumber}`,
+          referenceId: userId,
+        }),
+      ),
+    );
+
     await this.userRepository.createNotification({
       userId,
       title: 'KBZPay Verification Pending',

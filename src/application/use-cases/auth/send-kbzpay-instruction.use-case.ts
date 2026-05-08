@@ -48,6 +48,13 @@ export class SendKbzPayInstructionUseCase {
       referenceId: targetUserId,
     });
 
+    await this.userRepository.createNotification({
+      userId: adminUserId,
+      title: 'KBZPay Instruction Sent',
+      message: `Transfer instruction sent to user ${targetUser.phone}.\n\nTransfer phone: ${dto.adminPhoneForTransfer}`,
+      referenceId: targetUserId,
+    });
+
     return new VerificationActionResultDto('KBZPAY_TRANSFER_INSTRUCTION_SENT');
   }
 }
