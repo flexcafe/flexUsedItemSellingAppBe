@@ -7,6 +7,7 @@ import {
 import { GetPointsSummaryUseCase } from './get-points-summary.use-case.js';
 import { RequestWithdrawalUseCase } from './request-withdrawal.use-case.js';
 import { ManagePointConfigUseCase } from './manage-point-config.use-case.js';
+import { ListClientRankConfigUseCase } from './list-client-rank-config.use-case.js';
 import type { IPointsRepository } from '../../../domain/repositories/points.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { UserEntity } from '../../../domain/entities/user.entity.js';
@@ -184,6 +185,28 @@ describe('Points use-cases', () => {
       await expect(
         useCase.execute('user-1', { amount: 10 }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe(ListClientRankConfigUseCase.name, () => {
+    it('returns rank rows from repository', async () => {
+      const pointsRepo = buildPointsRepoMock();
+      pointsRepo.getRankConfigs.mockResolvedValue([
+        {
+          tier: RankTier.NEWBIE,
+          minPoints: 0,
+          maxPoints: 99,
+          label: 'Newbie',
+          badgeUrl: null,
+          sortOrder: 1,
+        },
+      ]);
+      const useCase = new ListClientRankConfigUseCase(pointsRepo);
+      const rows = await useCase.execute();
+      expect(pointsRepo.getRankConfigs).toHaveBeenCalledTimes(1);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.tier).toBe(RankTier.NEWBIE);
+      expect(rows[0]?.minPoints).toBe(0);
     });
   });
 

@@ -22,6 +22,14 @@ Frontend profile usage:
 - pendingWithdrawalAmount is already reserved by existing PENDING withdrawal requests.
 - currentRankConfig describes the current tier; nextRankConfig helps show progress to the next tier.`;
 
+export const CLIENT_RANK_CONFIG_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
+
+Public rank ladder for client apps (help screen, onboarding, rank explainer):
+- Returns the same tier rows as admin GET .../points/rank-config: tier, minPoints, maxPoints (null = no upper cap), label, badgeUrl, sortOrder.
+- If the database has no rank_configs rows yet, the API returns built-in defaults (Newbie through VIP).
+- Use minPoints/maxPoints to explain copy like "Bronze: 100–299 points"; VIP uses maxPoints null.
+- This endpoint is public (no JWT) so you can show the ladder before login if needed.`;
+
 export const CLIENT_TRANSACTION_STATS_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 
 Frontend transaction stats usage:

@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from '../../../common/decorators/public.decorator.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
@@ -26,9 +27,11 @@ import { GetPublicUserProfileUseCase } from '../../../application/use-cases/poin
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
+import { ListClientRankConfigUseCase } from '../../../application/use-cases/points/list-client-rank-config.use-case.js';
 import {
   CreateReviewDto,
   PointsSummaryDto,
+  RankConfigResponseDto,
   PublicUserProfileDto,
   RequestWithdrawalDto,
   ReviewResponseDto,
@@ -38,6 +41,7 @@ import {
 import {
   CLIENT_CREATE_REVIEW_DOC,
   CLIENT_POINTS_SUMMARY_DOC,
+  CLIENT_RANK_CONFIG_DOC,
   CLIENT_PUBLIC_PROFILE_DOC,
   CLIENT_REQUEST_WITHDRAWAL_DOC,
   CLIENT_TRANSACTION_STATS_DOC,
@@ -56,7 +60,24 @@ export class ClientPointsController {
     private readonly createTransactionReviewUseCase: CreateTransactionReviewUseCase,
     private readonly requestWithdrawalUseCase: RequestWithdrawalUseCase,
     private readonly listMyWithdrawalsUseCase: ListMyWithdrawalsUseCase,
+    private readonly listClientRankConfigUseCase: ListClientRankConfigUseCase,
   ) {}
+
+  @Public()
+  @Get('profile/rank-config')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List rank tiers and point thresholds (public)',
+    description: CLIENT_RANK_CONFIG_DOC,
+  })
+  @ApiArraySuccessResponse(RankConfigResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Rank configuration for displaying the points ladder',
+  })
+  async listRankConfig(): Promise<ApiResponseDto<RankConfigResponseDto[]>> {
+    const rows = await this.listClientRankConfigUseCase.execute();
+    return ApiResponseDto.success(rows, 'Rank configuration retrieved');
+  }
 
   @Get('profile/points')
   @ApiOperation({

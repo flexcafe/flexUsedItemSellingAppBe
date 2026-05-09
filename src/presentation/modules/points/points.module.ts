@@ -7,6 +7,7 @@ import { GetPublicUserProfileUseCase } from '../../../application/use-cases/poin
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
+import { ListClientRankConfigUseCase } from '../../../application/use-cases/points/list-client-rank-config.use-case.js';
 import { ListWithdrawalsUseCase } from '../../../application/use-cases/points/list-withdrawals.use-case.js';
 import { ApproveWithdrawalUseCase } from '../../../application/use-cases/points/approve-withdrawal.use-case.js';
 import { RejectWithdrawalUseCase } from '../../../application/use-cases/points/reject-withdrawal.use-case.js';
@@ -26,6 +27,7 @@ import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.in
     CreateTransactionReviewUseCase,
     RequestWithdrawalUseCase,
     ListMyWithdrawalsUseCase,
+    ListClientRankConfigUseCase,
     ListWithdrawalsUseCase,
     ApproveWithdrawalUseCase,
     RejectWithdrawalUseCase,
