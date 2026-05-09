@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  POINTS_REPOSITORY,
+  type IPointsRepository,
+} from '../../../domain/repositories/points.repository.interface.js';
+import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import { VerifyEmailVerificationDto } from '../../dtos/auth/verify-email-verification.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
 
@@ -14,6 +19,8 @@ export class VerifyEmailVerificationUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(POINTS_REPOSITORY)
+    private readonly pointsRepository: IPointsRepository,
   ) {}
 
   async execute(
@@ -37,6 +44,14 @@ export class VerifyEmailVerificationUseCase {
 
     await this.userRepository.markEmailVerificationVerified(verification.id);
     await this.userRepository.markUserEmailVerified(dto.email);
+
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (user) {
+      await this.pointsRepository.grantAccountLifetimeMilestoneBonus(
+        user.id,
+        PointSourceType.EMAIL_VERIFIED_BONUS,
+      );
+    }
 
     return new VerificationActionResultDto('EMAIL_VERIFIED');
   }

@@ -1,0 +1,11 @@
+-- AlterEnum
+ALTER TYPE "PointSourceType" ADD VALUE 'REGISTRATION_BONUS';
+
+-- AlterEnum
+ALTER TYPE "PointSourceType" ADD VALUE 'PHONE_VERIFIED_BONUS';
+
+-- AlterEnum
+ALTER TYPE "PointSourceType" ADD VALUE 'EMAIL_VERIFIED_BONUS';
+
+-- AlterEnum
+ALTER TYPE "PointSourceType" ADD VALUE 'KBZPAY_VERIFIED_BONUS';

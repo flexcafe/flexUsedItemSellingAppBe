@@ -119,6 +119,10 @@ enum PointSourceType {
   ADMIN_GRANT
   REFERRAL_BONUS
   WITHDRAWAL
+  REGISTRATION_BONUS
+  PHONE_VERIFIED_BONUS
+  EMAIL_VERIFIED_BONUS
+  KBZPAY_VERIFIED_BONUS
 }
 
 // ── Withdrawal ───────────────────────────────────────────────────────────────

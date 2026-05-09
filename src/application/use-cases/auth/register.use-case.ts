@@ -10,6 +10,11 @@ import { randomBytes, randomInt } from 'crypto';
 import { hash } from 'bcrypt';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  POINTS_REPOSITORY,
+  type IPointsRepository,
+} from '../../../domain/repositories/points.repository.interface.js';
+import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
 import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
 import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
@@ -32,6 +37,8 @@ export class RegisterUseCase {
     private readonly emailSender: IEmailSender,
     @Inject(SMS_SENDER)
     private readonly smsSender: ISmsSender,
+    @Inject(POINTS_REPOSITORY)
+    private readonly pointsRepository: IPointsRepository,
   ) {}
 
   async execute(dto: RegisterDto): Promise<VerificationActionResultDto> {
@@ -59,7 +66,7 @@ export class RegisterUseCase {
     const hashedPassword = await hash(dto.password, 12);
     const referralCode = await this.generateUniqueReferralCode();
 
-    await this.userRepository.create({
+    const createdUser = await this.userRepository.create({
       registrationType: RegistrationType.PHONE_ONLY,
       phone: dto.phone,
       email: dto.email,
@@ -82,6 +89,11 @@ export class RegisterUseCase {
         phoneNumber: dto.kbzPayPhoneNumber,
       },
     });
+
+    await this.pointsRepository.grantAccountLifetimeMilestoneBonus(
+      createdUser.id,
+      PointSourceType.REGISTRATION_BONUS,
+    );
 
     const otpCode = this.generateOtpCode();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);

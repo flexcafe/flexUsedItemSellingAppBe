@@ -27,6 +27,8 @@ import type {
   IUserRepository,
   UserAuthData,
 } from '../../../domain/repositories/user.repository.interface.js';
+import type { IPointsRepository } from '../../../domain/repositories/points.repository.interface.js';
+import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import {
   ProfileVerificationTagAction,
   ProfileVerificationTagStatus,
@@ -134,6 +136,31 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findKbzPayVerifiedUsers: jest.fn(),
     findKbzPayRegisteredAccounts: jest.fn(),
     getAuthDataByUserId: jest.fn(),
+    setProfileAvatar: jest.fn(),
+  };
+}
+
+function buildPointsRepoMock(): jest.Mocked<IPointsRepository> {
+  return {
+    getUserPointsSummary: jest.fn(),
+    getUserTransactionStats: jest.fn(),
+    getPublicUserProfile: jest.fn(),
+    getStarPointConfigs: jest.fn(),
+    upsertStarPointConfigs: jest.fn(),
+    getRankConfigs: jest.fn(),
+    upsertRankConfigs: jest.fn(),
+    findTransactionReviewContext: jest.fn(),
+    hasReview: jest.fn(),
+    createReviewAndAwardPoints: jest.fn(),
+    createWithdrawalRequest: jest.fn(),
+    findUserWithdrawalRequests: jest.fn(),
+    findWithdrawalRequests: jest.fn(),
+    approveWithdrawal: jest.fn(),
+    rejectWithdrawal: jest.fn(),
+    markWithdrawalPaid: jest.fn(),
+    grantAccountLifetimeMilestoneBonus: jest
+      .fn()
+      .mockResolvedValue(true),
   };
 }
 
@@ -158,7 +185,14 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const jwt = {
         sign: jest.fn().mockReturnValue('token'),
       } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new RegisterUseCase(
+        repo,
+        jwt,
+        emailSender,
+        smsSender,
+        pointsRepo,
+      );
 
       await expect(
         useCase.execute({
@@ -177,6 +211,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           gpsLongitude: 96.17,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
     });
 
     it('rejects duplicate phone/email', async () => {
@@ -189,7 +224,14 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const jwt = {
         sign: jest.fn().mockReturnValue('token'),
       } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new RegisterUseCase(
+        repo,
+        jwt,
+        emailSender,
+        smsSender,
+        pointsRepo,
+      );
 
       await expect(
         useCase.execute({
@@ -208,6 +250,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           gpsLongitude: 96.17,
         }),
       ).rejects.toBeInstanceOf(ConflictException);
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
     });
 
     it('rejects invalid referralId', async () => {
@@ -220,7 +263,14 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const jwt = {
         sign: jest.fn().mockReturnValue('token'),
       } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new RegisterUseCase(
+        repo,
+        jwt,
+        emailSender,
+        smsSender,
+        pointsRepo,
+      );
 
       await expect(
         useCase.execute({
@@ -240,6 +290,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           referralId: 'BADCODE',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
     });
 
     it('creates user + initializes OTP & email verification + returns pending action (no token)', async () => {
@@ -259,7 +310,14 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const jwt = {
         sign: jest.fn().mockReturnValue('access-token'),
       } as unknown as JwtService;
-      const useCase = new RegisterUseCase(repo, jwt, emailSender, smsSender);
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new RegisterUseCase(
+        repo,
+        jwt,
+        emailSender,
+        smsSender,
+        pointsRepo,
+      );
 
       const res = await useCase.execute({
         nickname: 'Nick',
@@ -289,6 +347,10 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(emailSender.send).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledTimes(0);
       expect(res.action).toBe('REGISTRATION_PENDING_VERIFICATION');
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
+        'user-new',
+        PointSourceType.REGISTRATION_BONUS,
+      );
     });
   });
 
@@ -615,7 +677,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         attempts: 0,
         maxAttempts: 5,
       });
-      const useCase = new VerifyPhoneOtpUseCase(repo);
+      repo.findByPhone.mockResolvedValue(buildUser({ id: 'user-1' }));
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new VerifyPhoneOtpUseCase(repo, pointsRepo);
       const res = await useCase.execute({
         phone: '+959123456789',
         code: '123456',
@@ -623,6 +687,10 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(res.action).toBe('PHONE_VERIFIED');
       expect(repo.markPhoneOtpVerified).toHaveBeenCalledWith('otp1');
       expect(repo.markUserPhoneVerified).toHaveBeenCalledWith('+959123456789');
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
+        'user-1',
+        PointSourceType.PHONE_VERIFIED_BONUS,
+      );
     });
 
     it('SendEmailVerificationUseCase calls createEmailVerification', async () => {
@@ -645,7 +713,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         status: VerificationStatus.PENDING,
         expiresAt: new Date(Date.now() + 60_000),
       });
-      const useCase = new VerifyEmailVerificationUseCase(repo);
+      repo.findByEmail.mockResolvedValue(buildUser({ id: 'user-1' }));
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new VerifyEmailVerificationUseCase(repo, pointsRepo);
       const res = await useCase.execute({
         email: 'john@example.com',
         token: 'tok',
@@ -654,6 +724,10 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(repo.markEmailVerificationVerified).toHaveBeenCalledWith('ev1');
       expect(repo.markUserEmailVerified).toHaveBeenCalledWith(
         'john@example.com',
+      );
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
+        'user-1',
+        PointSourceType.EMAIL_VERIFIED_BONUS,
       );
     });
 
@@ -795,13 +869,18 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         if (id === 'admin-1') return buildUser({ id, adminRoleId: 'role-1' });
         return buildUser({ id });
       });
-      const useCase = new AdminVerifyKbzPayUseCase(repo);
+      const pointsRepo = buildPointsRepoMock();
+      const useCase = new AdminVerifyKbzPayUseCase(repo, pointsRepo);
       const res = await useCase.execute('admin-1', 'user-1', {});
       expect(res.action).toBe('KBZPAY_VERIFIED');
       expect(repo.markKbzPayVerified).toHaveBeenCalledWith(
         'user-1',
         'admin-1',
         undefined,
+      );
+      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
+        'user-1',
+        PointSourceType.KBZPAY_VERIFIED_BONUS,
       );
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
       expect(repo.createNotification).toHaveBeenCalledWith(

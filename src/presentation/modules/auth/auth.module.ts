@@ -21,7 +21,9 @@ import { ListKbzPayVerifiedUsersUseCase } from '../../../application/use-cases/a
 import { ListKbzPayRegisteredAccountsUseCase } from '../../../application/use-cases/auth/list-kbzpay-registered-accounts.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
+import { PointsRepository } from '../../../infrastructure/repositories/points.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
+import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
 import { EMAIL_SENDER } from '../../../domain/services/email-sender.interface.js';
 import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
 import { BrevoSmtpEmailSender } from '../../../infrastructure/email/brevo-smtp-email.sender.js';
@@ -68,6 +70,10 @@ import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms
     {
       provide: USER_REPOSITORY,
       useClass: UserRepository,
+    },
+    {
+      provide: POINTS_REPOSITORY,
+      useClass: PointsRepository,
     },
   ],
   exports: [JwtModule, JwtStrategy],

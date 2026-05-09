@@ -11,7 +11,8 @@ export const POINTS_SYSTEM_OVERVIEW_DOC = `Pointing, ranking, review, and withdr
 10. When admin approves, the requested points are deducted from the user and the user is notified that payout is pending.
 11. Admin manually sends money through KBZPay outside the system, then marks the withdrawal paid with the KBZPay transfer reference.
 12. When admin marks paid, the system saves the transfer reference and sends a notification to the user with that transaction number.
-13. Point-related notifications use eventKey + metadata (same pattern as KBZPay) and trigger Pusher on private-user-{id} for realtime inbox updates. Client event keys: POINTS_REVIEW_RECEIVED_CLIENT, POINTS_WITHDRAWAL_REQUESTED_CLIENT, POINTS_WITHDRAWAL_APPROVED_CLIENT, POINTS_WITHDRAWAL_REJECTED_CLIENT, POINTS_WITHDRAWAL_PAID_CLIENT. Admins receive POINTS_WITHDRAWAL_REQUESTED_ADMIN when a user submits a new withdrawal request.`;
+13. Point-related notifications use eventKey + metadata (same pattern as KBZPay) and trigger Pusher on private-user-{id} for realtime inbox updates. Client event keys: POINTS_REVIEW_RECEIVED_CLIENT, POINTS_WITHDRAWAL_REQUESTED_CLIENT, POINTS_WITHDRAWAL_APPROVED_CLIENT, POINTS_WITHDRAWAL_REJECTED_CLIENT, POINTS_WITHDRAWAL_PAID_CLIENT. Admins receive POINTS_WITHDRAWAL_REQUESTED_ADMIN when a user submits a new withdrawal request.
+14. One-time account milestone bonuses (100 points each, once per lifetime, tracked on the point ledger): after successful registration; after phone OTP verification; after email verification; after admin KBZPay verification. Notification event keys: POINTS_BONUS_REGISTRATION_CLIENT, POINTS_BONUS_PHONE_VERIFIED_CLIENT, POINTS_BONUS_EMAIL_VERIFIED_CLIENT, POINTS_BONUS_KBZPAY_VERIFIED_CLIENT.`;
 
 export const CLIENT_POINTS_SUMMARY_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 

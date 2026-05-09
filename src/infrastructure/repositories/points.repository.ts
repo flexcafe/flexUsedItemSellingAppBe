@@ -29,12 +29,22 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../domain/repositories/user.repository.interface.js';
+import { PointSourceType as MilestonePointSource } from '../../domain/enums/point-source-type.enum.js';
 
 const {
-  PointSourceType,
+  PointSourceType: PrismaPointSourceType,
   TransactionStatus: PrismaTransactionStatus,
   WithdrawalStatus: PrismaWithdrawalStatus,
 } = PrismaPkg;
+
+const ACCOUNT_MILESTONE_BONUS_POINTS = 100;
+
+const ACCOUNT_MILESTONE_SOURCES = new Set<MilestonePointSource>([
+  MilestonePointSource.REGISTRATION_BONUS,
+  MilestonePointSource.PHONE_VERIFIED_BONUS,
+  MilestonePointSource.EMAIL_VERIFIED_BONUS,
+  MilestonePointSource.KBZPAY_VERIFIED_BONUS,
+]);
 
 const DEFAULT_STAR_POINT_CONFIGS: StarPointConfigData[] = [
   { starCount: 1, pointsAwarded: 1 },
@@ -385,7 +395,7 @@ export class PointsRepository implements IPointsRepository {
         data: {
           userId: data.revieweeId,
           amount: pointsAwarded,
-          sourceType: PointSourceType.REVIEW_RECEIVED,
+          sourceType: PrismaPointSourceType.REVIEW_RECEIVED,
           sourceId: createdReview.id,
           description: `${data.stars}-star review received`,
           balanceAfter: nextBalance,
@@ -522,7 +532,7 @@ export class PointsRepository implements IPointsRepository {
         data: {
           userId: withdrawal.userId,
           amount: -withdrawal.amount,
-          sourceType: PointSourceType.WITHDRAWAL,
+          sourceType: PrismaPointSourceType.WITHDRAWAL,
           sourceId: withdrawal.id,
           description: 'Point withdrawal approved',
           balanceAfter: nextBalance,
@@ -651,6 +661,135 @@ export class PointsRepository implements IPointsRepository {
     });
 
     return mapped;
+  }
+
+  async grantAccountLifetimeMilestoneBonus(
+    userId: string,
+    sourceType: MilestonePointSource,
+  ): Promise<boolean> {
+    if (!ACCOUNT_MILESTONE_SOURCES.has(sourceType)) {
+      throw new BadRequestException('Invalid account milestone bonus type');
+    }
+
+    const prismaSource = sourceType as unknown as PrismaPkg.PointSourceType;
+    const rankConfigs = await this.getRankConfigs();
+    let granted = false;
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.pointTransaction.findFirst({
+        where: { userId, sourceType: prismaSource },
+        select: { id: true },
+      });
+      if (existing) {
+        return;
+      }
+
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { totalPoints: true },
+      });
+      if (!user) {
+        return;
+      }
+
+      const nextBalance = user.totalPoints + ACCOUNT_MILESTONE_BONUS_POINTS;
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          totalPoints: nextBalance,
+          currentRank: this.findRankTierForPoints(rankConfigs, nextBalance),
+        },
+      });
+
+      await tx.pointTransaction.create({
+        data: {
+          userId,
+          amount: ACCOUNT_MILESTONE_BONUS_POINTS,
+          sourceType: prismaSource,
+          sourceId: userId,
+          description: this.milestoneBonusLedgerDescription(sourceType),
+          balanceAfter: nextBalance,
+        },
+      });
+      granted = true;
+    });
+
+    if (!granted) {
+      return false;
+    }
+
+    const { eventKey, title, message } =
+      this.milestoneBonusNotificationCopy(sourceType);
+    await this.userRepository.createNotification({
+      userId,
+      eventKey,
+      metadata: {
+        amount: ACCOUNT_MILESTONE_BONUS_POINTS,
+        sourceType,
+      },
+      title,
+      message,
+      referenceId: userId,
+    });
+
+    return true;
+  }
+
+  private milestoneBonusLedgerDescription(
+    sourceType: MilestonePointSource,
+  ): string {
+    switch (sourceType) {
+      case MilestonePointSource.REGISTRATION_BONUS:
+        return 'One-time registration bonus';
+      case MilestonePointSource.PHONE_VERIFIED_BONUS:
+        return 'One-time phone verification bonus';
+      case MilestonePointSource.EMAIL_VERIFIED_BONUS:
+        return 'One-time email verification bonus';
+      case MilestonePointSource.KBZPAY_VERIFIED_BONUS:
+        return 'One-time KBZPay verification bonus';
+      default:
+        return 'Account milestone bonus';
+    }
+  }
+
+  private milestoneBonusNotificationCopy(sourceType: MilestonePointSource): {
+    eventKey: string;
+    title: string;
+    message: string;
+  } {
+    const amount = ACCOUNT_MILESTONE_BONUS_POINTS;
+    switch (sourceType) {
+      case MilestonePointSource.REGISTRATION_BONUS:
+        return {
+          eventKey: 'POINTS_BONUS_REGISTRATION_CLIENT',
+          title: 'Welcome bonus',
+          message: `You received ${amount} bonus points for registering your account.`,
+        };
+      case MilestonePointSource.PHONE_VERIFIED_BONUS:
+        return {
+          eventKey: 'POINTS_BONUS_PHONE_VERIFIED_CLIENT',
+          title: 'Phone verified',
+          message: `You received ${amount} bonus points for verifying your phone number.`,
+        };
+      case MilestonePointSource.EMAIL_VERIFIED_BONUS:
+        return {
+          eventKey: 'POINTS_BONUS_EMAIL_VERIFIED_CLIENT',
+          title: 'Email verified',
+          message: `You received ${amount} bonus points for verifying your email.`,
+        };
+      case MilestonePointSource.KBZPAY_VERIFIED_BONUS:
+        return {
+          eventKey: 'POINTS_BONUS_KBZPAY_VERIFIED_CLIENT',
+          title: 'KBZPay verified',
+          message: `You received ${amount} bonus points for completing KBZPay verification.`,
+        };
+      default:
+        return {
+          eventKey: 'POINTS_BONUS_CLIENT',
+          title: 'Bonus points',
+          message: `You received ${amount} bonus points.`,
+        };
+    }
   }
 
   private async getPendingWithdrawalAmount(userId: string): Promise<number> {

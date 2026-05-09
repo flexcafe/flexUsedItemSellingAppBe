@@ -1,4 +1,5 @@
 import { RankTier } from '../enums/rank-tier.enum.js';
+import { PointSourceType } from '../enums/point-source-type.enum.js';
 import { WithdrawalStatus } from '../enums/withdrawal-status.enum.js';
 import { TransactionStatus } from '../enums/transaction-status.enum.js';
 
@@ -145,6 +146,16 @@ export interface IPointsRepository {
   markWithdrawalPaid(
     data: AdminMarkWithdrawalPaidData,
   ): Promise<WithdrawalRequestData>;
+
+  /**
+   * Awards a fixed one-time bonus for account milestones (registration, verifications).
+   * Idempotent per user and sourceType via the point ledger.
+   * @returns true if the bonus was granted, false if already claimed or user missing.
+   */
+  grantAccountLifetimeMilestoneBonus(
+    userId: string,
+    sourceType: PointSourceType,
+  ): Promise<boolean>;
 }
 
 export const POINTS_REPOSITORY = Symbol('POINTS_REPOSITORY');

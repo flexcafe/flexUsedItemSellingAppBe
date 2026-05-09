@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  POINTS_REPOSITORY,
+  type IPointsRepository,
+} from '../../../domain/repositories/points.repository.interface.js';
+import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import { AdminVerifyKbzPayDto } from '../../dtos/auth/admin-verify-kbzpay.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
 
@@ -14,6 +19,8 @@ export class AdminVerifyKbzPayUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(POINTS_REPOSITORY)
+    private readonly pointsRepository: IPointsRepository,
   ) {}
 
   async execute(
@@ -39,6 +46,11 @@ export class AdminVerifyKbzPayUseCase {
       targetUserId,
       adminUserId,
       dto.adminNote,
+    );
+
+    await this.pointsRepository.grantAccountLifetimeMilestoneBonus(
+      targetUserId,
+      PointSourceType.KBZPAY_VERIFIED_BONUS,
     );
 
     await this.userRepository.createNotification({
