@@ -10,7 +10,8 @@ export const POINTS_SYSTEM_OVERVIEW_DOC = `Pointing, ranking, review, and withdr
 9. Withdrawal requests appear in the admin dashboard. Admin can approve or reject pending requests.
 10. When admin approves, the requested points are deducted from the user and the user is notified that payout is pending.
 11. Admin manually sends money through KBZPay outside the system, then marks the withdrawal paid with the KBZPay transfer reference.
-12. When admin marks paid, the system saves the transfer reference and sends a notification to the user with that transaction number.`;
+12. When admin marks paid, the system saves the transfer reference and sends a notification to the user with that transaction number.
+13. Point-related notifications use eventKey + metadata (same pattern as KBZPay) and trigger Pusher on private-user-{id} for realtime inbox updates. Client event keys: POINTS_REVIEW_RECEIVED_CLIENT, POINTS_WITHDRAWAL_REQUESTED_CLIENT, POINTS_WITHDRAWAL_APPROVED_CLIENT, POINTS_WITHDRAWAL_REJECTED_CLIENT, POINTS_WITHDRAWAL_PAID_CLIENT. Admins receive POINTS_WITHDRAWAL_REQUESTED_ADMIN when a user submits a new withdrawal request.`;
 
 export const CLIENT_POINTS_SUMMARY_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 
@@ -42,7 +43,8 @@ Frontend withdrawal usage:
 - User enters the withdrawal amount in profile and submits this endpoint.
 - The amount must be at least 1 and cannot exceed availableWithdrawalPoints from GET /client/profile/points.
 - User KBZPay must be verified before requesting withdrawal.
-- This creates a PENDING request for admin dashboard review.`;
+- This creates a PENDING request for admin dashboard review.
+- The user receives a POINTS_WITHDRAWAL_REQUESTED_CLIENT notification; each active admin receives POINTS_WITHDRAWAL_REQUESTED_ADMIN (metadata includes withdrawalId, requesterUserId, nickname, phone, amount).`;
 
 export const CLIENT_WITHDRAWAL_HISTORY_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 

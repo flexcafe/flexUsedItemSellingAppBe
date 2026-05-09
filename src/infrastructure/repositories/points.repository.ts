@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -24,9 +25,12 @@ import type {
   UserTransactionStatsData,
   WithdrawalRequestData,
 } from '../../domain/repositories/points.repository.interface.js';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../domain/repositories/user.repository.interface.js';
 
 const {
-  NotificationType,
   PointSourceType,
   TransactionStatus: PrismaTransactionStatus,
   WithdrawalStatus: PrismaWithdrawalStatus,
@@ -85,7 +89,11 @@ const DEFAULT_RANK_CONFIGS: RankConfigData[] = [
 
 @Injectable()
 export class PointsRepository implements IPointsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   async getUserPointsSummary(
     userId: string,
@@ -384,17 +392,22 @@ export class PointsRepository implements IPointsRepository {
         },
       });
 
-      await tx.notification.create({
-        data: {
-          userId: data.revieweeId,
-          type: NotificationType.POINTS_RECEIVED,
-          title: 'Points received',
-          message: `You received ${pointsAwarded} points from a ${data.stars}-star review.`,
-          referenceId: createdReview.id,
-        },
-      });
-
       return createdReview;
+    });
+
+    await this.userRepository.createNotification({
+      userId: data.revieweeId,
+      eventKey: 'POINTS_REVIEW_RECEIVED_CLIENT',
+      metadata: {
+        reviewId: review.id,
+        transactionId: data.transactionId,
+        stars: data.stars,
+        pointsAwarded,
+        reviewerId: data.reviewerId,
+      },
+      title: 'Points received',
+      message: `You received ${pointsAwarded} points from a ${data.stars}-star review.`,
+      referenceId: review.id,
     });
 
     return this.mapReview(review);
@@ -412,16 +425,40 @@ export class PointsRepository implements IPointsRepository {
       include: WITHDRAWAL_INCLUDE,
     });
 
-    await this.prisma.notification.create({
-      data: {
-        userId: data.userId,
-        type: NotificationType.WITHDRAWAL,
-        title: 'Withdrawal requested',
-        message:
-          'Your point withdrawal request was submitted and is waiting for admin review.',
-        referenceId: row.id,
+    await this.userRepository.createNotification({
+      userId: data.userId,
+      eventKey: 'POINTS_WITHDRAWAL_REQUESTED_CLIENT',
+      metadata: {
+        withdrawalId: row.id,
+        amount: data.amount,
       },
+      title: 'Withdrawal requested',
+      message:
+        'Your point withdrawal request was submitted and is waiting for admin review.',
+      referenceId: row.id,
     });
+
+    const adminIds = await this.userRepository.findAdminUserIds();
+    const nickname = row.user.nickname;
+    const phone = row.user.phone;
+    await Promise.all(
+      adminIds.map((adminId) =>
+        this.userRepository.createNotification({
+          userId: adminId,
+          eventKey: 'POINTS_WITHDRAWAL_REQUESTED_ADMIN',
+          metadata: {
+            withdrawalId: row.id,
+            requesterUserId: data.userId,
+            nickname,
+            phone,
+            amount: data.amount,
+          },
+          title: 'Point withdrawal requested',
+          message: `User ${nickname} (${phone}) requested withdrawal of ${data.amount} points.`,
+          referenceId: row.id,
+        }),
+      ),
+    );
 
     return this.mapWithdrawal(row);
   }
@@ -503,21 +540,25 @@ export class PointsRepository implements IPointsRepository {
         include: WITHDRAWAL_INCLUDE,
       });
 
-      await tx.notification.create({
-        data: {
-          userId: withdrawal.userId,
-          type: NotificationType.WITHDRAWAL,
-          title: 'Withdrawal approved',
-          message:
-            'Your withdrawal was approved. Admin will transfer money by KBZPay manually.',
-          referenceId: withdrawal.id,
-        },
-      });
-
       return updated;
     });
 
-    return this.mapWithdrawal(row);
+    const mapped = this.mapWithdrawal(row);
+    await this.userRepository.createNotification({
+      userId: mapped.userId,
+      eventKey: 'POINTS_WITHDRAWAL_APPROVED_CLIENT',
+      metadata: {
+        withdrawalId: mapped.id,
+        amount: mapped.amount,
+        adminNote: mapped.adminNote,
+      },
+      title: 'Withdrawal approved',
+      message:
+        'Your withdrawal was approved. Admin will transfer money by KBZPay manually.',
+      referenceId: mapped.id,
+    });
+
+    return mapped;
   }
 
   async rejectWithdrawal(
@@ -545,21 +586,25 @@ export class PointsRepository implements IPointsRepository {
         include: WITHDRAWAL_INCLUDE,
       });
 
-      await tx.notification.create({
-        data: {
-          userId: withdrawal.userId,
-          type: NotificationType.WITHDRAWAL,
-          title: 'Withdrawal rejected',
-          message:
-            data.adminNote ?? 'Your withdrawal request was rejected by admin.',
-          referenceId: withdrawal.id,
-        },
-      });
-
       return updated;
     });
 
-    return this.mapWithdrawal(row);
+    const mapped = this.mapWithdrawal(row);
+    await this.userRepository.createNotification({
+      userId: mapped.userId,
+      eventKey: 'POINTS_WITHDRAWAL_REJECTED_CLIENT',
+      metadata: {
+        withdrawalId: mapped.id,
+        amount: mapped.amount,
+        adminNote: mapped.adminNote,
+      },
+      title: 'Withdrawal rejected',
+      message:
+        data.adminNote ?? 'Your withdrawal request was rejected by admin.',
+      referenceId: mapped.id,
+    });
+
+    return mapped;
   }
 
   async markWithdrawalPaid(
@@ -588,20 +633,24 @@ export class PointsRepository implements IPointsRepository {
         include: WITHDRAWAL_INCLUDE,
       });
 
-      await tx.notification.create({
-        data: {
-          userId: withdrawal.userId,
-          type: NotificationType.WITHDRAWAL,
-          title: 'Withdrawal paid',
-          message: `Admin sent your KBZPay withdrawal. Transaction number: ${data.kbzTransferRef}`,
-          referenceId: withdrawal.id,
-        },
-      });
-
       return updated;
     });
 
-    return this.mapWithdrawal(row);
+    const mapped = this.mapWithdrawal(row);
+    await this.userRepository.createNotification({
+      userId: mapped.userId,
+      eventKey: 'POINTS_WITHDRAWAL_PAID_CLIENT',
+      metadata: {
+        withdrawalId: mapped.id,
+        kbzTransferRef: data.kbzTransferRef,
+        amount: mapped.amount,
+      },
+      title: 'Withdrawal paid',
+      message: `Admin sent your KBZPay withdrawal. Transaction number: ${data.kbzTransferRef}`,
+      referenceId: mapped.id,
+    });
+
+    return mapped;
   }
 
   private async getPendingWithdrawalAmount(userId: string): Promise<number> {
