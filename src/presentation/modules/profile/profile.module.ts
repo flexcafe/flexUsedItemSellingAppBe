@@ -12,7 +12,9 @@ import { UserRepository } from '../../../infrastructure/repositories/user.reposi
 import { FacebookRepository } from '../../../infrastructure/repositories/facebook.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import { FACEBOOK_REPOSITORY } from '../../../domain/repositories/facebook.repository.interface.js';
+import { FACEBOOK_AUTH_SERVICE } from '../../../domain/services/facebook-auth.interface.js';
 import { FILE_STORAGE } from '../../../domain/services/file-storage.interface.js';
+import { FacebookGraphAuthService } from '../../../infrastructure/facebook/facebook-graph-auth.service.js';
 import { SupabaseFileStorageService } from '../../../infrastructure/storage/supabase-file-storage.service.js';
 
 @Module({
@@ -36,6 +38,10 @@ import { SupabaseFileStorageService } from '../../../infrastructure/storage/supa
     {
       provide: FILE_STORAGE,
       useClass: SupabaseFileStorageService,
+    },
+    {
+      provide: FACEBOOK_AUTH_SERVICE,
+      useClass: FacebookGraphAuthService,
     },
   ],
 })

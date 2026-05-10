@@ -125,11 +125,15 @@ export class ClientProfileController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Link Facebook account from profile (VPN allowed only for this endpoint)',
+      'Link Facebook account using verified Facebook access token (VPN allowed only for this endpoint)',
   })
   @ApiBooleanSuccessResponse({
     status: HttpStatus.OK,
     description: 'Facebook linked successfully',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid Facebook access token',
   })
   @ApiErrorResponse({
     status: HttpStatus.CONFLICT,

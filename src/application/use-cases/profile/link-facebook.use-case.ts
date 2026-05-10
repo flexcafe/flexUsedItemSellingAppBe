@@ -12,6 +12,10 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  FACEBOOK_AUTH_SERVICE,
+  type IFacebookAuthService,
+} from '../../../domain/services/facebook-auth.interface.js';
 import { LinkFacebookDto } from '../../dtos/profile/link-facebook.dto.js';
 
 @Injectable()
@@ -21,6 +25,8 @@ export class LinkFacebookUseCase {
     private readonly facebookRepository: IFacebookRepository,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(FACEBOOK_AUTH_SERVICE)
+    private readonly facebookAuthService: IFacebookAuthService,
   ) {}
 
   async execute(userId: string, dto: LinkFacebookDto): Promise<void> {
@@ -29,7 +35,11 @@ export class LinkFacebookUseCase {
       throw new NotFoundException('User not found');
     }
 
-    const owner = await this.userRepository.findByFacebookId(dto.facebookId);
+    const facebookUser = await this.facebookAuthService.verifyUserAccessToken(
+      dto.facebookAccessToken,
+    );
+
+    const owner = await this.userRepository.findByFacebookId(facebookUser.id);
     if (owner && owner.id !== userId) {
       throw new ConflictException(
         'This Facebook account is already linked to another user',
@@ -38,8 +48,8 @@ export class LinkFacebookUseCase {
 
     await this.facebookRepository.setFacebookLink({
       userId,
-      facebookId: dto.facebookId,
-      facebookName: dto.facebookName,
+      facebookId: facebookUser.id,
+      facebookName: facebookUser.name,
       facebookProfileUrl: dto.facebookProfileUrl,
     });
 
@@ -47,8 +57,8 @@ export class LinkFacebookUseCase {
       userId,
       eventKey: 'FACEBOOK_LINKED_CLIENT',
       metadata: {
-        facebookId: dto.facebookId,
-        facebookName: dto.facebookName,
+        facebookId: facebookUser.id,
+        facebookName: facebookUser.name,
         facebookProfileUrl: dto.facebookProfileUrl,
       },
       title: 'Facebook linked',
