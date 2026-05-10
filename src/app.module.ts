@@ -7,6 +7,7 @@ import {
   authBodyIdentifierTracker,
   authIpTracker,
 } from './common/throttler/auth-throttle.helpers.js';
+import { jwtUserSubTracker } from './common/throttler/jwt-user-throttle.helper.js';
 
 // Infrastructure
 import { DatabaseModule } from './infrastructure/database/database.module.js';
@@ -43,6 +44,31 @@ import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.mo
           ttl: 60_000,
           limit: 10,
           getTracker: authBodyIdentifierTracker,
+        },
+        // Client actions that fan out admin notifications (presentation-layer limits; see architecture.md)
+        {
+          name: 'admin-notify-ip',
+          ttl: 60_000,
+          limit: 40,
+          getTracker: authIpTracker,
+        },
+        {
+          name: 'admin-notify-user',
+          ttl: 3_600_000,
+          limit: 15,
+          getTracker: jwtUserSubTracker,
+        },
+        {
+          name: 'review-submit-ip',
+          ttl: 60_000,
+          limit: 60,
+          getTracker: authIpTracker,
+        },
+        {
+          name: 'review-submit-user',
+          ttl: 3_600_000,
+          limit: 80,
+          getTracker: jwtUserSubTracker,
         },
       ],
     }),

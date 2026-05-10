@@ -23,6 +23,7 @@ No layer should “reach around” another layer (e.g., controllers calling Pris
 - **What belongs here**
   - `@Controller()` route definitions
   - Guards, decorators usage (`@UseGuards`, `@CurrentUser`, `@Public`)
+  - HTTP rate limiting (`@Throttle`, `ThrottlerGuard`) for abuse-prone routes — configured in `AppModule` with named throttlers; per-route limits stay on controllers, not in use-cases
   - Swagger annotations (`@ApiTags`, `@ApiOperation`, `@ApiResponse`)
   - Request binding (`@Body`, `@Query`, `@Param`)
   - Route prefix conventions (`client/...`, `admin/dashboard/...`)

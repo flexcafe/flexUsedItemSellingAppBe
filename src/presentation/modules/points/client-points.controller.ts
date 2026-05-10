@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
@@ -128,6 +129,11 @@ export class ClientPointsController {
   }
 
   @Post('profile/withdrawals')
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 15, ttl: 3_600_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Request point withdrawal',
@@ -140,6 +146,10 @@ export class ClientPointsController {
   @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Not enough available points or KBZPay is not verified',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (protects admin notification fan-out)',
   })
   async requestWithdrawal(
     @CurrentUser() user: JwtPayload,
@@ -166,6 +176,11 @@ export class ClientPointsController {
   }
 
   @Post('transactions/:transactionId/review')
+  @Throttle({
+    'review-submit-ip': { limit: 60, ttl: 60_000 },
+    'review-submit-user': { limit: 80, ttl: 3_600_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Review buyer or seller after completed transaction',
@@ -182,6 +197,10 @@ export class ClientPointsController {
   @ApiErrorResponse({
     status: HttpStatus.CONFLICT,
     description: 'Current user already reviewed this transaction',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for review submissions',
   })
   async createReview(
     @CurrentUser() user: JwtPayload,

@@ -266,7 +266,11 @@ export class AuthController {
   }
 
   @Post('kbzpay/request-verification')
-  @UseGuards(JwtAuthGuard)
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 15, ttl: 3_600_000 },
+  })
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -291,6 +295,10 @@ export class AuthController {
     status: HttpStatus.NOT_FOUND,
     description: 'User or KBZPay account not found',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (protects admin notification fan-out)',
+  })
   async requestKbzPayVerification(
     @CurrentUser() user: JwtPayload,
     @Body() dto: RequestKbzPayVerificationDto,
@@ -306,7 +314,11 @@ export class AuthController {
   }
 
   @Post('kbzpay/submit-transaction')
-  @UseGuards(JwtAuthGuard)
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 15, ttl: 3_600_000 },
+  })
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -329,6 +341,10 @@ export class AuthController {
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'User or KBZPay account not found',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (protects admin notification fan-out)',
   })
   async submitKbzPayTransaction(
     @CurrentUser() user: JwtPayload,
