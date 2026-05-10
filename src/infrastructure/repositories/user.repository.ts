@@ -469,6 +469,9 @@ export class UserRepository implements IUserRepository {
           gpsLongitude: user.profile.gpsLongitude,
           isRegionVerified: user.profile.isRegionVerified,
           gpsVerifiedAt: user.profile.gpsVerifiedAt,
+          facebookName: user.profile.facebookName,
+          facebookProfileUrl: user.profile.facebookProfileUrl,
+          facebookLinkedAt: user.profile.facebookLinkedAt,
         }
       : null;
 

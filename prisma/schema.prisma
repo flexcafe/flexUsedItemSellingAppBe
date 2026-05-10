@@ -123,6 +123,13 @@ enum PointSourceType {
   PHONE_VERIFIED_BONUS
   EMAIL_VERIFIED_BONUS
   KBZPAY_VERIFIED_BONUS
+  FACEBOOK_FOLLOW_REWARD
+}
+
+enum FacebookFollowSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ── Withdrawal ───────────────────────────────────────────────────────────────
@@ -273,6 +280,7 @@ model User {
   buyerChatRooms     ChatRoom[]          @relation("BuyerChatRooms")
   sellerChatRooms    ChatRoom[]          @relation("SellerChatRooms")
   locationShares     LocationShare[]
+  facebookFollowSubmissions FacebookFollowSubmission[]
 
   // Admin (null for regular clients)
   adminRoleId String?    @map("admin_role_id")
@@ -304,11 +312,38 @@ model UserProfile {
 
   bio String? @db.Text
 
+  facebookName       String?   @map("facebook_name")
+  facebookProfileUrl String?   @map("facebook_profile_url")
+  facebookLinkedAt   DateTime? @map("facebook_linked_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([inputRegion])
   @@map("user_profiles")
+}
+
+model FacebookFollowSubmission {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  facebookName       String @map("facebook_name")
+  facebookProfileUrl String @map("facebook_profile_url")
+  facebookPageUrl    String @map("facebook_page_url")
+  screenshotUrl      String @map("screenshot_url")
+
+  status       FacebookFollowSubmissionStatus @default(PENDING)
+  adminNote    String?                        @map("admin_note")
+  reviewedById String?                        @map("reviewed_by_id")
+  reviewedAt   DateTime?                      @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("facebook_follow_submissions")
 }
 
 model KbzPayAccount {

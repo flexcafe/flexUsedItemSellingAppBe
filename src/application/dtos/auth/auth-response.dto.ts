@@ -59,6 +59,15 @@ export class ProfileDetailsDto {
   @ApiProperty()
   isRegionVerified: boolean;
 
+  @ApiProperty({ nullable: true })
+  facebookName: string | null;
+
+  @ApiProperty({ nullable: true })
+  facebookProfileUrl: string | null;
+
+  @ApiProperty({ nullable: true })
+  facebookLinkedAt: Date | null;
+
   constructor(data: UserAuthData['profile']) {
     this.avatar = data?.avatar ?? null;
     this.gender = data?.gender ?? null;
@@ -68,6 +77,9 @@ export class ProfileDetailsDto {
     this.gpsLatitude = data?.gpsLatitude ?? null;
     this.gpsLongitude = data?.gpsLongitude ?? null;
     this.isRegionVerified = data?.isRegionVerified ?? false;
+    this.facebookName = data?.facebookName ?? null;
+    this.facebookProfileUrl = data?.facebookProfileUrl ?? null;
+    this.facebookLinkedAt = data?.facebookLinkedAt ?? null;
   }
 }
 

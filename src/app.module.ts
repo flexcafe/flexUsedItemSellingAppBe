@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller.js';
@@ -22,6 +23,7 @@ import { ProfileModule } from './presentation/modules/profile/profile.module.js'
 import { NotificationsModule } from './presentation/modules/notifications/notifications.module.js';
 import { RealtimePresentationModule } from './presentation/modules/realtime/realtime.module.js';
 import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.module.js';
+import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
 
 @Module({
   imports: [
@@ -95,6 +97,12 @@ import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.mo
     // FavoriteModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: VpnRestrictionGuard,
+    },
+  ],
 })
 export class AppModule {}

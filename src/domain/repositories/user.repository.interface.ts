@@ -84,6 +84,9 @@ export interface UserProfileData {
   gpsLongitude: number | null;
   isRegionVerified: boolean;
   gpsVerifiedAt: Date | null;
+  facebookName?: string | null;
+  facebookProfileUrl?: string | null;
+  facebookLinkedAt?: Date | null;
 }
 
 export interface KbzPayAccountData {
