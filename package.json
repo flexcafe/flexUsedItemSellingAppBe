@@ -9,7 +9,6 @@
   "postinstall": "prisma generate",
   "scripts": {
     "build": "prisma generate && nest build",
-    "build:deploy": "NODE_OPTIONS=--max-old-space-size=4096 prisma generate && NODE_OPTIONS=--max-old-space-size=4096 nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
