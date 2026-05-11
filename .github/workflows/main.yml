@@ -18,10 +18,30 @@ jobs:
           port: 22
           script: |
             cd /home/admin/flexusedmarket/flexUsedItemSellingAppBe
+            
+            # 1. Update source code
             git pull origin main
+            
+            # 2. Install dependencies (clean install)
             npm ci
+            
+            # 3. Generate Prisma Client
             npx prisma generate
+            
+            # 4. Build with increased memory limit (utilizing server Swap)
+            # This prevents the 'JavaScript heap out of memory' crash
+            export NODE_OPTIONS="--max-old-space-size=2048"
             npm run build
+            
+            # 5. Run database migrations
             npx prisma migrate deploy
-            sudo systemctl restart flex-used-market-be.service
-            sudo systemctl status flex-used-market-be.service --no-pager
+            
+            # 6. Verify build exists before restarting
+            if [ -f "dist/src/main.js" ] || [ -f "dist/main.js" ]; then
+              echo "✅ Build successful, restarting service..."
+              sudo systemctl restart flex-used-market-be.service
+              sudo systemctl status flex-used-market-be.service --no-pager
+            else
+              echo "❌ Build failed: main.js not found in dist. Service will not restart."
+              exit 1
+            fi
