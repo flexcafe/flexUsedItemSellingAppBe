@@ -46,6 +46,7 @@ function buildUser(
 
 function buildRepoMock(): jest.Mocked<IUserRepository> {
   return {
+    getProfileAvatarUrl: jest.fn().mockResolvedValue(null),
     create: jest.fn(),
     findById: jest.fn(),
     findByEmail: jest.fn(),
@@ -86,6 +87,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
 function buildStorageMock(): jest.Mocked<IFileStorage> {
   return {
     uploadPublicFile: jest.fn(),
+    removePublicFiles: jest.fn(),
   };
 }
 

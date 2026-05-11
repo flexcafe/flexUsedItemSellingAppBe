@@ -44,4 +44,21 @@ export class SupabaseFileStorageService implements IFileStorage {
 
     return { publicUrl: data.publicUrl };
   }
+
+  async removePublicFiles(
+    bucket: string,
+    objectPaths: string[],
+  ): Promise<void> {
+    const paths = objectPaths.filter((p) => p.length > 0);
+    if (paths.length === 0) {
+      return;
+    }
+    const client = this.supabase.getClient();
+    const { error } = await client.storage.from(bucket).remove(paths);
+    if (error) {
+      this.logger.warn(
+        `Supabase storage remove failed bucket=${bucket} paths=${paths.join(',')}: ${error.message}`,
+      );
+    }
+  }
 }

@@ -41,6 +41,9 @@ export class UploadAvatarUseCase {
       'SUPABASE_AVATAR_BUCKET',
       'avatars',
     );
+    const previousAvatarUrl =
+      await this.userRepository.getProfileAvatarUrl(userId);
+
     const ext = this.extensionFromMime(file.mimeType);
     const objectPath = `users/${userId}/${randomUUID()}${ext}`;
 
@@ -53,7 +56,42 @@ export class UploadAvatarUseCase {
 
     await this.userRepository.setProfileAvatar(userId, publicUrl);
 
+    const oldPath = this.extractOwnedAvatarObjectPath(
+      previousAvatarUrl,
+      bucket,
+      userId,
+    );
+    if (oldPath && oldPath !== objectPath) {
+      await this.fileStorage.removePublicFiles(bucket, [oldPath]);
+    }
+
     return publicUrl;
+  }
+
+  /**
+   * Supabase public URL: .../object/public/{bucket}/{path}
+   * Only returns a path we are willing to delete (under users/{userId}/).
+   */
+  private extractOwnedAvatarObjectPath(
+    publicUrl: string | null,
+    bucket: string,
+    userId: string,
+  ): string | null {
+    if (!publicUrl?.trim()) {
+      return null;
+    }
+    const marker = `/object/public/${bucket}/`;
+    const i = publicUrl.indexOf(marker);
+    if (i === -1) {
+      return null;
+    }
+    const raw = publicUrl.slice(i + marker.length).split('?')[0] ?? '';
+    const path = decodeURIComponent(raw);
+    const prefix = `users/${userId}/`;
+    if (!path.startsWith(prefix) || path.includes('..')) {
+      return null;
+    }
+    return path;
   }
 
   private extensionFromMime(mime: string): string {

@@ -155,6 +155,7 @@ export interface IUserRepository {
   findAll(): Promise<UserEntity[]>;
   update(id: string, data: UpdateUserData): Promise<UserEntity>;
   delete(id: string): Promise<boolean>;
+  getProfileAvatarUrl(userId: string): Promise<string | null>;
   setProfileAvatar(userId: string, avatarUrl: string | null): Promise<void>;
 
   createPhoneOtp(phone: string, code: string, expiresAt: Date): Promise<void>;

@@ -127,6 +127,14 @@ export class UserRepository implements IUserRepository {
     return true;
   }
 
+  async getProfileAvatarUrl(userId: string): Promise<string | null> {
+    const row = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { avatar: true },
+    });
+    return row?.avatar ?? null;
+  }
+
   async setProfileAvatar(
     userId: string,
     avatarUrl: string | null,

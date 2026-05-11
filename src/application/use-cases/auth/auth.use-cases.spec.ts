@@ -136,6 +136,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findKbzPayVerifiedUsers: jest.fn(),
     findKbzPayRegisteredAccounts: jest.fn(),
     getAuthDataByUserId: jest.fn(),
+    getProfileAvatarUrl: jest.fn().mockResolvedValue(null),
     setProfileAvatar: jest.fn(),
   };
 }

@@ -48,6 +48,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findAll: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    getProfileAvatarUrl: jest.fn().mockResolvedValue(null),
     setProfileAvatar: jest.fn(),
     createPhoneOtp: jest.fn(),
     findLatestActivePhoneOtp: jest.fn(),
