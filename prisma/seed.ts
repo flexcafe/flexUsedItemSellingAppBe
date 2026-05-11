@@ -38,6 +38,35 @@ function generateReferralCode(): string {
   return randomBytes(4).toString('hex').toUpperCase();
 }
 
+/**
+ * Deletes all rows from every application table in `public`. Table definitions
+ * and `_prisma_migrations` are unchanged (no migration files touched).
+ */
+async function wipePublicApplicationData(
+  prisma: InstanceType<typeof PrismaClient>,
+): Promise<void> {
+  const rows = await prisma.$queryRaw<{ tablename: string }[]>`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename <> '_prisma_migrations'
+  `;
+  const names = rows
+    .map((r) => r.tablename)
+    .filter((n) => /^[a-z0-9_]+$/.test(n));
+  if (names.length === 0) {
+    console.log('[seed] no public tables to truncate');
+    return;
+  }
+  const quoted = names.map((n) => `"${n}"`).join(', ');
+  await prisma.$executeRawUnsafe(
+    `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`,
+  );
+  console.log(
+    `[seed] truncated ${names.length} public tables (migrations preserved)`,
+  );
+}
+
 async function main() {
   // These values should be set in your .env file
   const dbUrl = process.env.DATABASE_URL;
@@ -114,6 +143,11 @@ async function main() {
     connectionString: dbUrl,
   });
   const prisma = new PrismaClient({ adapter });
+
+  console.warn(
+    '[seed] removing all rows from public tables (schema unchanged), then seeding…',
+  );
+  await wipePublicApplicationData(prisma);
 
   // 1) Ensure ROOT_ADMIN role exists and has full permissions
   const rootRole = await prisma.adminRole.upsert({
