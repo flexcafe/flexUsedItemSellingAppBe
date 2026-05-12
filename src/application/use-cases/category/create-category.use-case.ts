@@ -28,6 +28,7 @@ export class CreateCategoryUseCase {
   async execute(
     adminId: string,
     dto: CreateCategoryDto,
+    iconPublicUrl: string | null = null,
   ): Promise<CategoryResponseDto> {
     await assertAdmin(this.userRepository, adminId);
     if (dto.parentId) {
@@ -44,7 +45,7 @@ export class CreateCategoryUseCase {
     const row = await this.categoryRepository.create({
       name: dto.name.trim(),
       slug,
-      icon: dto.icon,
+      ...(iconPublicUrl != null ? { icon: iconPublicUrl } : {}),
       sortOrder: dto.sortOrder ?? 0,
       isActive: true,
       parentId: dto.parentId,

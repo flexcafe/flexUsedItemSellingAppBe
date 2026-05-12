@@ -7,6 +7,7 @@ import {
 import {
   CATEGORY_REPOSITORY,
   type ICategoryRepository,
+  type UpdateCategoryData,
 } from '../../../domain/repositories/category.repository.interface.js';
 import {
   USER_REPOSITORY,
@@ -29,6 +30,7 @@ export class UpdateCategoryUseCase {
     adminId: string,
     categoryId: string,
     dto: UpdateCategoryDto,
+    iconReplacementUrl?: string | null,
   ): Promise<CategoryResponseDto> {
     await assertAdmin(this.userRepository, adminId);
     const existing = await this.categoryRepository.findById(categoryId);
@@ -55,13 +57,17 @@ export class UpdateCategoryUseCase {
       }
     }
 
-    const updated = await this.categoryRepository.update(categoryId, {
+    const data: UpdateCategoryData = {
       name: dto.name?.trim(),
       slug,
-      icon: dto.icon,
       sortOrder: dto.sortOrder,
       parentId: dto.parentId,
-    });
+    };
+    if (iconReplacementUrl != null) {
+      data.icon = iconReplacementUrl;
+    }
+
+    const updated = await this.categoryRepository.update(categoryId, data);
     return new CategoryResponseDto(updated);
   }
 

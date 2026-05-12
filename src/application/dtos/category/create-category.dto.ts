@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -29,20 +30,12 @@ export class CreateCategoryDto {
   slug?: string;
 
   @ApiPropertyOptional({
-    example: 'https://cdn.example.com/icon.png',
-    description: 'Optional icon URL for apps and admin tables.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  icon?: string;
-
-  @ApiPropertyOptional({
     example: 0,
     description:
       'Sort order among siblings (same parentId). Lower numbers appear first.',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   sortOrder?: number;

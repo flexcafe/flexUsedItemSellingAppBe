@@ -21,8 +21,9 @@ Categories are **hierarchical**: each row may have a \`parentId\` pointing to an
 - **\`isActive\`**: read-only in normal edits. **Only \`DELETE\`** retires a category (sets \`isActive\` to \`false\`). **\`PATCH\`** cannot change \`isActive\`. Inactive categories should not be used for **new** client products.
 
 ### Create (\`POST\`)
-1. Optional **\`parentId\`**: must reference an existing category; if invalid → **404** parent not found.
-2. Validates body (name length, optional slug, icon URL length, etc.) → **400** on validation errors.
+1. **Multipart form-data** (same pattern as slider ads): text fields **\`name\`** (required), optional **\`slug\`**, **\`sortOrder\`**, **\`parentId\`**, and optional binary field **\`icon\`** (PNG, JPEG, WebP, or SVG). The server uploads **\`icon\`** to Supabase (\`SUPABASE_CATEGORY_ICON_BUCKET\`, default \`category-icons\`) and stores the returned **public URL** on the category row.
+2. Optional **\`parentId\`**: must reference an existing category; if invalid → **404** parent not found.
+3. Validates body → **400** on validation errors; unsupported icon MIME → **400**.
 
 ### List (\`GET\`)
 - Returns **roots** with nested **children** (tree-shaped array).
@@ -32,7 +33,7 @@ Categories are **hierarchical**: each row may have a \`parentId\` pointing to an
 - Returns a single category node (with nested relations as loaded by the repository). Unknown id → **404**.
 
 ### Update (\`PATCH /:categoryId\`)
-- Partial updates: send only fields to change (**name**, **slug**, **icon**, **sortOrder**, **parentId**). **Cannot** set \`isActive\` here — use **DELETE** to retire a category.
+- **Multipart** partial update: optional text fields (**name**, **slug**, **sortOrder**, **parentId**) and optional **\`icon\`** file to replace the stored icon (uploaded to Supabase; same rules as create). **Cannot** set \`isActive\` here — use **DELETE** to retire a category.
 - **\`parentId\`**: cannot set a category as its own parent; cannot introduce a **cycle** in the tree (e.g. moving A under B when B is under A) → **409** on cycle.
 - Slug collision with another row → **409**.
 
@@ -44,14 +45,14 @@ Categories are **hierarchical**: each row may have a \`parentId\` pointing to an
 
 ### Frontend integration checklist
 1. After admin login, store JWT and send it on every admin request.
-2. Build category tree UI from list response; use \`id\` as value for product category pickers.
+2. Build category tree UI from list response; use \`id\` as value for product category pickers. Icons are **URLs** returned from the API (upload **\`icon\`** file on create/update, not a pasted link).
 3. When hiding disabled categories in pickers, call list with \`includeInactive=false\`.
 4. Handle 409 with user-facing copy for “has children” / “in use by products” / slug conflict.`;
 
 export const ADMIN_CATEGORY_CREATE_DOC = `${CATEGORY_ADMIN_WORKFLOW}
 
 ### This endpoint: \`POST /admin/dashboard/categories\`
-Creates a new category. Send JSON body matching **CreateCategoryDto**.
+Creates a new category. Send **multipart/form-data** with **\`name\`** and optional **\`slug\`**, **\`sortOrder\`**, **\`parentId\`**, **\`icon\`** (binary). Icon is uploaded server-side; the DB stores the resulting public URL.
 
 **Typical success:** 201 with **CategoryResponseDto** inside the standard **ApiResponseDto** envelope.`;
 
@@ -70,7 +71,7 @@ Returns one category by UUID path param **categoryId**.`;
 export const ADMIN_CATEGORY_UPDATE_DOC = `${CATEGORY_ADMIN_WORKFLOW}
 
 ### This endpoint: \`PATCH /admin/dashboard/categories/:categoryId\`
-Partial update. Body: **UpdateCategoryDto**. Validates hierarchy and slug rules on the server.`;
+Partial update. Send **multipart/form-data** with any of **\`name\`**, **\`slug\`**, **\`sortOrder\`**, **\`parentId\`**, and/or **\`icon\`** file to replace the icon. Validates hierarchy and slug rules on the server.`;
 
 export const ADMIN_CATEGORY_DELETE_DOC = `${CATEGORY_ADMIN_WORKFLOW}
 
