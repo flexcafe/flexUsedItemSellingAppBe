@@ -24,7 +24,9 @@ export function assertProductInputRules(params: {
   if (params.paymentMethods) {
     const uniq = new Set(params.paymentMethods);
     if (uniq.size !== params.paymentMethods.length) {
-      throw new BadRequestException('Duplicate payment methods are not allowed');
+      throw new BadRequestException(
+        'Duplicate payment methods are not allowed',
+      );
     }
   }
   if (

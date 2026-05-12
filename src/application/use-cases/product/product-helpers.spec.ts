@@ -33,4 +33,3 @@ describe('product helper rules', () => {
     expect(() => assertNotBlank('  ', 'title')).toThrow(BadRequestException);
   });
 });
-

@@ -107,9 +107,8 @@ describe(ProductRepository.name, () => {
 
     const repo = new ProductRepository(prisma as any);
 
-    await expect(
-      repo.softDeleteBySeller('p1', 'u1'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(repo.softDeleteBySeller('p1', 'u1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });
-

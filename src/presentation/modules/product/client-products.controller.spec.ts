@@ -159,7 +159,9 @@ describe(ClientProductsController.name, () => {
       .send({ confirmTitle: 'Book' })
       .expect(200);
 
-    expect(del.execute).toHaveBeenCalledWith('u1', id, { confirmTitle: 'Book' });
+    expect(del.execute).toHaveBeenCalledWith('u1', id, {
+      confirmTitle: 'Book',
+    });
     await close();
   });
 });

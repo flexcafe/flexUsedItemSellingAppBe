@@ -12,7 +12,9 @@ import { ListingCondition } from '../../../domain/enums/listing-condition.enum.j
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 
-function buildListing(overrides: Partial<ConstructorParameters<typeof ListingEntity>[0]> = {}) {
+function buildListing(
+  overrides: Partial<ConstructorParameters<typeof ListingEntity>[0]> = {},
+) {
   return new ListingEntity({
     id: 'p1',
     title: 'My Phone',

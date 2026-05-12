@@ -279,9 +279,7 @@ describe(UpdateProductUseCase.name, () => {
 
     await expect(
       useCase.execute('u1', 'p1', {
-        preferredLocations: [
-          { label: '  ', address: 'somewhere' },
-        ] as any,
+        preferredLocations: [{ label: '  ', address: 'somewhere' }] as any,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

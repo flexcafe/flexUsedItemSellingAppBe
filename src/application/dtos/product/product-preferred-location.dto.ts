@@ -4,7 +4,8 @@ import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 export class ProductPreferredLocationDto {
   @ApiProperty({
     example: 'Location 1',
-    description: 'Short label shown in UI (e.g. “Near office”). Cannot be blank.',
+    description:
+      'Short label shown in UI (e.g. “Near office”). Cannot be blank.',
   })
   @IsString()
   @MaxLength(100)

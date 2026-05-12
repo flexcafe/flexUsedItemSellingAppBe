@@ -17,7 +17,8 @@ export class MyProductsFilterDto {
   @ApiPropertyOptional({
     example: 20,
     default: 20,
-    description: 'Page size (1–50). Same semantics as public catalog pagination.',
+    description:
+      'Page size (1–50). Same semantics as public catalog pagination.',
   })
   @IsOptional()
   @Type(() => Number)
@@ -26,4 +27,3 @@ export class MyProductsFilterDto {
   @Max(50)
   limit?: number = 20;
 }
-

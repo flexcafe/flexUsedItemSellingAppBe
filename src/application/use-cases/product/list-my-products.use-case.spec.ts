@@ -28,4 +28,3 @@ describe(ListMyProductsUseCase.name, () => {
     });
   });
 });
-
