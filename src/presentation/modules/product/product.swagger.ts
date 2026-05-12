@@ -39,7 +39,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 - Body is **partial** (**UpdateProductDto**); omitted fields are left unchanged. Optional **\`status\`** allows controlled transitions when you expose them (validate in use-case layer).
 
 ### Delete
-- **Soft delete**: marks listing deleted and archives it. Idempotent behavior follows repository rules (concurrent deletes may yield **404** if already removed).
+- **Soft delete** (seller): JSON body must include **\`confirmTitle\`** matching the listing **title** (trimmed on both sides; case-sensitive). Wrong string → **400**. **Sold** listings cannot be seller-deleted → **409** (support/admin for edge cases). Otherwise marks deleted and archives. Concurrent deletes may yield **404** if already removed.
 
 ### Standard response envelope
 All JSON responses use **ApiResponseDto**: \`success\`, \`message\`, \`data\`, \`error\`, \`timestamp\`.`;
@@ -81,4 +81,4 @@ Partial update; only the owner. Body: **UpdateProductDto**.`;
 export const CLIENT_PRODUCT_DELETE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`DELETE /client/products/:productId\` (auth)
-Soft-deletes the listing when the caller is the seller.`;
+Soft-deletes the listing when the caller is the seller. **Body (JSON):** **DeleteProductDto** with **\`confirmTitle\`** equal to the listing title (trimmed). **Sold** listings → **409**.`;

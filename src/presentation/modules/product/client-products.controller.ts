@@ -29,6 +29,7 @@ import {
 } from '../../../common/decorators/api-response.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
+import { DeleteProductDto } from '../../../application/dtos/product/delete-product.dto.js';
 import {
   CreateProductDto,
   MyProductsFilterDto,
@@ -214,7 +215,7 @@ export class ClientProductsController {
   @Delete(':productId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Soft-delete own product',
+    summary: 'Soft-delete own product (confirmation body)',
     description: CLIENT_PRODUCT_DELETE_DOC,
   })
   @ApiParam({
@@ -232,8 +233,18 @@ export class ClientProductsController {
     description: 'Missing or invalid JWT.',
   })
   @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Validation failed on DeleteProductDto, or confirmation title does not match listing title.',
+  })
+  @ApiErrorResponse({
     status: HttpStatus.FORBIDDEN,
     description: 'Authenticated user is not the seller of this listing.',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.CONFLICT,
+    description:
+      'Listing is sold; sellers cannot delete it (support may assist).',
   })
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
@@ -243,8 +254,9 @@ export class ClientProductsController {
   async remove(
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: DeleteProductDto,
   ): Promise<ApiResponseDto<ProductDeleteResponseDto>> {
-    await this.deleteProductUseCase.execute(user.sub, productId);
+    await this.deleteProductUseCase.execute(user.sub, productId, dto);
     return ApiResponseDto.success({ deleted: true }, 'Product deleted');
   }
 }

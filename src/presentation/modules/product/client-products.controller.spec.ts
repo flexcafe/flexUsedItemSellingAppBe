@@ -118,4 +118,48 @@ describe(ClientProductsController.name, () => {
     });
     await close();
   });
+
+  it('DELETE /client/products/:id requires confirmTitle body', async () => {
+    const del = { execute: jest.fn().mockResolvedValue(undefined) };
+    const { app, close } = await createHttpTestApp({
+      controllers: [ClientProductsController],
+      providers: [
+        { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ListProductsUseCase,
+          useValue: { execute: jest.fn().mockResolvedValue(null) },
+        },
+        { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
+        { provide: DeleteProductUseCase, useValue: del },
+      ],
+      overrideGuards: [
+        {
+          guard: JwtAuthGuard,
+          canActivate: (ctx) => {
+            const req = (ctx as any).switchToHttp().getRequest();
+            req.user = { sub: 'u1' };
+            return true;
+          },
+        },
+      ],
+    });
+
+    const id = '11111111-1111-1111-1111-111111111111';
+    await request(app.getHttpServer())
+      .delete(`/api/v1/client/products/${id}`)
+      .send({})
+      .expect(400);
+
+    expect(del.execute).not.toHaveBeenCalled();
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/client/products/${id}`)
+      .send({ confirmTitle: 'Book' })
+      .expect(200);
+
+    expect(del.execute).toHaveBeenCalledWith('u1', id, { confirmTitle: 'Book' });
+    await close();
+  });
 });
