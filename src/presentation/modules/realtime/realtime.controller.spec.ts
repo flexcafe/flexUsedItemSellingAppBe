@@ -8,7 +8,9 @@ import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.in
 
 describe(RealtimeController.name, () => {
   it('POST /client/pusher/auth forbids mismatched channel', async () => {
-    const pusher = { authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'x' }) };
+    const pusher = {
+      authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'x' }),
+    };
     const userRepo = { findById: jest.fn() };
 
     const { app, close } = await createHttpTestApp({
@@ -38,7 +40,9 @@ describe(RealtimeController.name, () => {
   });
 
   it('POST /client/pusher/auth authorizes correct channel', async () => {
-    const pusher = { authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'ok' }) };
+    const pusher = {
+      authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'ok' }),
+    };
     const userRepo = { findById: jest.fn() };
 
     const { app, close } = await createHttpTestApp({
@@ -70,8 +74,12 @@ describe(RealtimeController.name, () => {
   });
 
   it('POST /admin/dashboard/pusher/auth requires admin user', async () => {
-    const pusher = { authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'ok' }) };
-    const userRepo = { findById: jest.fn().mockResolvedValue({ isAdmin: () => true }) };
+    const pusher = {
+      authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'ok' }),
+    };
+    const userRepo = {
+      findById: jest.fn().mockResolvedValue({ isAdmin: () => true }),
+    };
 
     const { app, close } = await createHttpTestApp({
       controllers: [RealtimeController],
@@ -101,4 +109,3 @@ describe(RealtimeController.name, () => {
     await close();
   });
 });
-

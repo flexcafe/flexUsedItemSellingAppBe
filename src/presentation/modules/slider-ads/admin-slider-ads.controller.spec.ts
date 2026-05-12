@@ -21,7 +21,10 @@ describe(AdminSliderAdsController.name, () => {
   };
 
   it('GET /admin/dashboard/slider-ads lists all ads', async () => {
-    const list = { listAll: jest.fn().mockResolvedValue([]), listActive: jest.fn() };
+    const list = {
+      listAll: jest.fn().mockResolvedValue([]),
+      listActive: jest.fn(),
+    };
     const { app, close } = await createHttpTestApp({
       controllers: [AdminSliderAdsController],
       providers: [
@@ -29,7 +32,10 @@ describe(AdminSliderAdsController.name, () => {
         { provide: CreateSliderAdUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateSliderAdUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteSliderAdUseCase, useValue: { execute: jest.fn() } },
-        { provide: UploadPublicFileUseCase, useValue: { uploadSliderAdImage: jest.fn() } },
+        {
+          provide: UploadPublicFileUseCase,
+          useValue: { uploadSliderAdImage: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -45,7 +51,11 @@ describe(AdminSliderAdsController.name, () => {
 
   it('POST /admin/dashboard/slider-ads creates ad with multipart file (201)', async () => {
     const list = { listAll: jest.fn(), listActive: jest.fn() };
-    const upload = { uploadSliderAdImage: jest.fn().mockResolvedValue('https://cdn/slide.webp') };
+    const upload = {
+      uploadSliderAdImage: jest
+        .fn()
+        .mockResolvedValue('https://cdn/slide.webp'),
+    };
     const create = {
       execute: jest.fn().mockResolvedValue({
         id: '59c148e3-5dc3-42dd-987e-c6b559f0a071',
@@ -90,4 +100,3 @@ describe(AdminSliderAdsController.name, () => {
     await close();
   });
 });
-

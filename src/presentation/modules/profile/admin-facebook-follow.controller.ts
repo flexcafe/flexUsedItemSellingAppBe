@@ -54,7 +54,10 @@ export class AdminFacebookFollowController {
       user.sub,
       query.status,
     );
-    return ApiResponseDto.success(rows, 'Facebook follow submissions retrieved');
+    return ApiResponseDto.success(
+      rows,
+      'Facebook follow submissions retrieved',
+    );
   }
 
   @Post('submissions/:submissionId/approve')

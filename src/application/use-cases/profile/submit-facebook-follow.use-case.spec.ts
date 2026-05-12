@@ -1,9 +1,6 @@
 import { jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
-import {
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { SubmitFacebookFollowUseCase } from './submit-facebook-follow.use-case.js';
 import type { IFacebookRepository } from '../../../domain/repositories/facebook.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
@@ -43,8 +40,13 @@ function buildUser(
 
 describe(SubmitFacebookFollowUseCase.name, () => {
   it('rejects when facebook is not linked', async () => {
-    const config = { get: jest.fn().mockReturnValue('facebook-follow-submissions') } as unknown as ConfigService;
-    const storage = { uploadPublicFile: jest.fn(), removePublicFiles: jest.fn() } as unknown as IFileStorage;
+    const config = {
+      get: jest.fn().mockReturnValue('facebook-follow-submissions'),
+    } as unknown as ConfigService;
+    const storage = {
+      uploadPublicFile: jest.fn(),
+      removePublicFiles: jest.fn(),
+    } as unknown as IFileStorage;
     const facebookRepo = {
       findLatestFacebookFollowSubmissionByUserId: jest.fn(),
     } as unknown as IFacebookRepository;
@@ -69,14 +71,23 @@ describe(SubmitFacebookFollowUseCase.name, () => {
           facebookProfileUrl: 'https://facebook.com/p',
           facebookPageUrl: 'https://facebook.com/page',
         },
-        { originalName: 's.webp', mimeType: 'image/webp', body: Buffer.from('x') },
+        {
+          originalName: 's.webp',
+          mimeType: 'image/webp',
+          body: Buffer.from('x'),
+        },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejects when a pending submission already exists', async () => {
-    const config = { get: jest.fn().mockReturnValue('facebook-follow-submissions') } as unknown as ConfigService;
-    const storage = { uploadPublicFile: jest.fn(), removePublicFiles: jest.fn() } as unknown as IFileStorage;
+    const config = {
+      get: jest.fn().mockReturnValue('facebook-follow-submissions'),
+    } as unknown as ConfigService;
+    const storage = {
+      uploadPublicFile: jest.fn(),
+      removePublicFiles: jest.fn(),
+    } as unknown as IFileStorage;
     const facebookRepo = {
       findLatestFacebookFollowSubmissionByUserId: jest
         .fn()
@@ -103,9 +114,12 @@ describe(SubmitFacebookFollowUseCase.name, () => {
           facebookProfileUrl: 'https://facebook.com/p',
           facebookPageUrl: 'https://facebook.com/page',
         },
-        { originalName: 's.webp', mimeType: 'image/webp', body: Buffer.from('x') },
+        {
+          originalName: 's.webp',
+          mimeType: 'image/webp',
+          body: Buffer.from('x'),
+        },
       ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 });
-

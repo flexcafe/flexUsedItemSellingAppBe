@@ -34,7 +34,10 @@ describe(AdminPointsController.name, () => {
         { provide: ListWithdrawalsUseCase, useValue: { execute: jest.fn() } },
         { provide: ApproveWithdrawalUseCase, useValue: { execute: jest.fn() } },
         { provide: RejectWithdrawalUseCase, useValue: { execute: jest.fn() } },
-        { provide: MarkWithdrawalPaidUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: MarkWithdrawalPaidUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -66,7 +69,10 @@ describe(AdminPointsController.name, () => {
         { provide: ListWithdrawalsUseCase, useValue: listW },
         { provide: ApproveWithdrawalUseCase, useValue: { execute: jest.fn() } },
         { provide: RejectWithdrawalUseCase, useValue: { execute: jest.fn() } },
-        { provide: MarkWithdrawalPaidUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: MarkWithdrawalPaidUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -80,4 +86,3 @@ describe(AdminPointsController.name, () => {
     await close();
   });
 });
-

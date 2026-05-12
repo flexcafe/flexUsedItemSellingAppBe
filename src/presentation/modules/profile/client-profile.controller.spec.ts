@@ -20,7 +20,9 @@ describe(ClientProfileController.name, () => {
   };
 
   it('POST /client/profile/avatar uploads multipart and returns avatarUrl', async () => {
-    const uploadAvatar = { execute: jest.fn().mockResolvedValue('https://cdn/a.png') };
+    const uploadAvatar = {
+      execute: jest.fn().mockResolvedValue('https://cdn/a.png'),
+    };
 
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProfileController],
@@ -28,8 +30,14 @@ describe(ClientProfileController.name, () => {
         { provide: ChangePasswordUseCase, useValue: { execute: jest.fn() } },
         { provide: UploadAvatarUseCase, useValue: uploadAvatar },
         { provide: LinkFacebookUseCase, useValue: { execute: jest.fn() } },
-        { provide: SubmitFacebookFollowUseCase, useValue: { execute: jest.fn() } },
-        { provide: GetMyFacebookFollowSubmissionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SubmitFacebookFollowUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetMyFacebookFollowSubmissionUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -56,8 +64,14 @@ describe(ClientProfileController.name, () => {
         { provide: ChangePasswordUseCase, useValue: { execute: jest.fn() } },
         { provide: UploadAvatarUseCase, useValue: { execute: jest.fn() } },
         { provide: LinkFacebookUseCase, useValue: { execute: jest.fn() } },
-        { provide: SubmitFacebookFollowUseCase, useValue: { execute: jest.fn() } },
-        { provide: GetMyFacebookFollowSubmissionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SubmitFacebookFollowUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetMyFacebookFollowSubmissionUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -97,7 +111,10 @@ describe(ClientProfileController.name, () => {
         { provide: UploadAvatarUseCase, useValue: { execute: jest.fn() } },
         { provide: LinkFacebookUseCase, useValue: { execute: jest.fn() } },
         { provide: SubmitFacebookFollowUseCase, useValue: submit },
-        { provide: GetMyFacebookFollowSubmissionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: GetMyFacebookFollowSubmissionUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [authGuard],
     });
@@ -118,4 +135,3 @@ describe(ClientProfileController.name, () => {
     await close();
   });
 });
-

@@ -32,8 +32,9 @@ export class FacebookGraphAuthService implements IFacebookAuthService {
 
   constructor(private readonly configService: ConfigService) {
     this.appId = this.configService.getOrThrow<string>('FACEBOOK_APP_ID');
-    this.appSecret =
-      this.configService.getOrThrow<string>('FACEBOOK_APP_SECRET');
+    this.appSecret = this.configService.getOrThrow<string>(
+      'FACEBOOK_APP_SECRET',
+    );
     this.graphBaseUrl = this.configService
       .get<string>('FACEBOOK_GRAPH_BASE_URL', 'https://graph.facebook.com')
       .replace(/\/$/, '');
@@ -121,7 +122,10 @@ export class FacebookGraphAuthService implements IFacebookAuthService {
     return `${this.graphBaseUrl}/${this.graphVersion}`;
   }
 
-  private async parseJsonOrThrow<T>(response: Response, message: string): Promise<T> {
+  private async parseJsonOrThrow<T>(
+    response: Response,
+    message: string,
+  ): Promise<T> {
     const raw = await response.text();
     if (!response.ok) {
       throw new BadRequestException(message);

@@ -24,9 +24,11 @@ describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
-      grantFacebookFollowRewardIfEligible: jest
-        .fn()
-        .mockResolvedValue({ rewarded: false, newTotalPoints: null, newRank: null }),
+      grantFacebookFollowRewardIfEligible: jest.fn().mockResolvedValue({
+        rewarded: false,
+        newTotalPoints: null,
+        newRank: null,
+      }),
       reviewFacebookFollowSubmission: jest.fn(),
     } as unknown as IFacebookRepository;
 
@@ -35,7 +37,10 @@ describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
       createNotification: jest.fn(),
     } as unknown as IUserRepository;
 
-    const useCase = new ReviewFacebookFollowSubmissionUseCase(facebookRepo, userRepo);
+    const useCase = new ReviewFacebookFollowSubmissionUseCase(
+      facebookRepo,
+      userRepo,
+    );
     await expect(
       useCase.approve('admin-1', 'sub-1', { adminNote: 'ok' }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -53,10 +58,12 @@ describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
       createNotification: jest.fn(),
     } as unknown as IUserRepository;
 
-    const useCase = new ReviewFacebookFollowSubmissionUseCase(facebookRepo, userRepo);
+    const useCase = new ReviewFacebookFollowSubmissionUseCase(
+      facebookRepo,
+      userRepo,
+    );
     await expect(
       useCase.approve('admin-1', 'sub-1', { adminNote: 'ok' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
-

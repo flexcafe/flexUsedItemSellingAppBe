@@ -28,16 +28,24 @@ export class CategoryRepository implements ICategoryRepository {
   async findBySlug(slug: string): Promise<CategoryEntity | null> {
     const category = await this.prisma.category.findUnique({
       where: { slug },
-      include: { children: true },
+      include: { children: { orderBy: { sortOrder: 'asc' } } },
     });
     return category ? CategoryMapper.toDomain(category) : null;
   }
 
-  async findAll(): Promise<CategoryEntity[]> {
+  async findAll(includeInactive = true): Promise<CategoryEntity[]> {
     const categories = await this.prisma.category.findMany({
-      where: { parentId: null },
-      include: { children: true },
-      orderBy: { name: 'asc' },
+      where: {
+        parentId: null,
+        ...(includeInactive ? {} : { isActive: true }),
+      },
+      include: {
+        children: {
+          where: includeInactive ? undefined : { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
     return CategoryMapper.toDomainList(categories);
   }
@@ -45,8 +53,12 @@ export class CategoryRepository implements ICategoryRepository {
   async findChildren(parentId: string): Promise<CategoryEntity[]> {
     const children = await this.prisma.category.findMany({
       where: { parentId },
-      include: { children: true },
-      orderBy: { name: 'asc' },
+      include: {
+        children: {
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
     return CategoryMapper.toDomainList(children);
   }
@@ -61,7 +73,20 @@ export class CategoryRepository implements ICategoryRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    await this.prisma.category.delete({ where: { id } });
+    await this.prisma.category.update({
+      where: { id },
+      data: { isActive: false },
+    });
     return true;
+  }
+
+  async isUsedByListings(id: string): Promise<boolean> {
+    const n = await this.prisma.listing.count({
+      where: {
+        categoryId: id,
+        isDeleted: false,
+      },
+    });
+    return n > 0;
   }
 }

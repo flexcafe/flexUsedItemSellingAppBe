@@ -13,6 +13,8 @@ export class CategoryMapper {
       name: prisma.name,
       slug: prisma.slug,
       icon: prisma.icon,
+      sortOrder: prisma.sortOrder,
+      isActive: prisma.isActive,
       parentId: prisma.parentId,
       createdAt: prisma.createdAt,
       updatedAt: prisma.updatedAt,

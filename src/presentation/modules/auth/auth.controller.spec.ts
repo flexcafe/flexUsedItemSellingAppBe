@@ -23,11 +23,26 @@ describe(AuthController.name, () => {
         { provide: LoginUseCase, useValue: { loginClient: jest.fn() } },
         { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
         { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: SendEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: RequestKbzPayVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: SubmitKbzPayTransactionUseCase, useValue: { execute: jest.fn() } },
-        { provide: GetCurrentUserProfileUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SendEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: VerifyEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: RequestKbzPayVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: SubmitKbzPayTransactionUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetCurrentUserProfileUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [
         { guard: ThrottlerGuard, canActivate: () => true },
@@ -57,11 +72,26 @@ describe(AuthController.name, () => {
         { provide: LoginUseCase, useValue: loginUseCase },
         { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
         { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: SendEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: RequestKbzPayVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: SubmitKbzPayTransactionUseCase, useValue: { execute: jest.fn() } },
-        { provide: GetCurrentUserProfileUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SendEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: VerifyEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: RequestKbzPayVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: SubmitKbzPayTransactionUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetCurrentUserProfileUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
     });
@@ -93,10 +123,22 @@ describe(AuthController.name, () => {
         { provide: LoginUseCase, useValue: { loginClient: jest.fn() } },
         { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
         { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: SendEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyEmailVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: RequestKbzPayVerificationUseCase, useValue: { execute: jest.fn() } },
-        { provide: SubmitKbzPayTransactionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SendEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: VerifyEmailVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: RequestKbzPayVerificationUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: SubmitKbzPayTransactionUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: GetCurrentUserProfileUseCase, useValue: getMe },
       ],
       overrideGuards: [
@@ -122,4 +164,3 @@ describe(AuthController.name, () => {
     await close();
   });
 });
-

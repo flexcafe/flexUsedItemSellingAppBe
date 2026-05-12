@@ -508,6 +508,7 @@ model Listing {
   directTradeLocation  String? @map("direct_trade_location")
   directTradeLatitude  Float?  @map("direct_trade_latitude")
   directTradeLongitude Float?  @map("direct_trade_longitude")
+  geoLocation          Unsupported("geography(Point,4326)")? @map("geo_location")
   mapScreenshotUrl     String? @map("map_screenshot_url")
   nearbyLandmarks      String? @map("nearby_landmarks")
   preferredTradeTime   String? @map("preferred_trade_time")

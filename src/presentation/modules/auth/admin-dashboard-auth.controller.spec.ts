@@ -22,10 +22,22 @@ describe(AdminDashboardAuthController.name, () => {
           provide: ListKbzPayVerificationRequestedUseCase,
           useValue: { execute: jest.fn() },
         },
-        { provide: ListKbzPayMoneyCheckUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayVerifiedUsersUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayRegisteredAccountsUseCase, useValue: { execute: jest.fn() } },
-        { provide: SendKbzPayInstructionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ListKbzPayMoneyCheckUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayVerifiedUsersUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayRegisteredAccountsUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: SendKbzPayInstructionUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: AdminVerifyKbzPayUseCase, useValue: { execute: jest.fn() } },
       ],
       overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
@@ -54,10 +66,22 @@ describe(AdminDashboardAuthController.name, () => {
           provide: ListKbzPayVerificationRequestedUseCase,
           useValue: { execute: jest.fn() },
         },
-        { provide: ListKbzPayMoneyCheckUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayVerifiedUsersUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayRegisteredAccountsUseCase, useValue: { execute: jest.fn() } },
-        { provide: SendKbzPayInstructionUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ListKbzPayMoneyCheckUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayVerifiedUsersUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayRegisteredAccountsUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: SendKbzPayInstructionUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: AdminVerifyKbzPayUseCase, useValue: { execute: jest.fn() } },
       ],
       overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
@@ -83,9 +107,18 @@ describe(AdminDashboardAuthController.name, () => {
           provide: ListKbzPayVerificationRequestedUseCase,
           useValue: { execute: jest.fn() },
         },
-        { provide: ListKbzPayMoneyCheckUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayVerifiedUsersUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListKbzPayRegisteredAccountsUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ListKbzPayMoneyCheckUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayVerifiedUsersUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: ListKbzPayRegisteredAccountsUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: SendKbzPayInstructionUseCase, useValue: send },
         { provide: AdminVerifyKbzPayUseCase, useValue: { execute: jest.fn() } },
       ],
@@ -114,4 +147,3 @@ describe(AdminDashboardAuthController.name, () => {
     await close();
   });
 });
-

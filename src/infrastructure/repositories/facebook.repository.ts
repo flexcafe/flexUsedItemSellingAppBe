@@ -202,7 +202,10 @@ export class FacebookRepository implements IFacebookRepository {
     return { rewarded, newTotalPoints, newRank };
   }
 
-  private findRankTierForPoints(configs: RankConfigData[], points: number): RankTier {
+  private findRankTierForPoints(
+    configs: RankConfigData[],
+    points: number,
+  ): RankTier {
     const sorted = [...configs].sort(
       (a, b) => a.sortOrder - b.sortOrder || a.minPoints - b.minPoints,
     );
@@ -215,7 +218,9 @@ export class FacebookRepository implements IFacebookRepository {
     );
   }
 
-  private mapSubmission(row: FacebookSubmissionRow): FacebookFollowSubmissionData {
+  private mapSubmission(
+    row: FacebookSubmissionRow,
+  ): FacebookFollowSubmissionData {
     return {
       id: row.id,
       userId: row.userId,

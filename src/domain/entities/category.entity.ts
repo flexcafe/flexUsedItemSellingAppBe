@@ -3,6 +3,8 @@ export interface CategoryEntityProps {
   name: string;
   slug: string;
   icon: string | null;
+  sortOrder: number;
+  isActive: boolean;
   parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -15,6 +17,8 @@ export class CategoryEntity {
   readonly name: string;
   readonly slug: string;
   readonly icon: string | null;
+  readonly sortOrder: number;
+  readonly isActive: boolean;
   readonly parentId: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -26,6 +30,8 @@ export class CategoryEntity {
     this.name = props.name;
     this.slug = props.slug;
     this.icon = props.icon;
+    this.sortOrder = props.sortOrder;
+    this.isActive = props.isActive;
     this.parentId = props.parentId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;

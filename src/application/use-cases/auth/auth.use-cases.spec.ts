@@ -159,9 +159,7 @@ function buildPointsRepoMock(): jest.Mocked<IPointsRepository> {
     approveWithdrawal: jest.fn(),
     rejectWithdrawal: jest.fn(),
     markWithdrawalPaid: jest.fn(),
-    grantAccountLifetimeMilestoneBonus: jest
-      .fn()
-      .mockResolvedValue(true),
+    grantAccountLifetimeMilestoneBonus: jest.fn().mockResolvedValue(true),
   };
 }
 
@@ -212,7 +210,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           gpsLongitude: 96.17,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects duplicate phone/email', async () => {
@@ -251,7 +251,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           gpsLongitude: 96.17,
         }),
       ).rejects.toBeInstanceOf(ConflictException);
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects invalid referralId', async () => {
@@ -291,7 +293,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           referralId: 'BADCODE',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).not.toHaveBeenCalled();
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).not.toHaveBeenCalled();
     });
 
     it('creates user + initializes OTP & email verification + returns pending action (no token)', async () => {
@@ -348,10 +352,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(emailSender.send).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledTimes(0);
       expect(res.action).toBe('REGISTRATION_PENDING_VERIFICATION');
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
-        'user-new',
-        PointSourceType.REGISTRATION_BONUS,
-      );
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).toHaveBeenCalledWith('user-new', PointSourceType.REGISTRATION_BONUS);
     });
   });
 
@@ -688,10 +691,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(res.action).toBe('PHONE_VERIFIED');
       expect(repo.markPhoneOtpVerified).toHaveBeenCalledWith('otp1');
       expect(repo.markUserPhoneVerified).toHaveBeenCalledWith('+959123456789');
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
-        'user-1',
-        PointSourceType.PHONE_VERIFIED_BONUS,
-      );
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).toHaveBeenCalledWith('user-1', PointSourceType.PHONE_VERIFIED_BONUS);
     });
 
     it('SendEmailVerificationUseCase calls createEmailVerification', async () => {
@@ -726,10 +728,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(repo.markUserEmailVerified).toHaveBeenCalledWith(
         'john@example.com',
       );
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
-        'user-1',
-        PointSourceType.EMAIL_VERIFIED_BONUS,
-      );
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).toHaveBeenCalledWith('user-1', PointSourceType.EMAIL_VERIFIED_BONUS);
     });
 
     it('KBZPay request sets pending and notifies user', async () => {
@@ -879,10 +880,9 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         'admin-1',
         undefined,
       );
-      expect(pointsRepo.grantAccountLifetimeMilestoneBonus).toHaveBeenCalledWith(
-        'user-1',
-        PointSourceType.KBZPAY_VERIFIED_BONUS,
-      );
+      expect(
+        pointsRepo.grantAccountLifetimeMilestoneBonus,
+      ).toHaveBeenCalledWith('user-1', PointSourceType.KBZPAY_VERIFIED_BONUS);
       expect(repo.createNotification).toHaveBeenCalledTimes(1);
       expect(repo.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -41,4 +41,3 @@ describe(AdminNotificationsController.name, () => {
     await close();
   });
 });
-

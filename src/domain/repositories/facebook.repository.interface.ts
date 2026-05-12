@@ -36,7 +36,9 @@ export interface FacebookFollowSubmissionData {
 export interface ReviewFacebookFollowSubmissionData {
   submissionId: string;
   adminId: string;
-  status: FacebookFollowSubmissionStatus.APPROVED | FacebookFollowSubmissionStatus.REJECTED;
+  status:
+    | FacebookFollowSubmissionStatus.APPROVED
+    | FacebookFollowSubmissionStatus.REJECTED;
   adminNote?: string;
 }
 

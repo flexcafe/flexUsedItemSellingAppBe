@@ -22,6 +22,8 @@ import { ProfileModule } from './presentation/modules/profile/profile.module.js'
 import { NotificationsModule } from './presentation/modules/notifications/notifications.module.js';
 import { RealtimePresentationModule } from './presentation/modules/realtime/realtime.module.js';
 import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.module.js';
+import { CategoryModule } from './presentation/modules/category/category.module.js';
+import { ProductModule } from './presentation/modules/product/product.module.js';
 import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
 
 @Module({
@@ -86,6 +88,8 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
     NotificationsModule,
     RealtimePresentationModule,
     SliderAdsModule,
+    CategoryModule,
+    ProductModule,
     // ─── Future feature modules ───
     // CategoryModule,
     // OfferModule,

@@ -36,25 +36,25 @@ export class ReviewFacebookFollowSubmissionUseCase {
     await this.assertAdmin(adminId);
     const row = await this.requirePendingSubmission(submissionId);
 
-    const reward = await this.facebookRepository.grantFacebookFollowRewardIfEligible(
-      {
+    const reward =
+      await this.facebookRepository.grantFacebookFollowRewardIfEligible({
         userId: row.userId,
         submissionId: row.id,
         points: FACEBOOK_FOLLOW_REWARD_POINTS,
-      },
-    );
+      });
     if (!reward.rewarded) {
       throw new ConflictException(
         'Facebook follow reward has already been granted for this account',
       );
     }
 
-    const reviewed = await this.facebookRepository.reviewFacebookFollowSubmission({
-      submissionId: row.id,
-      adminId,
-      status: FacebookFollowSubmissionStatus.APPROVED,
-      adminNote: dto.adminNote,
-    });
+    const reviewed =
+      await this.facebookRepository.reviewFacebookFollowSubmission({
+        submissionId: row.id,
+        adminId,
+        status: FacebookFollowSubmissionStatus.APPROVED,
+        adminNote: dto.adminNote,
+      });
 
     await this.userRepository.createNotification({
       userId: reviewed.userId,
@@ -79,12 +79,13 @@ export class ReviewFacebookFollowSubmissionUseCase {
     await this.assertAdmin(adminId);
     const row = await this.requirePendingSubmission(submissionId);
 
-    const reviewed = await this.facebookRepository.reviewFacebookFollowSubmission({
-      submissionId: row.id,
-      adminId,
-      status: FacebookFollowSubmissionStatus.REJECTED,
-      adminNote: dto.adminNote,
-    });
+    const reviewed =
+      await this.facebookRepository.reviewFacebookFollowSubmission({
+        submissionId: row.id,
+        adminId,
+        status: FacebookFollowSubmissionStatus.REJECTED,
+        adminNote: dto.adminNote,
+      });
 
     await this.userRepository.createNotification({
       userId: reviewed.userId,
@@ -110,9 +111,7 @@ export class ReviewFacebookFollowSubmissionUseCase {
     }
   }
 
-  private async requirePendingSubmission(
-    submissionId: string,
-  ): Promise<{
+  private async requirePendingSubmission(submissionId: string): Promise<{
     id: string;
     userId: string;
     status: FacebookFollowSubmissionStatus;

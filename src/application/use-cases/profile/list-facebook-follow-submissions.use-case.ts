@@ -28,9 +28,8 @@ export class ListFacebookFollowSubmissionsUseCase {
       throw new ForbiddenException('Only admins can perform this action');
     }
 
-    const rows = await this.facebookRepository.listFacebookFollowSubmissions(
-      status,
-    );
+    const rows =
+      await this.facebookRepository.listFacebookFollowSubmissions(status);
     return rows.map((row) => new FacebookFollowSubmissionDto(row));
   }
 }

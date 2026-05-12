@@ -1,8 +1,5 @@
 import { jest } from '@jest/globals';
-import {
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { LinkFacebookUseCase } from './link-facebook.use-case.js';
 import type { IFacebookRepository } from '../../../domain/repositories/facebook.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
@@ -67,7 +64,11 @@ describe(LinkFacebookUseCase.name, () => {
     const facebookAuth = buildFacebookAuthMock();
     userRepo.findById.mockResolvedValue(null);
 
-    const useCase = new LinkFacebookUseCase(facebookRepo, userRepo, facebookAuth);
+    const useCase = new LinkFacebookUseCase(
+      facebookRepo,
+      userRepo,
+      facebookAuth,
+    );
     await expect(
       useCase.execute('user-1', {
         facebookAccessToken: 'token',
@@ -87,7 +88,11 @@ describe(LinkFacebookUseCase.name, () => {
     });
     userRepo.findByFacebookId.mockResolvedValue(buildUser({ id: 'user-2' }));
 
-    const useCase = new LinkFacebookUseCase(facebookRepo, userRepo, facebookAuth);
+    const useCase = new LinkFacebookUseCase(
+      facebookRepo,
+      userRepo,
+      facebookAuth,
+    );
     await expect(
       useCase.execute('user-1', {
         facebookAccessToken: 'token',
@@ -107,7 +112,11 @@ describe(LinkFacebookUseCase.name, () => {
     });
     userRepo.findByFacebookId.mockResolvedValue(null);
 
-    const useCase = new LinkFacebookUseCase(facebookRepo, userRepo, facebookAuth);
+    const useCase = new LinkFacebookUseCase(
+      facebookRepo,
+      userRepo,
+      facebookAuth,
+    );
     await useCase.execute('user-1', {
       facebookAccessToken: 'token',
       facebookProfileUrl: 'https://www.facebook.com/some.profile',

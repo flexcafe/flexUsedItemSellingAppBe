@@ -61,4 +61,3 @@ describe(ClientNotificationsController.name, () => {
     await close();
   });
 });
-

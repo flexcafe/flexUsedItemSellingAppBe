@@ -21,4 +21,3 @@ describe(ClientSliderAdsController.name, () => {
     await close();
   });
 });
-
