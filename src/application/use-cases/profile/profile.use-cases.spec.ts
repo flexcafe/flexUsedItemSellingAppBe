@@ -93,6 +93,9 @@ function buildStorageMock(): jest.Mocked<IFileStorage> {
 
 describe('Profile use-cases', () => {
   describe(ChangePasswordUseCase.name, () => {
+    // bcrypt cost 12 can be slow on some CI/VPS machines; keep tests deterministic.
+    const BCRYPT_TEST_COST = 4;
+
     it('rejects when newPassword != confirmNewPassword', async () => {
       const repo = buildRepoMock();
       const useCase = new ChangePasswordUseCase(repo);
@@ -121,7 +124,7 @@ describe('Profile use-cases', () => {
     it('rejects when current password incorrect', async () => {
       const repo = buildRepoMock();
       repo.findById.mockResolvedValue(
-        buildUser({ password: await hash('correct', 12) }),
+        buildUser({ password: await hash('correct', BCRYPT_TEST_COST) }),
       );
       const useCase = new ChangePasswordUseCase(repo);
       await expect(
@@ -136,7 +139,7 @@ describe('Profile use-cases', () => {
     it('updates password hash on success', async () => {
       const repo = buildRepoMock();
       repo.findById.mockResolvedValue(
-        buildUser({ password: await hash('old', 12) }),
+        buildUser({ password: await hash('old', BCRYPT_TEST_COST) }),
       );
       repo.update.mockResolvedValue(buildUser());
 
