@@ -14,7 +14,6 @@ export interface UpdateCategoryData {
   slug?: string;
   icon?: string;
   sortOrder?: number;
-  isActive?: boolean;
   parentId?: string | null;
 }
 

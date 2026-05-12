@@ -60,7 +60,6 @@ export class UpdateCategoryUseCase {
       slug,
       icon: dto.icon,
       sortOrder: dto.sortOrder,
-      isActive: dto.isActive,
       parentId: dto.parentId,
     });
     return new CategoryResponseDto(updated);

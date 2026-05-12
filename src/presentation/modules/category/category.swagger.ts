@@ -18,7 +18,7 @@ Categories are **hierarchical**: each row may have a \`parentId\` pointing to an
 
 ### Sorting and visibility
 - **\`sortOrder\`**: lower values appear first among siblings (roots ordered, then children within each parent).
-- **\`isActive\`**: inactive categories should not be used for **new** client products; existing products keep their stored category id until you migrate data separately.
+- **\`isActive\`**: read-only in normal edits. **Only \`DELETE\`** retires a category (sets \`isActive\` to \`false\`). **\`PATCH\`** cannot change \`isActive\`. Inactive categories should not be used for **new** client products.
 
 ### Create (\`POST\`)
 1. Optional **\`parentId\`**: must reference an existing category; if invalid → **404** parent not found.
@@ -32,7 +32,7 @@ Categories are **hierarchical**: each row may have a \`parentId\` pointing to an
 - Returns a single category node (with nested relations as loaded by the repository). Unknown id → **404**.
 
 ### Update (\`PATCH /:categoryId\`)
-- Partial updates: send only fields to change.
+- Partial updates: send only fields to change (**name**, **slug**, **icon**, **sortOrder**, **parentId**). **Cannot** set \`isActive\` here — use **DELETE** to retire a category.
 - **\`parentId\`**: cannot set a category as its own parent; cannot introduce a **cycle** in the tree (e.g. moving A under B when B is under A) → **409** on cycle.
 - Slug collision with another row → **409**.
 
