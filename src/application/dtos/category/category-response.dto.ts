@@ -47,3 +47,12 @@ export class CategoryResponseDto {
     this.updatedAt = entity.updatedAt;
   }
 }
+
+/** Swagger / envelope shape for successful category delete. */
+export class CategoryDeleteResponseDto {
+  @ApiProperty({
+    example: true,
+    description: 'Always true when the server accepted the delete request',
+  })
+  deleted: boolean;
+}

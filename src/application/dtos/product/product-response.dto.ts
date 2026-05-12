@@ -93,3 +93,12 @@ export class ProductResponseDto {
     this.updatedAt = entity.updatedAt;
   }
 }
+
+/** Swagger / envelope shape for successful product delete. */
+export class ProductDeleteResponseDto {
+  @ApiProperty({
+    example: true,
+    description: 'Always true when the server accepted the delete request',
+  })
+  deleted: boolean;
+}

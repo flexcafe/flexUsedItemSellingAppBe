@@ -5,7 +5,11 @@ import { IsEnum, IsOptional } from 'class-validator';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {
-  @ApiPropertyOptional({ enum: ListingStatus })
+  @ApiPropertyOptional({
+    enum: ListingStatus,
+    description:
+      'Optional listing lifecycle status. Only send values your product rules allow; invalid transitions may be rejected elsewhere.',
+  })
   @IsOptional()
   @IsEnum(ListingStatus)
   status?: ListingStatus;

@@ -1,12 +1,31 @@
 import { jest } from '@jest/globals';
+import { NotFoundException } from '@nestjs/common';
 import { ProductRepository } from './product.repository.js';
 
 function buildPrismaMock() {
+  const tx = {
+    listing: {
+      updateMany: jest.fn(),
+    },
+    listingImage: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    preferredTradeLocation: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+  };
   return {
+    $transaction: jest.fn(async (cb: (ctx: typeof tx) => unknown) => cb(tx)),
     $queryRaw: jest.fn(),
     listing: {
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+      count: jest.fn(),
       findMany: jest.fn(),
     },
+    tx,
   };
 }
 
@@ -59,6 +78,38 @@ describe(ProductRepository.name, () => {
       : '';
     expect(sqlText).toContain('(l.geo_location IS NULL)');
     expect(sqlText).toContain('NULLS LAST');
+  });
+
+  it('throws not found when concurrent update makes row unavailable', async () => {
+    const prisma = buildPrismaMock();
+    prisma.listing.findUnique.mockResolvedValue({
+      id: 'p1',
+      sellerId: 'u1',
+      isDeleted: false,
+    });
+    prisma.tx.listing.updateMany.mockResolvedValue({ count: 0 });
+
+    const repo = new ProductRepository(prisma as any);
+
+    await expect(repo.updateBySeller('p1', 'u1', {})).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('throws not found when concurrent delete already archived row', async () => {
+    const prisma = buildPrismaMock();
+    prisma.listing.findUnique.mockResolvedValue({
+      id: 'p1',
+      sellerId: 'u1',
+      isDeleted: false,
+    });
+    prisma.listing.updateMany.mockResolvedValue({ count: 0 });
+
+    const repo = new ProductRepository(prisma as any);
+
+    await expect(
+      repo.softDeleteBySeller('p1', 'u1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 

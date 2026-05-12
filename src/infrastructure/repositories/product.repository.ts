@@ -131,8 +131,12 @@ export class ProductRepository implements IProductRepository {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.listing.update({
-        where: { id: listingId },
+      const updated = await tx.listing.updateMany({
+        where: {
+          id: listingId,
+          sellerId,
+          isDeleted: false,
+        },
         data: {
           categoryId: data.categoryId,
           title: data.title,
@@ -151,6 +155,9 @@ export class ProductRepository implements IProductRepository {
           deliveryFeePayer: data.deliveryFeePayer,
         },
       });
+      if (updated.count === 0) {
+        throw new NotFoundException('Product not found');
+      }
 
       if (data.images) {
         await tx.listingImage.deleteMany({ where: { listingId } });
@@ -196,10 +203,17 @@ export class ProductRepository implements IProductRepository {
     if (existing.sellerId !== sellerId) {
       throw new ForbiddenException('You can only delete your own products');
     }
-    await this.prisma.listing.update({
-      where: { id: listingId },
+    const result = await this.prisma.listing.updateMany({
+      where: {
+        id: listingId,
+        sellerId,
+        isDeleted: false,
+      },
       data: { isDeleted: true, status: PrismaListingStatus.ARCHIVED },
     });
+    if (result.count === 0) {
+      throw new NotFoundException('Product not found');
+    }
     return true;
   }
 
