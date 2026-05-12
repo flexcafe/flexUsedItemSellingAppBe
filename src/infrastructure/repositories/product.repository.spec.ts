@@ -78,6 +78,9 @@ describe(ProductRepository.name, () => {
       : '';
     expect(sqlText).toContain('(l.geo_location IS NULL)');
     expect(sqlText).toContain('NULLS LAST');
+    expect(sqlText).toContain('<->');
+    expect(sqlText).toContain('categories');
+    expect(sqlText).toContain('is_active');
   });
 
   it('throws not found when concurrent update makes row unavailable', async () => {

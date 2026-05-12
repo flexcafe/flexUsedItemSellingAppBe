@@ -76,3 +76,19 @@ export const ADMIN_CATEGORY_DELETE_DOC = `${CATEGORY_ADMIN_WORKFLOW}
 
 ### This endpoint: \`DELETE /admin/dashboard/categories/:categoryId\`
 Soft-deactivates the category when allowed. Read the “Delete” section above for conflict rules.`;
+
+export const CLIENT_CATEGORY_LIST_DOC = `## Client categories (storefront)
+
+**No JWT required.** Returns only **active** categories (same rule as product create: inactive categories are hidden).
+
+### This endpoint: \`GET /client/categories\` (public)
+Returns the **tree** of root categories with nested **active** children. Use each node’s **\`id\`** as **\`categoryId\`** when calling **\`GET /client/products\`**.
+
+**Base path:** your app’s global prefix (e.g. \`/api/v1\`) + \`/client/categories\`.`;
+
+export const CLIENT_CATEGORY_GET_DOC = `## Client category detail
+
+**No JWT required.** Returns one category only if it is **active**; otherwise **404**.
+
+### This endpoint: \`GET /client/categories/:categoryId\` (public)
+Use for labels or breadcrumbs when you already have a **\`categoryId\`** from the product list or picker.`;

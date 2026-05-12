@@ -234,6 +234,8 @@ export class ProductRepository implements IProductRepository {
       return { rows: [], total: 0 };
     }
 
+    // Nearest-first: ORDER BY geo <-> point uses GiST KNN; ST_Distance in ORDER BY
+    // does not get the same index-driven neighbor search.
     const ids = hasGeo
       ? await this.prisma.$queryRaw<ListingIdRow[]>(
           PrismaNs.sql`
@@ -242,13 +244,10 @@ export class ProductRepository implements IProductRepository {
             WHERE ${where}
             ORDER BY
               (l.geo_location IS NULL) ASC,
-              ST_Distance(
-                l.geo_location,
-                ST_SetSRID(
-                  ST_MakePoint(${query.longitude!}, ${query.latitude!}),
-                  4326
-                )::geography
-              ) ASC NULLS LAST,
+              l.geo_location <-> ST_SetSRID(
+                ST_MakePoint(${query.longitude!}, ${query.latitude!}),
+                4326
+              )::geography ASC NULLS LAST,
               l.created_at DESC
             LIMIT ${take}
             OFFSET ${skip}
@@ -284,6 +283,10 @@ export class ProductRepository implements IProductRepository {
     const conditions: Prisma.Sql[] = [
       PrismaNs.sql`l.is_deleted = false`,
       PrismaNs.sql`l.status = 'ACTIVE'::"ListingStatus"`,
+      PrismaNs.sql`EXISTS (
+        SELECT 1 FROM categories c
+        WHERE c.id = l.category_id AND c.is_active = true
+      )`,
     ];
 
     if (query.categoryId) {

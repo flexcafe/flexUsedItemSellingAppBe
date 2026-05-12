@@ -26,6 +26,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 - Distance and optional **radius** filtering use the listing’s **direct trade coordinates** (\`directTradeLatitude\` / \`directTradeLongitude\`), synced to PostGIS \`geo_location\` in the database — **not** the seller’s profile GPS.
 - **\`GET /client/products\`** with **\`latitude\` + \`longitude\`**: results are ordered by distance (listings without coordinates sort after those with coordinates).
 - Optional **\`radiusKm\`**: when set with lat/lng, only listings within that radius are returned (and count respects the same filter).
+- Catalog results only include listings whose **category is still active** (inactive/retired categories are excluded even if a listing row still points at them).
 
 ### Pagination
 - **Catalog** (\`GET /client/products\`): query **\`page\`** (≥1) and **\`limit\`** (1–50). Response **data** is **PaginatedResponseDto**: \`items\`, \`total\`, \`page\`, \`limit\`, \`totalPages\`, \`hasNextPage\`, \`hasPrevPage\`.

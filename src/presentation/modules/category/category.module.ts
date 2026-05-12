@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminCategoriesController } from './admin-categories.controller.js';
+import { ClientCategoriesController } from './client-categories.controller.js';
 import { CategoryRepository } from '../../../infrastructure/repositories/category.repository.js';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { CATEGORY_REPOSITORY } from '../../../domain/repositories/category.repository.interface.js';
@@ -11,7 +12,7 @@ import { GetCategoryUseCase } from '../../../application/use-cases/category/get-
 import { ListCategoriesUseCase } from '../../../application/use-cases/category/list-categories.use-case.js';
 
 @Module({
-  controllers: [AdminCategoriesController],
+  controllers: [AdminCategoriesController, ClientCategoriesController],
   providers: [
     CreateCategoryUseCase,
     UpdateCategoryUseCase,

@@ -12,9 +12,12 @@ export class GetCategoryUseCase {
     private readonly categoryRepository: ICategoryRepository,
   ) {}
 
-  async execute(id: string): Promise<CategoryResponseDto> {
+  async execute(
+    id: string,
+    options?: { requireActive?: boolean },
+  ): Promise<CategoryResponseDto> {
     const row = await this.categoryRepository.findById(id);
-    if (!row) {
+    if (!row || (options?.requireActive === true && !row.isActive)) {
       throw new NotFoundException('Category not found');
     }
     return new CategoryResponseDto(row);
