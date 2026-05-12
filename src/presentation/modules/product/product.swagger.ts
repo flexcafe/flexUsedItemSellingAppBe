@@ -7,8 +7,8 @@ export const CLIENT_PRODUCT_WORKFLOW = `## Products (listings) — client API
 Products are **second-hand listings** stored in the \`listings\` table. The client API exposes them under **\`/client/products\`**.
 
 ### Authentication
-- **Create**, **update**, **delete**, and **list my products** require **JWT** (\`Authorization: Bearer <accessToken>\`).
-- **Public catalog** (\`GET /client/products\`) and **product detail** (\`GET /client/products/:productId\`) are **public** (no JWT) so storefronts and deep links work.
+- **Create**, **update**, **delete**, **list my products**, and **get my product detail** require **JWT** (\`Authorization: Bearer <accessToken>\`).
+- **Public catalog** (\`GET /client/products\`) and **public product detail** (\`GET /client/products/:productId\`) are **public** (no JWT) so storefronts and deep links work.
 
 ### Category binding
 - Every product has a **\`categoryId\`** (UUID). The category must exist and be **active** at create time (and when changing category on update). Inactive or missing category → **404** “Active category not found”.
@@ -31,6 +31,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 ### Pagination
 - **Catalog** (\`GET /client/products\`): query **\`page\`** (≥1) and **\`limit\`** (1–50). Response **data** is **PaginatedResponseDto**: \`items\`, \`total\`, \`page\`, \`limit\`, \`totalPages\`, \`hasNextPage\`, \`hasPrevPage\`.
 - **My products** (\`GET /client/products/my\`): same pagination shape; only listings owned by the current user (**not deleted**).
+- **My product detail** (\`GET /client/products/my/:productId\`, auth): one listing **owned by the current user**, including **soft-deleted** rows (for seller dashboard). Wrong user or unknown id → **404**.
 
 ### Create lifecycle
 - Successful create stores the listing as **ACTIVE** and returns **ProductResponseDto** (wrapped in **ApiResponseDto**).
@@ -68,6 +69,11 @@ export const CLIENT_PRODUCT_LIST_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`GET /client/products/my\` (auth)
 Paginated list of the current user’s own products (non-deleted). Query: **MyProductsFilterDto** (\`page\`, \`limit\`).`;
+
+export const CLIENT_PRODUCT_GET_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
+
+### This endpoint: \`GET /client/products/my/:productId\` (auth)
+Returns **ProductResponseDto** for a listing that belongs to the JWT user. Use this for the seller “my listing” detail screen instead of the public detail route. Includes **archived / soft-deleted** seller listings that public \`GET /client/products/:productId\` would not return.`;
 
 export const CLIENT_PRODUCT_GET_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 

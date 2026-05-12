@@ -75,6 +75,10 @@ export interface SellerProductsQuery {
 export interface IProductRepository {
   create(data: CreateProductData): Promise<ListingEntity>;
   findById(id: string): Promise<ListingEntity | null>;
+  findByIdForSeller(
+    listingId: string,
+    sellerId: string,
+  ): Promise<ListingEntity | null>;
   findBySeller(query: SellerProductsQuery): Promise<ProductSearchResult>;
   updateBySeller(
     listingId: string,

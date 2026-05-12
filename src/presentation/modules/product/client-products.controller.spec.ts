@@ -6,9 +6,13 @@ import { ClientProductsController } from './client-products.controller.js';
 import { CreateProductUseCase } from '../../../application/use-cases/product/create-product.use-case.js';
 import { ListProductsUseCase } from '../../../application/use-cases/product/list-products.use-case.js';
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
+import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
+import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
+import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
+import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 
 describe(ClientProductsController.name, () => {
   it('GET /client/products is public', async () => {
@@ -27,6 +31,10 @@ describe(ClientProductsController.name, () => {
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: ListProductsUseCase, useValue: list },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: GetMyProductDetailUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
@@ -54,6 +62,10 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn().mockResolvedValue(null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: GetMyProductDetailUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
@@ -91,6 +103,10 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn().mockResolvedValue(null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: GetMyProductDetailUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: ListMyProductsUseCase, useValue: listMine },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
@@ -119,6 +135,69 @@ describe(ClientProductsController.name, () => {
     await close();
   });
 
+  it('GET /client/products/my/:productId returns seller detail', async () => {
+    const productId = '22222222-2222-2222-2222-222222222222';
+    const detailPayload = {
+      id: productId,
+      title: 'Mine',
+      description: 'd',
+      price: 10,
+      condition: ListingCondition.GOOD,
+      status: ListingStatus.ACTIVE,
+      paymentMethods: [PaymentMethod.CASH],
+      directTradeLocation: null,
+      directTradeLatitude: null,
+      directTradeLongitude: null,
+      mapScreenshotUrl: null,
+      nearbyLandmarks: null,
+      preferredTradeTime: null,
+      isDeliveryAvailable: false,
+      deliveryFeePayer: null,
+      images: [],
+      sellerId: 'u1',
+      categoryId: 'c1',
+      viewCount: 0,
+      createdAt: new Date('2020-01-01'),
+      updatedAt: new Date('2020-01-02'),
+    };
+    const getMine = {
+      execute: jest.fn().mockResolvedValue(detailPayload),
+    };
+    const { app, close } = await createHttpTestApp({
+      controllers: [ClientProductsController],
+      providers: [
+        { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ListProductsUseCase,
+          useValue: { execute: jest.fn().mockResolvedValue(null) },
+        },
+        { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        { provide: GetMyProductDetailUseCase, useValue: getMine },
+        { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
+        { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
+      ],
+      overrideGuards: [
+        {
+          guard: JwtAuthGuard,
+          canActivate: (ctx) => {
+            const req = (ctx as any).switchToHttp().getRequest();
+            req.user = { sub: 'u1' };
+            return true;
+          },
+        },
+      ],
+    });
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/client/products/my/${productId}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(getMine.execute).toHaveBeenCalledWith('u1', productId);
+    await close();
+  });
+
   it('DELETE /client/products/:id requires confirmTitle body', async () => {
     const del = { execute: jest.fn().mockResolvedValue(undefined) };
     const { app, close } = await createHttpTestApp({
@@ -130,6 +209,10 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn().mockResolvedValue(null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: GetMyProductDetailUseCase,
+          useValue: { execute: jest.fn() },
+        },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: del },

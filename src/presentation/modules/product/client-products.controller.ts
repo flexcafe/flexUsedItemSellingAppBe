@@ -42,6 +42,7 @@ import { PaginatedResponseDto } from '../../../application/dtos/common/index.js'
 import { CreateProductUseCase } from '../../../application/use-cases/product/create-product.use-case.js';
 import { ListProductsUseCase } from '../../../application/use-cases/product/list-products.use-case.js';
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
+import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
@@ -51,6 +52,7 @@ import {
   CLIENT_PRODUCT_GET_DOC,
   CLIENT_PRODUCT_LIST_DOC,
   CLIENT_PRODUCT_LIST_MINE_DOC,
+  CLIENT_PRODUCT_GET_MINE_DOC,
   CLIENT_PRODUCT_UPDATE_DOC,
 } from './product.swagger.js';
 
@@ -63,6 +65,7 @@ export class ClientProductsController {
     private readonly createProductUseCase: CreateProductUseCase,
     private readonly listProductsUseCase: ListProductsUseCase,
     private readonly getProductDetailUseCase: GetProductDetailUseCase,
+    private readonly getMyProductDetailUseCase: GetMyProductDetailUseCase,
     private readonly listMyProductsUseCase: ListMyProductsUseCase,
     private readonly updateProductUseCase: UpdateProductUseCase,
     private readonly deleteProductUseCase: DeleteProductUseCase,
@@ -138,6 +141,40 @@ export class ClientProductsController {
   ): Promise<ApiResponseDto<PaginatedResponseDto<ProductResponseDto>>> {
     const rows = await this.listMyProductsUseCase.execute(user.sub, query);
     return ApiResponseDto.success(rows, 'My products retrieved');
+  }
+
+  @Get('my/:productId')
+  @ApiOperation({
+    summary: 'Get one of my listings by id (seller detail)',
+    description: CLIENT_PRODUCT_GET_MINE_DOC,
+  })
+  @ApiParam({
+    name: 'productId',
+    format: 'uuid',
+    description: 'Listing id that must belong to the current user.',
+  })
+  @ApiSuccessResponse(ProductResponseDto, {
+    status: HttpStatus.OK,
+    description:
+      'Wrapped in ApiResponseDto; data is ProductResponseDto (same shape as public detail).',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid JWT.',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'No listing with this id for the current seller.',
+  })
+  async getMine(
+    @CurrentUser() user: JwtPayload,
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ): Promise<ApiResponseDto<ProductResponseDto>> {
+    const row = await this.getMyProductDetailUseCase.execute(
+      user.sub,
+      productId,
+    );
+    return ApiResponseDto.success(row, 'My product detail retrieved');
   }
 
   @Public()

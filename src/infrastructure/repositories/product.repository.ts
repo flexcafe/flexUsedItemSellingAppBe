@@ -96,6 +96,14 @@ export class ProductRepository implements IProductRepository {
     return ListingMapper.toDomain(row);
   }
 
+  async findByIdForSeller(listingId: string, sellerId: string) {
+    const row = await this.prisma.listing.findFirst({
+      where: { id: listingId, sellerId },
+      include: { category: true, seller: true, images: true },
+    });
+    return row ? ListingMapper.toDomain(row) : null;
+  }
+
   async findBySeller({ sellerId, skip, take }: SellerProductsQuery) {
     const safeTake = Math.max(1, Math.min(take, 50));
     const safeSkip = Math.max(0, skip);

@@ -9,6 +9,7 @@ import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.in
 import { CreateProductUseCase } from '../../../application/use-cases/product/create-product.use-case.js';
 import { ListProductsUseCase } from '../../../application/use-cases/product/list-products.use-case.js';
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
+import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
@@ -19,6 +20,7 @@ import { DeleteProductUseCase } from '../../../application/use-cases/product/del
     CreateProductUseCase,
     ListProductsUseCase,
     GetProductDetailUseCase,
+    GetMyProductDetailUseCase,
     ListMyProductsUseCase,
     UpdateProductUseCase,
     DeleteProductUseCase,

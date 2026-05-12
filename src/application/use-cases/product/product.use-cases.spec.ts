@@ -13,6 +13,7 @@ function buildProductRepoMock(): jest.Mocked<IProductRepository> {
   return {
     create: jest.fn(),
     findById: jest.fn(),
+    findByIdForSeller: jest.fn(),
     findBySeller: jest.fn(),
     updateBySeller: jest.fn(),
     softDeleteBySeller: jest.fn(),
