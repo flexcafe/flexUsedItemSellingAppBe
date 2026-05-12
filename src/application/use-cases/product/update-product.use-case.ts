@@ -62,7 +62,6 @@ export class UpdateProductUseCase {
       categoryId: dto.categoryId,
       title,
       description,
-      price: dto.price,
       condition: dto.condition,
       status: dto.status,
       paymentMethods: dto.paymentMethods,

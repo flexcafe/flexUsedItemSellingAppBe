@@ -36,7 +36,6 @@ export interface UpdateProductData {
   categoryId?: string;
   title?: string;
   description?: string;
-  price?: number;
   condition?: ListingCondition;
   status?: ListingStatus;
   paymentMethods?: PaymentMethod[];

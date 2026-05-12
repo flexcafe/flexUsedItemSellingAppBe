@@ -36,7 +36,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 
 ### Update / ownership
 - **\`PATCH /client/products/:productId\`**: only the **seller** may update. Another user’s id → **403**. Unknown id or soft-deleted → **404**.
-- Body is **partial** (**UpdateProductDto**); omitted fields are left unchanged. Optional **\`status\`** allows controlled transitions when you expose them (validate in use-case layer).
+- Body is **partial** (**UpdateProductDto**); omitted fields are left unchanged. **\`price\`** cannot be changed after create (omit it on **PATCH**). Optional **\`status\`** allows controlled transitions when you expose them (validate in use-case layer).
 
 ### Delete
 - **Soft delete** (seller): JSON body must include **\`confirmTitle\`** matching the listing **title** (trimmed on both sides; case-sensitive). Wrong string → **400**. **Sold** listings cannot be seller-deleted → **409** (support/admin for edge cases). Otherwise marks deleted and archives. Concurrent deletes may yield **404** if already removed.
@@ -76,7 +76,7 @@ Returns one product by UUID. Deleted or missing → **404**.`;
 export const CLIENT_PRODUCT_UPDATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`PATCH /client/products/:productId\` (auth)
-Partial update; only the owner. Body: **UpdateProductDto**.`;
+Partial update; only the owner. Body: **UpdateProductDto** (no **\`price\`** field — price is fixed after create).`;
 
 export const CLIENT_PRODUCT_DELETE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
