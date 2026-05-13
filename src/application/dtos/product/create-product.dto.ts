@@ -4,12 +4,14 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -120,8 +122,13 @@ export class CreateProductDto {
   @IsBoolean()
   isDeliveryAvailable: boolean;
 
-  @ApiPropertyOptional({ enum: DeliveryFeePayer, nullable: true })
-  @IsOptional()
+  @ApiPropertyOptional({
+    enum: DeliveryFeePayer,
+    description:
+      'Who pays delivery when `isDeliveryAvailable` is true: **BUYER** or **SELLER**. Required in that case. Omit when delivery is disabled.',
+  })
+  @ValidateIf((o: CreateProductDto) => o.isDeliveryAvailable === true)
+  @IsNotEmpty({ message: 'deliveryFeePayer is required when delivery is available' })
   @IsEnum(DeliveryFeePayer)
   deliveryFeePayer?: DeliveryFeePayer;
 

@@ -20,7 +20,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 - **\`paymentMethods\`**: at least one of \`CASH\`, \`KBZPAY\`; max two entries; **no duplicates** (**400**).
 - **\`images\`**: max **5** URLs (**400** if more). Typically these are **public URLs** returned by your upload flow (e.g. Supabase).
 - **\`preferredLocations\`**: max **3** objects; each **label** and **address** must be non-blank (**400**).
-- **\`isDeliveryAvailable\`**: if \`false\`, do not send \`deliveryFeePayer\` (**400** if you do).
+- **\`isDeliveryAvailable\` / \`deliveryFeePayer\`**: when delivery is **off** (\`false\`), omit \`deliveryFeePayer\` or send \`null\` (**400** if you send BUYER/SELLER). When delivery is **on** (\`true\`), you **must** set \`deliveryFeePayer\` to **\`BUYER\`** or **\`SELLER\`** (who pays delivery) — omitting it on create (**400**). On **PATCH**, merged rules apply: enabling delivery without a payer fails unless the listing already had one; setting delivery off clears the payer in storage.
 
 ### Geo / “nearest first” catalog
 - Distance and optional **radius** filtering use the listing’s **direct trade coordinates** (\`directTradeLatitude\` / \`directTradeLongitude\`), synced to PostGIS \`geo_location\` in the database — **not** the seller’s profile GPS.

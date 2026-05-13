@@ -1,7 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   PRODUCT_REPOSITORY,
   type IProductRepository,
+  type UpdateProductData,
 } from '../../../domain/repositories/product.repository.interface.js';
 import {
   CATEGORY_REPOSITORY,
@@ -13,6 +19,7 @@ import {
   assertActiveCategory,
   assertNotBlank,
   assertProductInputRules,
+  mergeListingDeliveryForUpdate,
 } from './_helpers.js';
 
 @Injectable()
@@ -29,6 +36,14 @@ export class UpdateProductUseCase {
     productId: string,
     dto: UpdateProductDto,
   ): Promise<ProductResponseDto> {
+    const existing = await this.productRepository.findByIdForSeller(
+      productId,
+      userId,
+    );
+    if (!existing || existing.isDeleted) {
+      throw new NotFoundException('Product not found');
+    }
+
     const title = dto.title ? assertNotBlank(dto.title, 'title') : undefined;
     const description = dto.description
       ? assertNotBlank(dto.description, 'description')
@@ -48,17 +63,31 @@ export class UpdateProductUseCase {
       await assertActiveCategory(this.categoryRepository, dto.categoryId);
     }
 
+    if (
+      dto.isDeliveryAvailable === false &&
+      dto.deliveryFeePayer !== undefined &&
+      dto.deliveryFeePayer !== null
+    ) {
+      throw new BadRequestException(
+        'deliveryFeePayer is only allowed when delivery is available',
+      );
+    }
+
+    const mergedDelivery = mergeListingDeliveryForUpdate(existing, dto);
+
     assertProductInputRules({
       images: dto.images,
       preferredLocations: dto.preferredLocations,
       paymentMethods: dto.paymentMethods,
       isDeliveryAvailable: dto.isDeliveryAvailable,
-      deliveryFeePayer: dto.deliveryFeePayer ?? null,
+      deliveryFeePayer:
+        dto.deliveryFeePayer !== undefined ? dto.deliveryFeePayer : undefined,
+      deliveryEffective: mergedDelivery,
       directTradeLatitude: dto.directTradeLatitude ?? null,
       directTradeLongitude: dto.directTradeLongitude ?? null,
     });
 
-    const row = await this.productRepository.updateBySeller(productId, userId, {
+    const updatePayload: UpdateProductData = {
       categoryId: dto.categoryId,
       title,
       description,
@@ -71,11 +100,23 @@ export class UpdateProductUseCase {
       mapScreenshotUrl: dto.mapScreenshotUrl,
       nearbyLandmarks: dto.nearbyLandmarks,
       preferredTradeTime: dto.preferredTradeTime,
-      isDeliveryAvailable: dto.isDeliveryAvailable,
-      deliveryFeePayer: dto.deliveryFeePayer,
       images: dto.images,
       preferredLocations: dto.preferredLocations,
-    });
+    };
+
+    if (
+      dto.isDeliveryAvailable !== undefined ||
+      dto.deliveryFeePayer !== undefined
+    ) {
+      updatePayload.isDeliveryAvailable = mergedDelivery.isDeliveryAvailable;
+      updatePayload.deliveryFeePayer = mergedDelivery.deliveryFeePayer;
+    }
+
+    const row = await this.productRepository.updateBySeller(
+      productId,
+      userId,
+      updatePayload,
+    );
     return new ProductResponseDto(row);
   }
 }

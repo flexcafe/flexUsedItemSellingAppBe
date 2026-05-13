@@ -8,6 +8,7 @@ import type { IUserRepository } from '../../../domain/repositories/user.reposito
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
+import { DeliveryFeePayer } from '../../../domain/enums/delivery-fee-payer.enum.js';
 
 function buildProductRepoMock(): jest.Mocked<IProductRepository> {
   return {
@@ -31,6 +32,22 @@ function buildUserRepoMock(): jest.Mocked<IUserRepository> {
   return {
     findById: jest.fn(),
   } as unknown as jest.Mocked<IUserRepository>;
+}
+
+function buildExistingListingForUpdate(
+  overrides: Partial<{
+    isDeliveryAvailable: boolean;
+    deliveryFeePayer: DeliveryFeePayer | null;
+    isDeleted: boolean;
+  }> = {},
+) {
+  return {
+    id: 'p1',
+    isDeleted: false,
+    isDeliveryAvailable: false,
+    deliveryFeePayer: null,
+    ...overrides,
+  } as any;
 }
 
 describe(CreateProductUseCase.name, () => {
@@ -216,6 +233,35 @@ describe(CreateProductUseCase.name, () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('rejects when delivery is on but deliveryFeePayer is missing', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    const userRepo = buildUserRepoMock();
+    userRepo.findById.mockResolvedValue({ id: 'u1' } as any);
+    categoryRepo.findById.mockResolvedValue({
+      id: 'c1',
+      isActive: true,
+    } as any);
+
+    const useCase = new CreateProductUseCase(
+      productRepo,
+      categoryRepo,
+      userRepo,
+    );
+    await expect(
+      useCase.execute('u1', {
+        categoryId: '11111111-1111-1111-1111-111111111111',
+        title: 'Phone',
+        description: 'desc',
+        price: 1200,
+        paymentMethods: [PaymentMethod.CASH],
+        isDeliveryAvailable: true,
+        images: [],
+        preferredLocations: [],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects blank direct trade location and preferred location fields', async () => {
     const productRepo = buildProductRepoMock();
     const categoryRepo = buildCategoryRepoMock();
@@ -258,12 +304,74 @@ describe(CreateProductUseCase.name, () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('creates product when delivery is on and deliveryFeePayer is set', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    const userRepo = buildUserRepoMock();
+    userRepo.findById.mockResolvedValue({ id: 'u1' } as any);
+    categoryRepo.findById.mockResolvedValue({
+      id: 'c1',
+      isActive: true,
+    } as any);
+    productRepo.create.mockResolvedValue({
+      id: 'p1',
+      title: 'Phone',
+      description: 'desc',
+      price: 1200,
+      condition: ListingCondition.GOOD,
+      status: ListingStatus.ACTIVE,
+      paymentMethods: [PaymentMethod.CASH],
+      directTradeLocation: null,
+      directTradeLatitude: null,
+      directTradeLongitude: null,
+      mapScreenshotUrl: null,
+      nearbyLandmarks: null,
+      preferredTradeTime: null,
+      isDeliveryAvailable: true,
+      deliveryFeePayer: DeliveryFeePayer.BUYER,
+      images: [],
+      isDeleted: false,
+      viewCount: 0,
+      sellerId: 'u1',
+      categoryId: 'c1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+
+    const useCase = new CreateProductUseCase(
+      productRepo,
+      categoryRepo,
+      userRepo,
+    );
+    await useCase.execute('u1', {
+      categoryId: '11111111-1111-1111-1111-111111111111',
+      title: 'Phone',
+      description: 'desc',
+      price: 1200,
+      paymentMethods: [PaymentMethod.CASH],
+      isDeliveryAvailable: true,
+      deliveryFeePayer: DeliveryFeePayer.BUYER,
+      images: [],
+      preferredLocations: [],
+    });
+
+    expect(productRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isDeliveryAvailable: true,
+        deliveryFeePayer: DeliveryFeePayer.BUYER,
+      }),
+    );
+  });
 });
 
 describe(UpdateProductUseCase.name, () => {
   it('rejects blank direct trade location on update', async () => {
     const productRepo = buildProductRepoMock();
     const categoryRepo = buildCategoryRepoMock();
+    productRepo.findByIdForSeller.mockResolvedValue(
+      buildExistingListingForUpdate(),
+    );
     const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
 
     await expect(
@@ -276,6 +384,9 @@ describe(UpdateProductUseCase.name, () => {
   it('rejects preferred location with blank fields', async () => {
     const productRepo = buildProductRepoMock();
     const categoryRepo = buildCategoryRepoMock();
+    productRepo.findByIdForSeller.mockResolvedValue(
+      buildExistingListingForUpdate(),
+    );
     const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
 
     await expect(
@@ -283,5 +394,22 @@ describe(UpdateProductUseCase.name, () => {
         preferredLocations: [{ label: '  ', address: 'somewhere' }] as any,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects enabling delivery without a fee payer when listing had none', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    productRepo.findByIdForSeller.mockResolvedValue(
+      buildExistingListingForUpdate({
+        isDeliveryAvailable: false,
+        deliveryFeePayer: null,
+      }),
+    );
+    const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
+
+    await expect(
+      useCase.execute('u1', 'p1', { isDeliveryAvailable: true }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(productRepo.updateBySeller).not.toHaveBeenCalled();
   });
 });

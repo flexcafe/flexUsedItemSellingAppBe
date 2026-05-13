@@ -3,12 +3,44 @@ import type { ICategoryRepository } from '../../../domain/repositories/category.
 import { DeliveryFeePayer } from '../../../domain/enums/delivery-fee-payer.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 
+export function mergeListingDeliveryForUpdate(
+  existing: {
+    isDeliveryAvailable: boolean;
+    deliveryFeePayer: DeliveryFeePayer | null;
+  },
+  dto: {
+    isDeliveryAvailable?: boolean;
+    deliveryFeePayer?: DeliveryFeePayer | null;
+  },
+): { isDeliveryAvailable: boolean; deliveryFeePayer: DeliveryFeePayer | null } {
+  const isDeliveryAvailable =
+    dto.isDeliveryAvailable !== undefined
+      ? dto.isDeliveryAvailable
+      : existing.isDeliveryAvailable;
+
+  let deliveryFeePayer: DeliveryFeePayer | null;
+  if (dto.isDeliveryAvailable === false) {
+    deliveryFeePayer = null;
+  } else if (dto.deliveryFeePayer !== undefined) {
+    deliveryFeePayer = dto.deliveryFeePayer;
+  } else {
+    deliveryFeePayer = existing.deliveryFeePayer;
+  }
+
+  return { isDeliveryAvailable, deliveryFeePayer };
+}
+
 export function assertProductInputRules(params: {
   images?: string[];
   preferredLocations?: unknown[];
   paymentMethods?: PaymentMethod[];
   isDeliveryAvailable?: boolean;
   deliveryFeePayer?: DeliveryFeePayer | null;
+  /** When set (partial PATCH), delivery invariants apply to merged listing state. */
+  deliveryEffective?: {
+    isDeliveryAvailable: boolean;
+    deliveryFeePayer: DeliveryFeePayer | null;
+  };
   directTradeLatitude?: number | null;
   directTradeLongitude?: number | null;
 }): void {
@@ -36,6 +68,29 @@ export function assertProductInputRules(params: {
   ) {
     throw new BadRequestException(
       'deliveryFeePayer is only allowed when delivery is available',
+    );
+  }
+
+  const effIs = params.deliveryEffective
+    ? params.deliveryEffective.isDeliveryAvailable
+    : params.isDeliveryAvailable;
+  const effPayer = params.deliveryEffective
+    ? params.deliveryEffective.deliveryFeePayer
+    : (params.deliveryFeePayer ?? null);
+
+  if (effIs === true) {
+    if (
+      effPayer !== DeliveryFeePayer.BUYER &&
+      effPayer !== DeliveryFeePayer.SELLER
+    ) {
+      throw new BadRequestException(
+        'deliveryFeePayer must be BUYER or SELLER when delivery is available',
+      );
+    }
+  }
+  if (effIs === false && effPayer !== null) {
+    throw new BadRequestException(
+      'deliveryFeePayer must be omitted when delivery is not available',
     );
   }
   const hasLat = params.directTradeLatitude != null;

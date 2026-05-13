@@ -3,6 +3,7 @@ import {
   assertActiveCategory,
   assertNotBlank,
   assertProductInputRules,
+  mergeListingDeliveryForUpdate,
 } from './_helpers.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 import { DeliveryFeePayer } from '../../../domain/enums/delivery-fee-payer.enum.js';
@@ -25,6 +26,50 @@ describe('product helper rules', () => {
         deliveryFeePayer: DeliveryFeePayer.BUYER,
       }),
     ).toThrow(BadRequestException);
+  });
+
+  it('rejects missing delivery fee payer when delivery is enabled', () => {
+    expect(() =>
+      assertProductInputRules({
+        isDeliveryAvailable: true,
+        deliveryFeePayer: null,
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('allows delivery when payer is BUYER or SELLER', () => {
+    expect(() =>
+      assertProductInputRules({
+        isDeliveryAvailable: true,
+        deliveryFeePayer: DeliveryFeePayer.SELLER,
+      }),
+    ).not.toThrow();
+  });
+
+  it('validates merged delivery on partial update context', () => {
+    expect(() =>
+      assertProductInputRules({
+        deliveryEffective: {
+          isDeliveryAvailable: true,
+          deliveryFeePayer: null,
+        },
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('mergeListingDeliveryForUpdate clears payer when disabling delivery', () => {
+    expect(
+      mergeListingDeliveryForUpdate(
+        {
+          isDeliveryAvailable: true,
+          deliveryFeePayer: DeliveryFeePayer.BUYER,
+        },
+        { isDeliveryAvailable: false },
+      ),
+    ).toEqual({
+      isDeliveryAvailable: false,
+      deliveryFeePayer: null,
+    });
   });
 
   it('rejects partial direct trade coordinate', () => {
