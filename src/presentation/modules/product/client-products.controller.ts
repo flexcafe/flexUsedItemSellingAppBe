@@ -10,14 +10,19 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
@@ -46,6 +51,7 @@ import { GetMyProductDetailUseCase } from '../../../application/use-cases/produc
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
+import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
 import {
   CLIENT_PRODUCT_CREATE_DOC,
   CLIENT_PRODUCT_DELETE_DOC,
@@ -69,10 +75,84 @@ export class ClientProductsController {
     private readonly listMyProductsUseCase: ListMyProductsUseCase,
     private readonly updateProductUseCase: UpdateProductUseCase,
     private readonly deleteProductUseCase: DeleteProductUseCase,
+    private readonly uploadProductMediaUseCase: UploadProductMediaUseCase,
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Optional product photos uploaded directly from FE.',
+        },
+        mapScreenshot: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Optional map screenshot image uploaded directly from FE.',
+        },
+        categoryId: { type: 'string', format: 'uuid' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        price: { type: 'number' },
+        condition: { type: 'string' },
+        paymentMethods: {
+          oneOf: [
+            { type: 'array', items: { type: 'string' } },
+            { type: 'string' },
+          ],
+        },
+        directTradeLocation: { type: 'string' },
+        directTradeLatitude: { type: 'number' },
+        directTradeLongitude: { type: 'number' },
+        mapScreenshotUrl: { type: 'string' },
+        nearbyLandmarks: { type: 'string' },
+        preferredTradeTime: { type: 'string' },
+        isDeliveryAvailable: { type: 'boolean' },
+        deliveryFeePayer: { type: 'string' },
+        preferredLocations: {
+          oneOf: [
+            { type: 'array', items: { type: 'object' } },
+            {
+              type: 'string',
+              description: 'JSON string array for multipart submissions.',
+            },
+          ],
+        },
+      },
+      required: [
+        'categoryId',
+        'title',
+        'description',
+        'price',
+        'paymentMethods',
+        'isDeliveryAvailable',
+      ],
+    },
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 5 },
+        { name: 'mapScreenshot', maxCount: 1 },
+      ],
+      {
+        limits: {
+          fileSize: 4 * 1024 * 1024,
+          files: 6,
+        },
+        fileFilter: (_req, file, cb) => {
+          const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+          cb(null, allowed.includes(file.mimetype));
+        },
+      },
+    ),
+  )
   @ApiOperation({
     summary: 'Create a product listing (seller = current user)',
     description: CLIENT_PRODUCT_CREATE_DOC,
@@ -98,7 +178,26 @@ export class ClientProductsController {
   async create(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateProductDto,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      mapScreenshot?: Express.Multer.File[];
+    },
   ): Promise<ApiResponseDto<ProductResponseDto>> {
+    const uploadedImageUrls =
+      await this.uploadProductMediaUseCase.uploadListingImages(
+        user.sub,
+        files?.images,
+      );
+    const uploadedMapScreenshotUrl =
+      await this.uploadProductMediaUseCase.uploadMapScreenshot(
+        user.sub,
+        files?.mapScreenshot?.[0],
+      );
+    dto.images = [...(dto.images ?? []), ...uploadedImageUrls];
+    if (uploadedMapScreenshotUrl) {
+      dto.mapScreenshotUrl = uploadedMapScreenshotUrl;
+    }
     const row = await this.createProductUseCase.execute(user.sub, dto);
     return ApiResponseDto.success(row, 'Product created');
   }
@@ -206,6 +305,71 @@ export class ClientProductsController {
   }
 
   @Patch(':productId')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Optional replacement product photos (max 5).',
+        },
+        mapScreenshot: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Optional replacement map screenshot; overwrites mapScreenshotUrl.',
+        },
+        categoryId: { type: 'string', format: 'uuid' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        condition: { type: 'string' },
+        status: { type: 'string' },
+        paymentMethods: {
+          oneOf: [
+            { type: 'array', items: { type: 'string' } },
+            { type: 'string' },
+          ],
+        },
+        directTradeLocation: { type: 'string' },
+        directTradeLatitude: { type: 'number' },
+        directTradeLongitude: { type: 'number' },
+        mapScreenshotUrl: { type: 'string' },
+        nearbyLandmarks: { type: 'string' },
+        preferredTradeTime: { type: 'string' },
+        isDeliveryAvailable: { type: 'boolean' },
+        deliveryFeePayer: { type: 'string' },
+        preferredLocations: {
+          oneOf: [
+            { type: 'array', items: { type: 'object' } },
+            {
+              type: 'string',
+              description: 'JSON string array for multipart submissions.',
+            },
+          ],
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 5 },
+        { name: 'mapScreenshot', maxCount: 1 },
+      ],
+      {
+        limits: {
+          fileSize: 4 * 1024 * 1024,
+          files: 6,
+        },
+        fileFilter: (_req, file, cb) => {
+          const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+          cb(null, allowed.includes(file.mimetype));
+        },
+      },
+    ),
+  )
   @ApiOperation({
     summary: 'Update own product (partial body)',
     description: CLIENT_PRODUCT_UPDATE_DOC,
@@ -240,7 +404,28 @@ export class ClientProductsController {
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseUUIDPipe) productId: string,
     @Body() dto: UpdateProductDto,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      mapScreenshot?: Express.Multer.File[];
+    },
   ): Promise<ApiResponseDto<ProductResponseDto>> {
+    if (files?.images?.length) {
+      dto.images = await this.uploadProductMediaUseCase.uploadListingImages(
+        user.sub,
+        files.images,
+      );
+    }
+    if (files?.mapScreenshot?.[0]) {
+      const mapScreenshotUrl =
+        await this.uploadProductMediaUseCase.uploadMapScreenshot(
+          user.sub,
+          files.mapScreenshot[0],
+        );
+      if (mapScreenshotUrl) {
+        dto.mapScreenshotUrl = mapScreenshotUrl;
+      }
+    }
     const row = await this.updateProductUseCase.execute(
       user.sub,
       productId,

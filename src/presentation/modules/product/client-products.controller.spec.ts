@@ -10,20 +10,28 @@ import { GetMyProductDetailUseCase } from '../../../application/use-cases/produc
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
+import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 
+function buildUploadMediaMock() {
+  return {
+    uploadListingImages: jest.fn(async () => []),
+    uploadMapScreenshot: jest.fn(async () => null),
+  };
+}
+
 describe(ClientProductsController.name, () => {
   it('GET /client/products is public', async () => {
     const list = {
-      execute: jest.fn().mockResolvedValue({
+      execute: jest.fn(async () => ({
         data: [],
         total: 0,
         page: 1,
         limit: 20,
         totalPages: 0,
-      }),
+      })),
     };
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
@@ -38,6 +46,10 @@ describe(ClientProductsController.name, () => {
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: UploadProductMediaUseCase,
+          useValue: buildUploadMediaMock(),
+        },
       ],
       overrideGuards: [{ guard: JwtAuthGuard, canActivate: () => true }],
     });
@@ -59,7 +71,7 @@ describe(ClientProductsController.name, () => {
         { provide: CreateProductUseCase, useValue: create },
         {
           provide: ListProductsUseCase,
-          useValue: { execute: jest.fn().mockResolvedValue(null) },
+          useValue: { execute: jest.fn(async () => null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
         {
@@ -69,6 +81,10 @@ describe(ClientProductsController.name, () => {
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: UploadProductMediaUseCase,
+          useValue: buildUploadMediaMock(),
+        },
       ],
       overrideGuards: [{ guard: JwtAuthGuard, canActivate: () => false }],
     });
@@ -84,7 +100,7 @@ describe(ClientProductsController.name, () => {
 
   it('GET /client/products/my uses paginated response', async () => {
     const listMine = {
-      execute: jest.fn().mockResolvedValue({
+      execute: jest.fn(async () => ({
         items: [],
         total: 0,
         page: 2,
@@ -92,7 +108,7 @@ describe(ClientProductsController.name, () => {
         totalPages: 0,
         hasNextPage: false,
         hasPrevPage: true,
-      }),
+      })),
     };
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
@@ -100,7 +116,7 @@ describe(ClientProductsController.name, () => {
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
-          useValue: { execute: jest.fn().mockResolvedValue(null) },
+          useValue: { execute: jest.fn(async () => null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
         {
@@ -110,6 +126,10 @@ describe(ClientProductsController.name, () => {
         { provide: ListMyProductsUseCase, useValue: listMine },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: UploadProductMediaUseCase,
+          useValue: buildUploadMediaMock(),
+        },
       ],
       overrideGuards: [
         {
@@ -161,7 +181,7 @@ describe(ClientProductsController.name, () => {
       updatedAt: new Date('2020-01-02'),
     };
     const getMine = {
-      execute: jest.fn().mockResolvedValue(detailPayload),
+      execute: jest.fn(async () => detailPayload),
     };
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
@@ -169,13 +189,17 @@ describe(ClientProductsController.name, () => {
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
-          useValue: { execute: jest.fn().mockResolvedValue(null) },
+          useValue: { execute: jest.fn(async () => null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
         { provide: GetMyProductDetailUseCase, useValue: getMine },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: UploadProductMediaUseCase,
+          useValue: buildUploadMediaMock(),
+        },
       ],
       overrideGuards: [
         {
@@ -199,14 +223,14 @@ describe(ClientProductsController.name, () => {
   });
 
   it('DELETE /client/products/:id requires confirmTitle body', async () => {
-    const del = { execute: jest.fn().mockResolvedValue(undefined) };
+    const del = { execute: jest.fn(async () => undefined) };
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
-          useValue: { execute: jest.fn().mockResolvedValue(null) },
+          useValue: { execute: jest.fn(async () => null) },
         },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
         {
@@ -216,6 +240,10 @@ describe(ClientProductsController.name, () => {
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: del },
+        {
+          provide: UploadProductMediaUseCase,
+          useValue: buildUploadMediaMock(),
+        },
       ],
       overrideGuards: [
         {

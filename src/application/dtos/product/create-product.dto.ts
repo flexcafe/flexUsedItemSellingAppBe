@@ -14,7 +14,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 import { DeliveryFeePayer } from '../../../domain/enums/delivery-fee-payer.enum.js';
@@ -48,6 +48,7 @@ export class CreateProductDto {
   description: string;
 
   @ApiProperty({ example: 980000 })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price: number;
@@ -67,6 +68,7 @@ export class CreateProductDto {
     description:
       'At least one method. Max two entries, no duplicates. Values: CASH, KBZPAY.',
   })
+  @Transform(({ value }) => parseEnumArrayValue(value))
   @IsArray()
   @ArrayMaxSize(2)
   @IsEnum(PaymentMethod, { each: true })
@@ -88,6 +90,7 @@ export class CreateProductDto {
       'WGS84 latitude of direct trade pin. Must be paired with directTradeLongitude; drives PostGIS geo_location for nearest-first search.',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   directTradeLatitude?: number;
 
@@ -97,6 +100,7 @@ export class CreateProductDto {
       'WGS84 longitude of direct trade pin. Must be paired with directTradeLatitude.',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   directTradeLongitude?: number;
 
@@ -119,6 +123,7 @@ export class CreateProductDto {
   preferredTradeTime?: string;
 
   @ApiProperty()
+  @Transform(({ value }) => parseBooleanValue(value))
   @IsBoolean()
   isDeliveryAvailable: boolean;
 
@@ -128,7 +133,9 @@ export class CreateProductDto {
       'Who pays delivery when `isDeliveryAvailable` is true: **BUYER** or **SELLER**. Required in that case. Omit when delivery is disabled.',
   })
   @ValidateIf((o: CreateProductDto) => o.isDeliveryAvailable === true)
-  @IsNotEmpty({ message: 'deliveryFeePayer is required when delivery is available' })
+  @IsNotEmpty({
+    message: 'deliveryFeePayer is required when delivery is available',
+  })
   @IsEnum(DeliveryFeePayer)
   deliveryFeePayer?: DeliveryFeePayer;
 
@@ -136,12 +143,14 @@ export class CreateProductDto {
     isArray: true,
     example: ['https://cdn.example.com/p1.jpg'],
     description:
-      'Up to 5 HTTPS URLs of already-uploaded images (public bucket URLs). Order is preserved as sort order 0..n-1.',
+      'Optional fallback URLs. For multipart create/update, upload binary files in `images` field and server stores them in Supabase.',
   })
+  @Transform(({ value }) => parseStringArrayValue(value))
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(5)
   @IsString({ each: true })
-  images: string[];
+  images?: string[];
 
   @ApiProperty({
     type: ProductPreferredLocationDto,
@@ -149,9 +158,70 @@ export class CreateProductDto {
     description:
       'Up to 3 alternate meetup options (label + address; optional per-row lat/lng). Each label and address must be non-blank after trim.',
   })
+  @Transform(({ value }) => parsePreferredLocationsValue(value))
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => ProductPreferredLocationDto)
-  preferredLocations: ProductPreferredLocationDto[];
+  preferredLocations?: ProductPreferredLocationDto[];
+}
+
+function parseBooleanValue(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true') {
+    return true;
+  }
+  if (normalized === 'false') {
+    return false;
+  }
+  return value;
+}
+
+function parseStringArrayValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    return trimmed
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return value;
+}
+
+function parseEnumArrayValue(value: unknown): unknown {
+  return parseStringArrayValue(value);
+}
+
+function parsePreferredLocationsValue(value: unknown): unknown {
+  if (Array.isArray(value) || typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    return parsed;
+  } catch {
+    return value;
+  }
 }

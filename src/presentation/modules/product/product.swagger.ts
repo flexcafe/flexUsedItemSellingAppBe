@@ -18,7 +18,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 - **\`directTradeLocation\`**: if provided, cannot be blank (**400**).
 - **\`directTradeLatitude\` / \`directTradeLongitude\`**: must be **both** set or **both** omitted (**400** if only one is sent).
 - **\`paymentMethods\`**: at least one of \`CASH\`, \`KBZPAY\`; max two entries; **no duplicates** (**400**).
-- **\`images\`**: max **5** URLs (**400** if more). Typically these are **public URLs** returned by your upload flow (e.g. Supabase).
+- **\`images\`**: send multipart binary files in field **\`images\`** (max **5**, PNG/JPEG/WebP). Server uploads to Supabase and stores returned public URLs. You may still send URL strings in JSON mode when needed.
 - **\`preferredLocations\`**: max **3** objects; each **label** and **address** must be non-blank (**400**).
 - **\`isDeliveryAvailable\` / \`deliveryFeePayer\`**: when delivery is **off** (\`false\`), omit \`deliveryFeePayer\` or send \`null\` (**400** if you send BUYER/SELLER). When delivery is **on** (\`true\`), you **must** set \`deliveryFeePayer\` to **\`BUYER\`** or **\`SELLER\`** (who pays delivery) — omitting it on create (**400**). On **PATCH**, merged rules apply: enabling delivery without a payer fails unless the listing already had one; setting delivery off clears the payer in storage.
 
@@ -49,7 +49,11 @@ All JSON responses use **ApiResponseDto**: \`success\`, \`message\`, \`data\`, \
 export const CLIENT_PRODUCT_CREATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`POST /client/products\`
-Creates a new listing for the authenticated user as seller. Body: **CreateProductDto**. **201** on success.`;
+Creates a new listing for the authenticated user as seller. Prefer **multipart/form-data** so FE can send image binaries directly:
+- **\`images\`**: optional multiple files (product photos)
+- **\`mapScreenshot\`**: optional single file
+- remaining fields from **CreateProductDto** as form fields
+Server uploads files to Supabase and stores public URLs on the listing. **201** on success.`;
 
 export const CLIENT_PRODUCT_LIST_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
@@ -83,7 +87,7 @@ Returns one product by UUID. Deleted or missing → **404**.`;
 export const CLIENT_PRODUCT_UPDATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`PATCH /client/products/:productId\` (auth)
-Partial update; only the owner. Body: **UpdateProductDto** (no **\`price\`** field — price is fixed after create).`;
+Partial update; only the owner. Prefer **multipart/form-data** with optional replacement files (**\`images\`**, **\`mapScreenshot\`**) plus any **UpdateProductDto** fields (no **\`price\`** field — price is fixed after create).`;
 
 export const CLIENT_PRODUCT_DELETE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 

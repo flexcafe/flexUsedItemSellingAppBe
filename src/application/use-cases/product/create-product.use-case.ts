@@ -69,6 +69,8 @@ export class CreateProductUseCase {
       directTradeLatitude: dto.directTradeLatitude ?? null,
       directTradeLongitude: dto.directTradeLongitude ?? null,
     });
+    const images = dto.images ?? [];
+    const preferredLocations = dto.preferredLocations ?? [];
 
     const row = await this.productRepository.create({
       sellerId: userId,
@@ -87,8 +89,8 @@ export class CreateProductUseCase {
       preferredTradeTime: dto.preferredTradeTime ?? null,
       isDeliveryAvailable: dto.isDeliveryAvailable,
       deliveryFeePayer: dto.deliveryFeePayer ?? null,
-      images: dto.images,
-      preferredLocations: dto.preferredLocations,
+      images,
+      preferredLocations,
     });
     return new ProductResponseDto(row);
   }
