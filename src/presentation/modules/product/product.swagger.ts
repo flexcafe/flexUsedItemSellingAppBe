@@ -44,7 +44,10 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 - **Soft delete** (seller): JSON body must include **\`confirmTitle\`** matching the listing **title** (trimmed on both sides; case-sensitive). Wrong string → **400**. **Sold** listings cannot be seller-deleted → **409** (support/admin for edge cases). Otherwise marks deleted and archives. Concurrent deletes may yield **404** if already removed.
 
 ### Standard response envelope
-All JSON responses use **ApiResponseDto**: \`success\`, \`message\`, \`data\`, \`error\`, \`timestamp\`.`;
+All JSON responses use **ApiResponseDto**: \`success\`, \`message\`, \`data\`, \`error\`, \`timestamp\`.
+
+### Public \`createdAtDisplay\` (catalog + public detail only)
+On **\`GET /client/products\`** and **\`GET /client/products/:productId\`**, each **ProductResponseDto** may include **\`createdAtDisplay\`**: listing age for UI — **\`just now\`**, **\`N min ago\`** (under 1 hour), **\`N h ago\`** (1–23 hours), **weekday name** (English, e.g. \`Wednesday\`) when the listing is at least 24 hours old but younger than 7 days, then a **short date** (e.g. \`May 6, 2026\`) when the listing is **7 days or older**. Uses **\`LISTING_DISPLAY_TIMEZONE\`** (env, default \`UTC\`; e.g. \`Asia/Yangon\` for Myanmar wall clock). **\`createdAt\`** remains the canonical ISO instant. Seller routes (**\`/my\`**, create/update responses) omit **\`createdAtDisplay\`**.`;
 
 export const CLIENT_PRODUCT_CREATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
@@ -67,7 +70,7 @@ Search and browse the catalog.
 - \`radiusKm\` — optional; requires lat/lng; filters to listings within radius (km).
 - \`page\`, \`limit\` — pagination.
 
-**200** returns **PaginatedResponseDto** in \`data\` (field \`items\`: array of **ProductResponseDto**).`;
+**200** returns **PaginatedResponseDto** in \`data\` (field \`items\`: array of **ProductResponseDto**). Each item includes **\`createdAtDisplay\`** (public-only label for \`createdAt\`: \`N min ago\` / \`N h ago\` / weekday / date — see workflow).`;
 
 export const CLIENT_PRODUCT_LIST_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
@@ -82,7 +85,7 @@ Returns **ProductResponseDto** for a listing that belongs to the JWT user. Use t
 export const CLIENT_PRODUCT_GET_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`GET /client/products/:productId\` (public)
-Returns one product by UUID. Deleted or missing → **404**.`;
+Returns one product by UUID. Deleted or missing → **404**. Response **ProductResponseDto** includes **\`createdAtDisplay\`** (same rules as public catalog).`;
 
 export const CLIENT_PRODUCT_UPDATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 

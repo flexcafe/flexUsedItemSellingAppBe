@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { ConfigService } from '@nestjs/config';
 import { ListProductsUseCase } from './list-products.use-case.js';
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface.js';
 
@@ -14,11 +15,22 @@ function buildProductRepoMock(): jest.Mocked<IProductRepository> {
   };
 }
 
+function buildConfigMock(): ConfigService {
+  return {
+    get: jest.fn((key: string, def?: string) => {
+      if (key === 'LISTING_DISPLAY_TIMEZONE') {
+        return 'UTC';
+      }
+      return def;
+    }),
+  } as unknown as ConfigService;
+}
+
 describe(ListProductsUseCase.name, () => {
   it('clamps page and limit into allowed boundaries', async () => {
     const repo = buildProductRepoMock();
     repo.search.mockResolvedValue({ rows: [], total: 0 });
-    const useCase = new ListProductsUseCase(repo);
+    const useCase = new ListProductsUseCase(repo, buildConfigMock());
 
     await useCase.execute({
       page: -10 as unknown as number,

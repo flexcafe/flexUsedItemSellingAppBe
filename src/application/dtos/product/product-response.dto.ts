@@ -69,6 +69,12 @@ export class ProductResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
+  @ApiPropertyOptional({
+    description:
+      'Public catalog / public detail only: human-readable listing age in `LISTING_DISPLAY_TIMEZONE` — e.g. `5 min ago`, `3 h ago`, `Wednesday`, `May 6, 2026`. Omitted for seller-only responses.',
+  })
+  createdAtDisplay?: string;
+
   constructor(entity: ListingEntity) {
     this.id = entity.id;
     this.title = entity.title;
