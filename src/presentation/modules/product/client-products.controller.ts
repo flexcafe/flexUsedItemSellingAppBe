@@ -198,8 +198,16 @@ export class ClientProductsController {
     if (uploadedMapScreenshotUrl) {
       dto.mapScreenshotUrl = uploadedMapScreenshotUrl;
     }
-    const row = await this.createProductUseCase.execute(user.sub, dto);
-    return ApiResponseDto.success(row, 'Product created');
+    try {
+      const row = await this.createProductUseCase.execute(user.sub, dto);
+      return ApiResponseDto.success(row, 'Product created');
+    } catch (err) {
+      await this.uploadProductMediaUseCase.revertUploadedPublicUrls([
+        ...uploadedImageUrls,
+        ...(uploadedMapScreenshotUrl ? [uploadedMapScreenshotUrl] : []),
+      ]);
+      throw err;
+    }
   }
 
   @Public()
@@ -410,28 +418,40 @@ export class ClientProductsController {
       mapScreenshot?: Express.Multer.File[];
     },
   ): Promise<ApiResponseDto<ProductResponseDto>> {
+    const newImageUrls = files?.images?.length
+      ? await this.uploadProductMediaUseCase.uploadListingImages(
+          user.sub,
+          files.images,
+        )
+      : [];
+    let newMapScreenshotUrl: string | null = null;
     if (files?.images?.length) {
-      dto.images = await this.uploadProductMediaUseCase.uploadListingImages(
-        user.sub,
-        files.images,
-      );
+      dto.images = newImageUrls;
     }
     if (files?.mapScreenshot?.[0]) {
-      const mapScreenshotUrl =
+      newMapScreenshotUrl =
         await this.uploadProductMediaUseCase.uploadMapScreenshot(
           user.sub,
           files.mapScreenshot[0],
         );
-      if (mapScreenshotUrl) {
-        dto.mapScreenshotUrl = mapScreenshotUrl;
+      if (newMapScreenshotUrl) {
+        dto.mapScreenshotUrl = newMapScreenshotUrl;
       }
     }
-    const row = await this.updateProductUseCase.execute(
-      user.sub,
-      productId,
-      dto,
-    );
-    return ApiResponseDto.success(row, 'Product updated');
+    try {
+      const row = await this.updateProductUseCase.execute(
+        user.sub,
+        productId,
+        dto,
+      );
+      return ApiResponseDto.success(row, 'Product updated');
+    } catch (err) {
+      await this.uploadProductMediaUseCase.revertUploadedPublicUrls([
+        ...newImageUrls,
+        ...(newMapScreenshotUrl ? [newMapScreenshotUrl] : []),
+      ]);
+      throw err;
+    }
   }
 
   @Delete(':productId')

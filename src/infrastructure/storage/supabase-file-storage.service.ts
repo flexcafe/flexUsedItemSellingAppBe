@@ -32,8 +32,13 @@ export class SupabaseFileStorageService implements IFileStorage {
         msg.includes('signature verification') || msg.includes('invalid jwt')
           ? ' Fix: set SUPABASE_SERVICE_KEY to the service_role secret (Project Settings → API), not the anon key; SUPABASE_URL must be the same project URL.'
           : '';
+      const routeHint =
+        msg.includes('not found') &&
+        (msg.includes('route') || msg.includes('/object/'))
+          ? ' Fix: SUPABASE_URL must be the Supabase project URL only (e.g. https://YOUR_REF.supabase.co), not your Nest API, not /rest/v1. In Dashboard → Storage, create the bucket named in SUPABASE_PRODUCT_IMAGE_BUCKET (default listing-images) or point that env var at an existing bucket.'
+          : '';
       throw new BadGatewayException(
-        `Supabase upload failed: ${error.message}.${credentialHint}`,
+        `Supabase upload failed: ${error.message}.${credentialHint}${routeHint}`,
       );
     }
 
