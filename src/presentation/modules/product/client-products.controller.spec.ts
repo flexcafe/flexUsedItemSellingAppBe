@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { createHttpTestApp } from '../../../test-utils/http-test-app.js';
 import { ClientProductsController } from './client-products.controller.js';
@@ -22,6 +23,13 @@ function buildUploadMediaMock() {
   };
 }
 
+function configServiceProvider() {
+  return {
+    provide: ConfigService,
+    useValue: { get: jest.fn((_key: string, def?: string) => def) },
+  };
+}
+
 describe(ClientProductsController.name, () => {
   it('GET /client/products is public', async () => {
     const list = {
@@ -36,6 +44,7 @@ describe(ClientProductsController.name, () => {
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
+        configServiceProvider(),
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: ListProductsUseCase, useValue: list },
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
@@ -59,6 +68,7 @@ describe(ClientProductsController.name, () => {
       .expect(200);
 
     expect(res.body.success).toBe(true);
+    expect(res.body.listingDisplayTimezone).toBe('UTC');
     expect(list.execute).toHaveBeenCalledTimes(1);
     await close();
   });
@@ -68,6 +78,7 @@ describe(ClientProductsController.name, () => {
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
+        configServiceProvider(),
         { provide: CreateProductUseCase, useValue: create },
         {
           provide: ListProductsUseCase,
@@ -113,6 +124,7 @@ describe(ClientProductsController.name, () => {
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
+        configServiceProvider(),
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
@@ -148,6 +160,7 @@ describe(ClientProductsController.name, () => {
       .expect(200);
 
     expect(res.body.success).toBe(true);
+    expect(res.body.listingDisplayTimezone).toBeUndefined();
     expect(listMine.execute).toHaveBeenCalledWith('u1', {
       page: 2,
       limit: 10,
@@ -186,6 +199,7 @@ describe(ClientProductsController.name, () => {
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
+        configServiceProvider(),
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
@@ -218,6 +232,7 @@ describe(ClientProductsController.name, () => {
       .expect(200);
 
     expect(res.body.success).toBe(true);
+    expect(res.body.listingDisplayTimezone).toBeUndefined();
     expect(getMine.execute).toHaveBeenCalledWith('u1', productId);
     await close();
   });
@@ -227,6 +242,7 @@ describe(ClientProductsController.name, () => {
     const { app, close } = await createHttpTestApp({
       controllers: [ClientProductsController],
       providers: [
+        configServiceProvider(),
         { provide: CreateProductUseCase, useValue: { execute: jest.fn() } },
         {
           provide: ListProductsUseCase,
