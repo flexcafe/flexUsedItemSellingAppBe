@@ -21,6 +21,13 @@ function baseResponseSchema(
           message: { type: 'string', example: 'Operation successful' },
           data: dataSchema,
           error: { type: 'string', nullable: true, example: null },
+          listingDisplayTimezone: {
+            type: 'string',
+            nullable: true,
+            example: 'Asia/Yangon',
+            description:
+              'On public product list/detail only: IANA zone used for `createdAtDisplay` (server `LISTING_DISPLAY_TIMEZONE`).',
+          },
           timestamp: {
             type: 'string',
             format: 'date-time',

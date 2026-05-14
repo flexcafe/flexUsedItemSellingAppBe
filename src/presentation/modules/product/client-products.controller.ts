@@ -14,6 +14,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -68,6 +69,7 @@ import {
 @ApiBearerAuth('access-token')
 export class ClientProductsController {
   constructor(
+    private readonly configService: ConfigService,
     private readonly createProductUseCase: CreateProductUseCase,
     private readonly listProductsUseCase: ListProductsUseCase,
     private readonly getProductDetailUseCase: GetProductDetailUseCase,
@@ -225,7 +227,14 @@ export class ClientProductsController {
     @Query() query: ProductFilterDto,
   ): Promise<ApiResponseDto<PaginatedResponseDto<ProductResponseDto>>> {
     const rows = await this.listProductsUseCase.execute(query);
-    return ApiResponseDto.success(rows, 'Products retrieved');
+    const listingDisplayTimezone = this.configService.get<string>(
+      'LISTING_DISPLAY_TIMEZONE',
+      'UTC',
+    );
+    return ApiResponseDto.success(rows, {
+      message: 'Products retrieved',
+      listingDisplayTimezone,
+    });
   }
 
   @Get('my')
@@ -309,7 +318,14 @@ export class ClientProductsController {
     @Param('productId', ParseUUIDPipe) productId: string,
   ): Promise<ApiResponseDto<ProductResponseDto>> {
     const row = await this.getProductDetailUseCase.execute(productId);
-    return ApiResponseDto.success(row, 'Product detail retrieved');
+    const listingDisplayTimezone = this.configService.get<string>(
+      'LISTING_DISPLAY_TIMEZONE',
+      'UTC',
+    );
+    return ApiResponseDto.success(row, {
+      message: 'Product detail retrieved',
+      listingDisplayTimezone,
+    });
   }
 
   @Patch(':productId')
