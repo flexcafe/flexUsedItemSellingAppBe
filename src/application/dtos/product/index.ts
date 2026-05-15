@@ -5,4 +5,5 @@ export * from './update-product.dto.js';
 export * from './product-filter.dto.js';
 export * from './product-response.dto.js';
 export * from './product-public-api-response.dto.js';
+export * from './serialize-public-product-response.js';
 export * from './product-preferred-location.dto.js';
