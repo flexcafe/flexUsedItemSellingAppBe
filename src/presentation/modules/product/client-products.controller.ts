@@ -19,6 +19,8 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
+  ApiExtraModels,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
@@ -42,6 +44,8 @@ import {
   ProductDeleteResponseDto,
   ProductFilterDto,
   ProductResponseDto,
+  ApiResponsePublicProductDetailDto,
+  ApiResponsePublicProductListDto,
   UpdateProductDto,
 } from '../../../application/dtos/product/index.js';
 import { PaginatedResponseDto } from '../../../application/dtos/common/index.js';
@@ -218,10 +222,11 @@ export class ClientProductsController {
     summary: 'Search / list public product catalog (paginated)',
     description: CLIENT_PRODUCT_LIST_DOC,
   })
-  @ApiPaginatedSuccessResponse(ProductResponseDto, {
-    status: HttpStatus.OK,
+  @ApiExtraModels(ApiResponsePublicProductListDto)
+  @ApiOkResponse({
+    type: ApiResponsePublicProductListDto,
     description:
-      'Wrapped in ApiResponseDto; data is PaginatedResponseDto with items: ProductResponseDto[].',
+      'Public catalog. Each item in `data.items` includes `createdAtDisplay`; envelope includes `listingDisplayTimezone`.',
   })
   async list(
     @Query() query: ProductFilterDto,
@@ -304,10 +309,11 @@ export class ClientProductsController {
     format: 'uuid',
     description: 'Listing id (same as legacy “listing” primary key).',
   })
-  @ApiSuccessResponse(ProductResponseDto, {
-    status: HttpStatus.OK,
+  @ApiExtraModels(ApiResponsePublicProductDetailDto)
+  @ApiOkResponse({
+    type: ApiResponsePublicProductDetailDto,
     description:
-      'Wrapped in ApiResponseDto; data is ProductResponseDto including images URLs and sellerId.',
+      'Public detail. `data.createdAtDisplay` and envelope `listingDisplayTimezone` are set.',
   })
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,

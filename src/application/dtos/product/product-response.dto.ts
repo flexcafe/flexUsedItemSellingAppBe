@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ListingEntity } from '../../../domain/entities/listing.entity.js';
+import { formatPublicListingCreatedLabel } from '../../utils/format-public-listing-created-label.js';
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
@@ -70,12 +71,14 @@ export class ProductResponseDto {
   updatedAt: Date;
 
   @ApiPropertyOptional({
+    type: String,
+    example: '3 h ago',
     description:
       'Public catalog / public detail only: human-readable listing age in `LISTING_DISPLAY_TIMEZONE` — e.g. `5 min ago`, `3 h ago`, `Wednesday`, `May 6, 2026`. Omitted for seller-only responses.',
   })
   createdAtDisplay?: string;
 
-  constructor(entity: ListingEntity) {
+  constructor(entity: ListingEntity, createdAtDisplay?: string) {
     this.id = entity.id;
     this.title = entity.title;
     this.description = entity.description;
@@ -97,6 +100,20 @@ export class ProductResponseDto {
     this.viewCount = entity.viewCount;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
+    if (createdAtDisplay !== undefined) {
+      this.createdAtDisplay = createdAtDisplay;
+    }
+  }
+
+  /** Public catalog / public detail: includes `createdAtDisplay` for FE cards. */
+  static fromPublicListing(
+    entity: ListingEntity,
+    options: { now: Date; timeZone: string },
+  ): ProductResponseDto {
+    return new ProductResponseDto(
+      entity,
+      formatPublicListingCreatedLabel(entity.createdAt, options),
+    );
   }
 }
 
