@@ -28,20 +28,33 @@ jobs:
             # 3. Generate Prisma Client
             npx prisma generate
             
-            # 4. Build with increased memory limit (utilizing server Swap)
-            # This prevents the 'JavaScript heap out of memory' crash
+            # 4. Build with increased memory limit
             export NODE_OPTIONS="--max-old-space-size=2048"
             npm run build
             
             # 5. Run database migrations
             npx prisma migrate deploy
             
-            # 6. Verify build exists before restarting
-            if [ -f "dist/src/main.js" ] || [ -f "dist/main.js" ]; then
-              echo "✅ Build successful, restarting service..."
-              sudo systemctl restart flex-used-market-be.service
-              sudo systemctl status flex-used-market-be.service --no-pager
-            else
-              echo "❌ Build failed: main.js not found in dist. Service will not restart."
+            # 6. Locate the actual main.js (handles dist/main.js or dist/src/main.js)
+            ACTUAL_PATH=$(find dist -name main.js | head -n 1)
+            
+            if [ -z "$ACTUAL_PATH" ]; then
+              echo "❌ Build failed: main.js not found anywhere in dist/."
               exit 1
             fi
+
+            FULL_PATH="/home/admin/flexusedmarket/flexUsedItemSellingAppBe/$ACTUAL_PATH"
+            echo "✅ Found build entry point at: $FULL_PATH"
+
+            # 7. Dynamically update the systemd service file if the path is wrong
+            # This ensures the service always points to where the build actually is
+            sudo sed -i "s|ExecStart=.*|ExecStart=/usr/bin/node $FULL_PATH|" /etc/systemd/system/flex-used-market-be.service
+            
+            # 8. Reload and Restart
+            echo "🚀 Restarting service..."
+            sudo systemctl daemon-reload
+            sudo systemctl restart flex-used-market-be.service
+            
+            # 9. Health Check
+            sleep 2
+            sudo systemctl status flex-used-market-be.service --no-pager
