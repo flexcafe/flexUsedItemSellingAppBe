@@ -7,6 +7,7 @@ import {
 import { ProductFilterDto } from '../../dtos/product/product-filter.dto.js';
 import { ProductResponseDto } from '../../dtos/product/product-response.dto.js';
 import { PaginatedResponseDto } from '../../dtos/common/index.js';
+import { formatPublicListingCreatedLabel } from '../../utils/format-public-listing-created-label.js';
 
 @Injectable()
 export class ListProductsUseCase {
@@ -35,9 +36,14 @@ export class ListProductsUseCase {
     );
     const now = new Date();
     return new PaginatedResponseDto(
-      data.rows.map((r) =>
-        ProductResponseDto.fromPublicListing(r, { now, timeZone }),
-      ),
+      data.rows.map((r) => {
+        const dto = new ProductResponseDto(r);
+        dto.createdAtDisplay = formatPublicListingCreatedLabel(r.createdAt, {
+          now,
+          timeZone,
+        });
+        return dto;
+      }),
       data.total,
       page,
       limit,

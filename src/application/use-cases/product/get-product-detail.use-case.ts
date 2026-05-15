@@ -5,6 +5,7 @@ import {
   type IProductRepository,
 } from '../../../domain/repositories/product.repository.interface.js';
 import { ProductResponseDto } from '../../dtos/product/product-response.dto.js';
+import { formatPublicListingCreatedLabel } from '../../utils/format-public-listing-created-label.js';
 
 @Injectable()
 export class GetProductDetailUseCase {
@@ -19,13 +20,15 @@ export class GetProductDetailUseCase {
     if (!row) {
       throw new NotFoundException('Product not found');
     }
+    const dto = new ProductResponseDto(row);
     const timeZone = this.configService.get<string>(
       'LISTING_DISPLAY_TIMEZONE',
       'UTC',
     );
-    return ProductResponseDto.fromPublicListing(row, {
+    dto.createdAtDisplay = formatPublicListingCreatedLabel(row.createdAt, {
       now: new Date(),
       timeZone,
     });
+    return dto;
   }
 }

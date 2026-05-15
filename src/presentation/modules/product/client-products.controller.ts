@@ -46,8 +46,6 @@ import {
   ProductResponseDto,
   ApiResponsePublicProductDetailDto,
   ApiResponsePublicProductListDto,
-  serializePublicProduct,
-  serializePublicProductPage,
   UpdateProductDto,
 } from '../../../application/dtos/product/index.js';
 import { PaginatedResponseDto } from '../../../application/dtos/common/index.js';
@@ -238,7 +236,7 @@ export class ClientProductsController {
       'LISTING_DISPLAY_TIMEZONE',
       'UTC',
     );
-    return ApiResponseDto.success(serializePublicProductPage(rows), {
+    return ApiResponseDto.success(rows, {
       message: 'Products retrieved',
       listingDisplayTimezone,
     });
@@ -330,7 +328,7 @@ export class ClientProductsController {
       'LISTING_DISPLAY_TIMEZONE',
       'UTC',
     );
-    return ApiResponseDto.success(serializePublicProduct(row), {
+    return ApiResponseDto.success(row, {
       message: 'Product detail retrieved',
       listingDisplayTimezone,
     });
