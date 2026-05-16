@@ -6,3 +6,6 @@ export * from './product-filter.dto.js';
 export * from './product-response.dto.js';
 export * from './product-public-api-response.dto.js';
 export * from './product-preferred-location.dto.js';
+export * from './product-preferred-location-response.dto.js';
+export * from './product-seller-summary.dto.js';
+export * from './public-product-detail-response.dto.js';

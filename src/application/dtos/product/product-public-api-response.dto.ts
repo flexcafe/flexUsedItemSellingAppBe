@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PublicProductDetailResponseDto } from './public-product-detail-response.dto.js';
 import { ProductResponseDto } from './product-response.dto.js';
 
 /**
@@ -73,8 +74,8 @@ export class ApiResponsePublicProductDetailDto {
   })
   listingDisplayTimezone?: string;
 
-  @ApiProperty({ type: ProductResponseDto })
-  data: ProductResponseDto;
+  @ApiProperty({ type: PublicProductDetailResponseDto })
+  data: PublicProductDetailResponseDto;
 
   @ApiProperty({
     format: 'date-time',

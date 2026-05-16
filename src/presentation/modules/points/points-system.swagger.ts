@@ -44,7 +44,17 @@ Public profile visibility policy:
 - This endpoint is for viewing another user's public profile card.
 - It intentionally excludes private account data (phone, email, KBZ verification tags, withdrawal history, admin notes, transaction references, referral data, and point ledger details).
 - It returns trust-facing fields only: nickname, avatar, region, rank, average stars, total reviews, completed sales, completed purchases, and memberSince.
-- Use this endpoint for other-user profile screens, seller/buyer mini cards, or trust summary panels.`;
+- Use this endpoint for other-user profile screens, seller/buyer mini cards, or trust summary panels.
+- **Public (no JWT).** Product detail also embeds a subset of these fields under \`data.seller\`.`;
+
+export const CLIENT_SELLER_REVIEWS_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
+
+Seller reviews for product detail (lazy-loaded):
+- **GET /client/users/:userId/reviews** — **public**, paginated (\`page\`, \`limit\`).
+- **\`starBreakdown\`**: always five entries for stars 1–5 with \`count\` (e.g. 5★ × 6, 3★ × 2).
+- **\`items\`**: recent reviews with \`stars\`, \`comment\`, \`reviewerNickname\`, \`reviewerAvatar\`, \`createdAt\`.
+- Reviews come from completed trades only (submitted via POST .../transactions/:id/review after COMPLETED).
+- Call when the user opens the seller review panel on product detail; do not bundle into product detail.`;
 
 export const CLIENT_REQUEST_WITHDRAWAL_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 

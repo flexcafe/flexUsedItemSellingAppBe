@@ -5,6 +5,7 @@ import { PaymentMethod } from '../enums/payment-method.enum.js';
 import { DeliveryFeePayer } from '../enums/delivery-fee-payer.enum.js';
 import { UserEntity } from './user.entity.js';
 import { CategoryEntity } from './category.entity.js';
+import { PreferredTradeLocationEntity } from './preferred-trade-location.entity.js';
 
 export interface ListingEntityProps {
   id: string;
@@ -29,6 +30,7 @@ export interface ListingEntityProps {
   categoryId: string;
   createdAt: Date;
   updatedAt: Date;
+  preferredLocations: PreferredTradeLocationEntity[];
   seller?: UserEntity;
   category?: CategoryEntity;
 }
@@ -56,6 +58,7 @@ export class ListingEntity {
   readonly categoryId: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly preferredLocations: PreferredTradeLocationEntity[];
   readonly seller?: UserEntity;
   readonly category?: CategoryEntity;
 
@@ -82,6 +85,7 @@ export class ListingEntity {
     this.categoryId = props.categoryId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.preferredLocations = props.preferredLocations ?? [];
     this.seller = props.seller;
     this.category = props.category;
   }

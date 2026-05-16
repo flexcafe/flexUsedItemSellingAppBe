@@ -76,6 +76,26 @@ export interface ReviewData {
   createdAt: Date;
 }
 
+export interface ReviewStarCountData {
+  stars: number;
+  count: number;
+}
+
+export interface SellerReviewListItemData {
+  id: string;
+  stars: number;
+  comment: string | null;
+  reviewerNickname: string;
+  reviewerAvatar: string | null;
+  createdAt: Date;
+}
+
+export interface SellerReviewsResultData {
+  starBreakdown: ReviewStarCountData[];
+  items: SellerReviewListItemData[];
+  total: number;
+}
+
 export interface TransactionReviewContextData {
   id: string;
   status: TransactionStatus;
@@ -115,6 +135,11 @@ export interface IPointsRepository {
     userId: string,
   ): Promise<UserTransactionStatsData | null>;
   getPublicUserProfile(userId: string): Promise<PublicUserProfileData | null>;
+  getSellerReviews(
+    revieweeId: string,
+    skip: number,
+    take: number,
+  ): Promise<SellerReviewsResultData | null>;
   getStarPointConfigs(): Promise<StarPointConfigData[]>;
   upsertStarPointConfigs(
     configs: StarPointConfigData[],

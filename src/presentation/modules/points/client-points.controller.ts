@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -21,10 +22,12 @@ import {
   ApiSuccessResponse,
 } from '../../../common/decorators/api-response.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
+import { PaginationQueryDto } from '../../../application/dtos/common/pagination.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { GetPointsSummaryUseCase } from '../../../application/use-cases/points/get-points-summary.use-case.js';
 import { GetTransactionStatsUseCase } from '../../../application/use-cases/points/get-transaction-stats.use-case.js';
 import { GetPublicUserProfileUseCase } from '../../../application/use-cases/points/get-public-user-profile.use-case.js';
+import { ListSellerReviewsUseCase } from '../../../application/use-cases/points/list-seller-reviews.use-case.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
@@ -34,6 +37,7 @@ import {
   PointsSummaryDto,
   RankConfigResponseDto,
   PublicUserProfileDto,
+  SellerReviewsPageDto,
   RequestWithdrawalDto,
   ReviewResponseDto,
   TransactionStatsDto,
@@ -44,6 +48,7 @@ import {
   CLIENT_POINTS_SUMMARY_DOC,
   CLIENT_RANK_CONFIG_DOC,
   CLIENT_PUBLIC_PROFILE_DOC,
+  CLIENT_SELLER_REVIEWS_DOC,
   CLIENT_REQUEST_WITHDRAWAL_DOC,
   CLIENT_TRANSACTION_STATS_DOC,
   CLIENT_WITHDRAWAL_HISTORY_DOC,
@@ -58,6 +63,7 @@ export class ClientPointsController {
     private readonly getPointsSummaryUseCase: GetPointsSummaryUseCase,
     private readonly getTransactionStatsUseCase: GetTransactionStatsUseCase,
     private readonly getPublicUserProfileUseCase: GetPublicUserProfileUseCase,
+    private readonly listSellerReviewsUseCase: ListSellerReviewsUseCase,
     private readonly createTransactionReviewUseCase: CreateTransactionReviewUseCase,
     private readonly requestWithdrawalUseCase: RequestWithdrawalUseCase,
     private readonly listMyWithdrawalsUseCase: ListMyWithdrawalsUseCase,
@@ -112,13 +118,31 @@ export class ClientPointsController {
     return ApiResponseDto.success(stats, 'Profile transaction stats retrieved');
   }
 
+  @Public()
+  @Get('users/:userId/reviews')
+  @ApiOperation({
+    summary: 'List seller reviews with star breakdown (public)',
+    description: CLIENT_SELLER_REVIEWS_DOC,
+  })
+  @ApiSuccessResponse(SellerReviewsPageDto, {
+    description:
+      'Star histogram (1–5) plus paginated review comments from completed trades.',
+  })
+  async listSellerReviews(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() query: PaginationQueryDto,
+  ): Promise<ApiResponseDto<SellerReviewsPageDto>> {
+    const page = await this.listSellerReviewsUseCase.execute(userId, query);
+    return ApiResponseDto.success(page, 'Seller reviews retrieved');
+  }
+
+  @Public()
   @Get('users/:userId/public-profile')
   @ApiOperation({
     summary: 'Get public profile for another user',
     description: CLIENT_PUBLIC_PROFILE_DOC,
   })
   @ApiSuccessResponse(PublicUserProfileDto, {
-    status: HttpStatus.OK,
     description: 'Public user profile retrieved',
   })
   async getPublicProfile(

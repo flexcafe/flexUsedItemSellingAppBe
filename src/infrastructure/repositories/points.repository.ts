@@ -19,6 +19,7 @@ import type {
   PublicUserProfileData,
   RankConfigData,
   ReviewData,
+  SellerReviewsResultData,
   StarPointConfigData,
   TransactionReviewContextData,
   UserPointsSummaryData,
@@ -239,6 +240,67 @@ export class PointsRepository implements IPointsRepository {
       completedSales,
       completedPurchases,
       memberSince: user.createdAt,
+    };
+  }
+
+  async getSellerReviews(
+    revieweeId: string,
+    skip: number,
+    take: number,
+  ): Promise<SellerReviewsResultData | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: revieweeId },
+      select: { id: true },
+    });
+    if (!user) {
+      return null;
+    }
+
+    const safeTake = Math.max(1, Math.min(take, 50));
+    const safeSkip = Math.max(0, skip);
+
+    const [grouped, total, rows] = await Promise.all([
+      this.prisma.review.groupBy({
+        by: ['stars'],
+        where: { revieweeId },
+        _count: { stars: true },
+      }),
+      this.prisma.review.count({ where: { revieweeId } }),
+      this.prisma.review.findMany({
+        where: { revieweeId },
+        orderBy: { createdAt: 'desc' },
+        skip: safeSkip,
+        take: safeTake,
+        include: {
+          reviewer: {
+            select: {
+              nickname: true,
+              profile: { select: { avatar: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const countByStar = new Map(
+      grouped.map((g) => [g.stars, g._count.stars]),
+    );
+    const starBreakdown = [1, 2, 3, 4, 5].map((stars) => ({
+      stars,
+      count: countByStar.get(stars) ?? 0,
+    }));
+
+    return {
+      starBreakdown,
+      items: rows.map((row) => ({
+        id: row.id,
+        stars: row.stars,
+        comment: row.comment,
+        reviewerNickname: row.reviewer.nickname,
+        reviewerAvatar: row.reviewer.profile?.avatar ?? null,
+        createdAt: row.createdAt,
+      })),
+      total,
     };
   }
 

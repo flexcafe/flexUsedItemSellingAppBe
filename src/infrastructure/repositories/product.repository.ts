@@ -18,12 +18,15 @@ import { ListingMapper } from '../mappers/listing.mapper.js';
 
 const { ListingStatus: PrismaListingStatus, Prisma: PrismaNs } = PrismaPkg;
 
+const listingDetailInclude = {
+  category: true,
+  seller: true,
+  images: true,
+  preferredLocations: { orderBy: { sortOrder: 'asc' as const } },
+} as const;
+
 type ListingWithRelations = Prisma.ListingGetPayload<{
-  include: {
-    category: true;
-    seller: true;
-    images: true;
-  };
+  include: typeof listingDetailInclude;
 }>;
 
 type ListingIdRow = { id: string };
@@ -88,7 +91,7 @@ export class ProductRepository implements IProductRepository {
   async findById(id: string) {
     const row = await this.prisma.listing.findUnique({
       where: { id },
-      include: { category: true, seller: true, images: true },
+      include: listingDetailInclude,
     });
     if (!row || row.isDeleted) {
       return null;
@@ -99,7 +102,7 @@ export class ProductRepository implements IProductRepository {
   async findByIdForSeller(listingId: string, sellerId: string) {
     const row = await this.prisma.listing.findFirst({
       where: { id: listingId, sellerId },
-      include: { category: true, seller: true, images: true },
+      include: listingDetailInclude,
     });
     return row ? ListingMapper.toDomain(row) : null;
   }
@@ -329,7 +332,7 @@ export class ProductRepository implements IProductRepository {
   ): Promise<ListingWithRelations> {
     const row = await this.prisma.listing.findUnique({
       where: { id },
-      include: { category: true, seller: true, images: true },
+      include: listingDetailInclude,
     });
     if (!row) {
       throw new NotFoundException('Product not found');

@@ -4,3 +4,4 @@ export * from './review.dto.js';
 export * from './point-config.dto.js';
 export * from './transaction-stats.dto.js';
 export * from './public-user-profile.dto.js';
+export * from './seller-reviews.dto.js';

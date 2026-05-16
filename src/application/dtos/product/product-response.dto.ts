@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ListingEntity } from '../../../domain/entities/listing.entity.js';
+import { ProductPreferredLocationResponseDto } from './product-preferred-location-response.dto.js';
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
@@ -69,6 +70,13 @@ export class ProductResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
+  @ApiProperty({
+    type: ProductPreferredLocationResponseDto,
+    isArray: true,
+    description: 'Up to 3 preferred trade locations (empty array if none).',
+  })
+  preferredLocations: ProductPreferredLocationResponseDto[];
+
   @ApiPropertyOptional({
     type: String,
     example: '3 h ago',
@@ -77,7 +85,7 @@ export class ProductResponseDto {
   })
   createdAtDisplay?: string;
 
-  constructor(entity: ListingEntity) {
+  constructor(entity: ListingEntity, createdAtDisplay?: string) {
     this.id = entity.id;
     this.title = entity.title;
     this.description = entity.description;
@@ -99,6 +107,12 @@ export class ProductResponseDto {
     this.viewCount = entity.viewCount;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
+    this.preferredLocations = entity.preferredLocations.map(
+      (loc) => new ProductPreferredLocationResponseDto(loc),
+    );
+    if (createdAtDisplay !== undefined) {
+      this.createdAtDisplay = createdAtDisplay;
+    }
   }
 }
 

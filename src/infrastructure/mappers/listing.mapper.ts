@@ -1,9 +1,11 @@
 import type {
   Listing as PrismaListing,
   ListingImage as PrismaListingImage,
+  PreferredTradeLocation as PrismaPreferredTradeLocation,
   User as PrismaUser,
   Category as PrismaCategory,
 } from '@prisma/client';
+import { PreferredTradeLocationEntity } from '../../domain/entities/preferred-trade-location.entity.js';
 import { ListingEntity } from '../../domain/entities/listing.entity.js';
 import { ListingStatus } from '../../domain/enums/listing-status.enum.js';
 import { ListingCondition } from '../../domain/enums/listing-condition.enum.js';
@@ -16,6 +18,7 @@ type PrismaListingWithRelations = PrismaListing & {
   seller?: PrismaUser;
   category?: PrismaCategory;
   images?: PrismaListingImage[];
+  preferredLocations?: PrismaPreferredTradeLocation[];
 };
 
 export class ListingMapper {
@@ -47,6 +50,21 @@ export class ListingMapper {
       categoryId: prisma.categoryId,
       createdAt: prisma.createdAt,
       updatedAt: prisma.updatedAt,
+      preferredLocations: prisma.preferredLocations
+        ? prisma.preferredLocations
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map(
+              (loc) =>
+                new PreferredTradeLocationEntity({
+                  id: loc.id,
+                  label: loc.label,
+                  address: loc.address,
+                  latitude: loc.latitude,
+                  longitude: loc.longitude,
+                  sortOrder: loc.sortOrder,
+                }),
+            )
+        : [],
       seller: prisma.seller ? UserMapper.toDomain(prisma.seller) : undefined,
       category: prisma.category
         ? CategoryMapper.toDomain(prisma.category)

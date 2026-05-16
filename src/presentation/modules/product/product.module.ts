@@ -16,6 +16,8 @@ import { ListMyProductsUseCase } from '../../../application/use-cases/product/li
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
 import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
+import { PointsRepository } from '../../../infrastructure/repositories/points.repository.js';
+import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
 
 @Module({
   controllers: [ClientProductsController],
@@ -43,6 +45,10 @@ import { UploadProductMediaUseCase } from '../../../application/use-cases/produc
     {
       provide: FILE_STORAGE,
       useClass: SupabaseFileStorageService,
+    },
+    {
+      provide: POINTS_REPOSITORY,
+      useClass: PointsRepository,
     },
   ],
 })

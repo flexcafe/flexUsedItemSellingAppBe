@@ -46,6 +46,7 @@ import {
   ProductResponseDto,
   ApiResponsePublicProductDetailDto,
   ApiResponsePublicProductListDto,
+  PublicProductDetailResponseDto,
   UpdateProductDto,
 } from '../../../application/dtos/product/index.js';
 import { PaginatedResponseDto } from '../../../application/dtos/common/index.js';
@@ -322,7 +323,7 @@ export class ClientProductsController {
   })
   async getOne(
     @Param('productId', ParseUUIDPipe) productId: string,
-  ): Promise<ApiResponseDto<ProductResponseDto>> {
+  ): Promise<ApiResponseDto<PublicProductDetailResponseDto>> {
     const row = await this.getProductDetailUseCase.execute(productId);
     const listingDisplayTimezone = this.configService.get<string>(
       'LISTING_DISPLAY_TIMEZONE',

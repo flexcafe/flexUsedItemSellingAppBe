@@ -85,7 +85,11 @@ Returns **ProductResponseDto** for a listing that belongs to the JWT user. Use t
 export const CLIENT_PRODUCT_GET_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`GET /client/products/:productId\` (public)
-Returns one product by UUID. Deleted or missing → **404**. Response **ProductResponseDto** includes **\`createdAtDisplay\`** (same rules as public catalog).`;
+Returns one product by UUID. Deleted or missing → **404**. Response **PublicProductDetailResponseDto** includes:
+- All listing fields (map coords, title, price, description, images, payment/delivery, **\`preferredTradeTime\`**, **\`createdAtDisplay\`**, etc.)
+- **\`preferredLocations\`**: up to 3 spots (\`label\`, \`address\`, optional lat/lng)
+- **\`seller\`**: \`nickname\`, \`avatar\`, \`currentRank\`, \`averageStars\`, \`totalReviews\` (trust card; no private PII)
+For star histogram and review comments, call **GET /client/users/:sellerId/reviews** when the user opens reviews (not included here).`;
 
 export const CLIENT_PRODUCT_UPDATE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
