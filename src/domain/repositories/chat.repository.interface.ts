@@ -156,6 +156,9 @@ export interface IChatRepository {
     chatRoomId: string,
     type: TransactionType,
   ): Promise<TransactionData | null>;
+  findDirectTradeIdByTransactionId(
+    transactionId: string,
+  ): Promise<string | null>;
   upsertDirectTrade(data: DirectTradeData): Promise<void>;
   upsertLocationShare(data: LocationShareData): Promise<void>;
   stopLocationShare(directTradeId: string, userId: string): Promise<void>;

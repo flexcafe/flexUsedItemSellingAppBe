@@ -6,6 +6,10 @@ import { createClient, type RedisClientType } from 'redis';
 export class ChatIdempotencyService implements OnModuleDestroy {
   private readonly logger = new Logger(ChatIdempotencyService.name);
   private readonly memory = new Map<string, number>();
+  private readonly memoryCounters = new Map<
+    string,
+    { count: number; resetAtMs: number }
+  >();
   private readonly redisClient: RedisClientType | null = null;
 
   constructor(configService: ConfigService) {
@@ -38,6 +42,36 @@ export class ChatIdempotencyService implements OnModuleDestroy {
     }
     this.memory.set(key, now + ttlSeconds * 1000);
     return true;
+  }
+
+  async allowRateLimitedAction(
+    key: string,
+    maxActions: number,
+    windowSeconds: number,
+  ): Promise<boolean> {
+    if (this.redisClient && this.redisClient.isOpen) {
+      const count = await this.redisClient.incr(key);
+      if (count === 1) {
+        await this.redisClient.expire(key, windowSeconds);
+      }
+      return count <= maxActions;
+    }
+
+    const now = Date.now();
+    const existing = this.memoryCounters.get(key);
+    if (!existing || existing.resetAtMs <= now) {
+      this.memoryCounters.set(key, {
+        count: 1,
+        resetAtMs: now + windowSeconds * 1000,
+      });
+      return true;
+    }
+    const nextCount = existing.count + 1;
+    this.memoryCounters.set(key, {
+      count: nextCount,
+      resetAtMs: existing.resetAtMs,
+    });
+    return nextCount <= maxActions;
   }
 
   async onModuleDestroy(): Promise<void> {

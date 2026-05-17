@@ -26,10 +26,7 @@ import { TransactionStatus } from '../../domain/enums/transaction-status.enum.js
 import { TransactionType } from '../../domain/enums/transaction-type.enum.js';
 import type { JsonValue } from '../../domain/repositories/user.repository.interface.js';
 
-const {
-  MessageType: PrismaMessageType,
-  TransactionStatus: PrismaTransactionStatus,
-} = PrismaPkg;
+const { TransactionStatus: PrismaTransactionStatus } = PrismaPkg;
 
 type CursorToken = {
   createdAt: Date;
@@ -77,26 +74,38 @@ export class ChatRepository implements IChatRepository {
   ): Promise<ChatCursorPage<ChatRoomSummaryData>> {
     const pageSize = this.normalizeTake(take, 50);
     const decoded = this.decodeCursor(cursor);
+    const userScopeWhere: PrismaPkg.Prisma.ChatRoomWhereInput = {
+      OR: [{ buyerId: userId }, { sellerId: userId }],
+    };
+    const cursorWhere: PrismaPkg.Prisma.ChatRoomWhereInput | undefined = decoded
+      ? {
+          OR: [
+            { updatedAt: { lt: decoded.createdAt } },
+            {
+              updatedAt: decoded.createdAt,
+              id: { lt: decoded.id },
+            },
+          ],
+        }
+      : undefined;
     const rows = await this.prisma.chatRoom.findMany({
-      where: {
-        OR: [{ buyerId: userId }, { sellerId: userId }],
-        ...(decoded
-          ? {
-              OR: [
-                { updatedAt: { lt: decoded.createdAt } },
-                {
-                  updatedAt: decoded.createdAt,
-                  id: { lt: decoded.id },
-                },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
+      where: cursorWhere
+        ? {
+            AND: [userScopeWhere, cursorWhere],
+          }
+        : userScopeWhere,
+      select: {
+        id: true,
+        listingId: true,
+        buyerId: true,
+        sellerId: true,
+        lastMessageId: true,
+        lastMessagePreview: true,
+        lastMessageType: true,
+        lastMessageAt: true,
+        unreadCountBuyer: true,
+        unreadCountSeller: true,
+        updatedAt: true,
       },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: pageSize + 1,
@@ -105,33 +114,19 @@ export class ChatRepository implements IChatRepository {
     const hasNext = rows.length > pageSize;
     const slice = hasNext ? rows.slice(0, pageSize) : rows;
 
-    const unreadCounts = await this.prisma.chatMessage.groupBy({
-      by: ['chatRoomId'],
-      where: {
-        chatRoomId: { in: slice.map((r) => r.id) },
-        isRead: false,
-        senderId: { not: userId },
-      },
-      _count: { _all: true },
-    });
-    const unreadMap = new Map<string, number>(
-      unreadCounts.map((r) => [r.chatRoomId, r._count._all]),
-    );
-
     const items = slice.map((row) => {
-      const latest = row.messages[0] ?? null;
+      const unreadCount =
+        row.buyerId === userId ? row.unreadCountBuyer : row.unreadCountSeller;
       return {
         chatRoomId: row.id,
         listingId: row.listingId,
         buyerId: row.buyerId,
         sellerId: row.sellerId,
-        latestMessageId: latest?.id ?? null,
-        latestMessageContent: latest?.content ?? null,
-        latestMessageType: latest
-          ? (latest.type as unknown as MessageType)
-          : null,
-        latestMessageCreatedAt: latest?.createdAt ?? null,
-        unreadCount: unreadMap.get(row.id) ?? 0,
+        latestMessageId: row.lastMessageId,
+        latestMessageContent: row.lastMessagePreview,
+        latestMessageType: row.lastMessageType as unknown as MessageType | null,
+        latestMessageCreatedAt: row.lastMessageAt,
+        unreadCount,
         updatedAt: row.updatedAt,
       } satisfies ChatRoomSummaryData;
     });
@@ -178,20 +173,8 @@ export class ChatRepository implements IChatRepository {
   }
 
   async createMessage(data: CreateChatMessageData): Promise<ChatMessageData> {
-    const row = await this.prisma.chatMessage.create({
-      data: {
-        chatRoomId: data.chatRoomId,
-        senderId: data.senderId,
-        type: data.type as unknown as PrismaPkg.MessageType,
-        content: data.content,
-        metadata:
-          (data.metadata as PrismaPkg.Prisma.InputJsonValue | undefined) ??
-          PrismaPkg.Prisma.JsonNull,
-      },
-    });
-    await this.prisma.chatRoom.update({
-      where: { id: data.chatRoomId },
-      data: { updatedAt: row.createdAt },
+    const row = await this.prisma.$transaction(async (tx) => {
+      return this.createMessageWithRoomSnapshot(tx, data);
     });
     return this.mapMessage(row);
   }
@@ -200,13 +183,41 @@ export class ChatRepository implements IChatRepository {
     chatRoomId: string,
     userId: string,
   ): Promise<number> {
-    const result = await this.prisma.chatMessage.updateMany({
-      where: {
-        chatRoomId,
-        senderId: { not: userId },
-        isRead: false,
-      },
-      data: { isRead: true },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const room = await tx.chatRoom.findUnique({
+        where: { id: chatRoomId },
+        select: { buyerId: true, sellerId: true },
+      });
+      if (!room) {
+        throw new NotFoundException('Chat room not found');
+      }
+
+      const updated = await tx.chatMessage.updateMany({
+        where: {
+          chatRoomId,
+          senderId: { not: userId },
+          isRead: false,
+        },
+        data: { isRead: true },
+      });
+
+      const unreadRemaining = await tx.chatMessage.count({
+        where: {
+          chatRoomId,
+          senderId: { not: userId },
+          isRead: false,
+        },
+      });
+
+      await tx.chatRoom.update({
+        where: { id: chatRoomId },
+        data:
+          room.buyerId === userId
+            ? { unreadCountBuyer: unreadRemaining }
+            : { unreadCountSeller: unreadRemaining },
+      });
+
+      return updated;
     });
     return result.count;
   }
@@ -271,6 +282,16 @@ export class ChatRepository implements IChatRepository {
       orderBy: { createdAt: 'desc' },
     });
     return row ? this.mapTransaction(row) : null;
+  }
+
+  async findDirectTradeIdByTransactionId(
+    transactionId: string,
+  ): Promise<string | null> {
+    const row = await this.prisma.directTrade.findUnique({
+      where: { transactionId },
+      select: { id: true },
+    });
+    return row?.id ?? null;
   }
 
   async upsertDirectTrade(data: DirectTradeData): Promise<void> {
@@ -397,17 +418,15 @@ export class ChatRepository implements IChatRepository {
         },
       });
 
-      await tx.chatMessage.create({
-        data: {
-          chatRoomId: transaction.chatRoomId,
-          senderId: adminId,
-          type: PrismaMessageType.SAFE_PAYMENT_VERIFIED,
-          content: 'Safe payment verified by admin.',
-          metadata: {
-            adminReceivingPhone,
-            adminNote: adminNote ?? null,
-            verifiedAt: new Date().toISOString(),
-          },
+      await this.createMessageWithRoomSnapshot(tx, {
+        chatRoomId: transaction.chatRoomId,
+        senderId: adminId,
+        type: MessageType.SAFE_PAYMENT_VERIFIED,
+        content: 'Safe payment verified by admin.',
+        metadata: {
+          adminReceivingPhone,
+          adminNote: adminNote ?? null,
+          verifiedAt: new Date().toISOString(),
         },
       });
 
@@ -449,17 +468,15 @@ export class ChatRepository implements IChatRepository {
         data: { status: PrismaTransactionStatus.COMPLETED },
       });
 
-      await tx.chatMessage.create({
-        data: {
-          chatRoomId: transaction.chatRoomId,
-          senderId: adminId,
-          type: PrismaMessageType.PAYMENT_TRANSFERRED,
-          content: 'Admin transferred safe payment to seller.',
-          metadata: {
-            transferRef,
-            adminNote: adminNote ?? null,
-            transferredAt: new Date().toISOString(),
-          },
+      await this.createMessageWithRoomSnapshot(tx, {
+        chatRoomId: transaction.chatRoomId,
+        senderId: adminId,
+        type: MessageType.PAYMENT_TRANSFERRED,
+        content: 'Admin transferred safe payment to seller.',
+        metadata: {
+          transferRef,
+          adminNote: adminNote ?? null,
+          transferredAt: new Date().toISOString(),
         },
       });
 
@@ -673,6 +690,69 @@ export class ChatRepository implements IChatRepository {
 
   private normalizeTake(value: number, max: number): number {
     return Math.max(1, Math.min(value, max));
+  }
+
+  private async createMessageWithRoomSnapshot(
+    tx: PrismaPkg.Prisma.TransactionClient,
+    data: CreateChatMessageData,
+  ) {
+    const room = await tx.chatRoom.findUnique({
+      where: { id: data.chatRoomId },
+      select: {
+        id: true,
+        buyerId: true,
+        sellerId: true,
+        unreadCountBuyer: true,
+        unreadCountSeller: true,
+      },
+    });
+    if (!room) {
+      throw new NotFoundException('Chat room not found');
+    }
+
+    const row = await tx.chatMessage.create({
+      data: {
+        chatRoomId: data.chatRoomId,
+        senderId: data.senderId,
+        type: data.type as unknown as PrismaPkg.MessageType,
+        content: data.content,
+        metadata:
+          (data.metadata as PrismaPkg.Prisma.InputJsonValue | undefined) ??
+          PrismaPkg.Prisma.JsonNull,
+      },
+    });
+
+    const nextUnreadBuyer =
+      data.senderId === room.buyerId
+        ? room.unreadCountBuyer
+        : room.unreadCountBuyer + 1;
+    const nextUnreadSeller =
+      data.senderId === room.sellerId
+        ? room.unreadCountSeller
+        : room.unreadCountSeller + 1;
+
+    await tx.chatRoom.update({
+      where: { id: room.id },
+      data: {
+        updatedAt: row.createdAt,
+        lastMessageId: row.id,
+        lastMessageType: row.type,
+        lastMessagePreview: this.toMessagePreview(row.content),
+        lastMessageAt: row.createdAt,
+        unreadCountBuyer: nextUnreadBuyer,
+        unreadCountSeller: nextUnreadSeller,
+      },
+    });
+
+    return row;
+  }
+
+  private toMessagePreview(content: string): string {
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    if (normalized.length <= 180) {
+      return normalized;
+    }
+    return `${normalized.slice(0, 180)}...`;
   }
 
   private encodeCursor(createdAt: Date, id: string): string {

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -38,6 +39,8 @@ import type { CreateReviewDto } from '../../dtos/points/review.dto.js';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
@@ -115,7 +118,7 @@ export class ChatService {
       content,
       type,
     });
-    await this.publishMessage(room.id, room.buyerId, room.sellerId, message);
+    this.publishMessage(room.id, room.buyerId, room.sellerId, message);
     return message;
   }
 
@@ -160,7 +163,7 @@ export class ChatService {
         meetingLongitude: dto.meetingLongitude ?? null,
       },
     });
-    await this.publishMessage(
+    this.publishMessage(
       room.id,
       room.buyerId,
       room.sellerId,
@@ -185,9 +188,15 @@ export class ChatService {
     if (!transaction) {
       throw new NotFoundException('Direct trade transaction not found');
     }
+    const directTradeId = await this.chats.findDirectTradeIdByTransactionId(
+      transaction.id,
+    );
+    if (!directTradeId) {
+      throw new NotFoundException('Direct trade details not found');
+    }
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
     await this.chats.upsertLocationShare({
-      directTradeId: transaction.id,
+      directTradeId,
       userId,
       latitude,
       longitude,
@@ -211,7 +220,13 @@ export class ChatService {
     if (!transaction) {
       throw new NotFoundException('Direct trade transaction not found');
     }
-    await this.chats.stopLocationShare(transaction.id, userId);
+    const directTradeId = await this.chats.findDirectTradeIdByTransactionId(
+      transaction.id,
+    );
+    if (!directTradeId) {
+      throw new NotFoundException('Direct trade details not found');
+    }
+    await this.chats.stopLocationShare(directTradeId, userId);
     const systemMessage = await this.chats.createMessage({
       chatRoomId: room.id,
       senderId: userId,
@@ -219,7 +234,7 @@ export class ChatService {
       content: 'Location sharing stopped.',
       metadata: { transactionId: transaction.id },
     });
-    await this.publishMessage(
+    this.publishMessage(
       room.id,
       room.buyerId,
       room.sellerId,
@@ -265,8 +280,7 @@ export class ChatService {
       chatRoomId: room.id,
       senderId: userId,
       type: MessageType.SAFE_PAYMENT_INITIATED,
-      content:
-        'Buyer submitted safe payment. Admin verification pending.',
+      content: 'Buyer submitted safe payment. Admin verification pending.',
       metadata: {
         transactionId: transaction.id,
         payerKbzName: dto.payerKbzName,
@@ -275,7 +289,7 @@ export class ChatService {
         kbzTransactionId: dto.kbzTransactionId,
       },
     });
-    await this.publishMessage(
+    this.publishMessage(
       room.id,
       room.buyerId,
       room.sellerId,
@@ -314,7 +328,10 @@ export class ChatService {
     if (tx.buyerId !== userId && tx.sellerId !== userId) {
       throw new ForbiddenException('Not part of this transaction');
     }
-    const next = await this.chats.markTransactionCompletedByUser(transactionId, userId);
+    const next = await this.chats.markTransactionCompletedByUser(
+      transactionId,
+      userId,
+    );
     const message = await this.chats.createMessage({
       chatRoomId: next.chatRoomId,
       senderId: userId,
@@ -330,7 +347,7 @@ export class ChatService {
         sellerCompleted: next.sellerCompleted,
       },
     });
-    await this.publishMessage(
+    this.publishMessage(
       next.chatRoomId,
       next.buyerId,
       next.sellerId,
@@ -385,11 +402,15 @@ export class ChatService {
       dto.transferRef,
       dto.adminNote,
     );
-    this.realtime.emitToChatRoom(next.chatRoomId, 'chat.safePayment.transferred', {
-      transactionId: next.id,
-      chatRoomId: next.chatRoomId,
-      transferRef: dto.transferRef,
-    });
+    this.realtime.emitToChatRoom(
+      next.chatRoomId,
+      'chat.safePayment.transferred',
+      {
+        transactionId: next.id,
+        chatRoomId: next.chatRoomId,
+        transferRef: dto.transferRef,
+      },
+    );
     return next;
   }
 
@@ -411,7 +432,11 @@ export class ChatService {
         'Reviews can only be submitted after transaction completion',
       );
     }
-    return this.createTransactionReviewUseCase.execute(transactionId, userId, dto);
+    return this.createTransactionReviewUseCase.execute(
+      transactionId,
+      userId,
+      dto,
+    );
   }
 
   private async requireRoomParticipant(chatRoomId: string, userId: string) {
@@ -435,13 +460,13 @@ export class ChatService {
     }
   }
 
-  private async publishMessage(
+  private publishMessage(
     chatRoomId: string,
     buyerId: string,
     sellerId: string,
     message: ChatMessageData,
     event = 'chat.message.sent',
-  ): Promise<void> {
+  ): void {
     this.realtime.emitToChatRoom(chatRoomId, event, {
       chatRoomId,
       message,
@@ -454,7 +479,12 @@ export class ChatService {
       chatRoomId,
       messageId: message.id,
     });
-    await Promise.all([
+    // Keep hot-path chat events on Socket.IO only; avoid extra third-party roundtrips.
+    if (event === 'chat.message.sent') {
+      return;
+    }
+
+    void Promise.allSettled([
       this.pusher.trigger(`private-user-${buyerId}`, 'chat.room.updated', {
         chatRoomId,
         messageId: message.id,
@@ -463,6 +493,15 @@ export class ChatService {
         chatRoomId,
         messageId: message.id,
       }),
-    ]);
+    ]).then((results) => {
+      results.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          const target = idx === 0 ? buyerId : sellerId;
+          this.logger.warn(
+            `Pusher chat.room.updated failed for user=${target}: ${String(result.reason)}`,
+          );
+        }
+      });
+    });
   }
 }

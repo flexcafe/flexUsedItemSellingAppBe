@@ -822,3 +822,19 @@ ALTER TABLE "fraud_reports" ADD CONSTRAINT "fraud_reports_reported_user_id_fkey"
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- Chat room denormalized summary/counters (performance)
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "last_message_id" TEXT;
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "last_message_type" "MessageType";
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "last_message_preview" TEXT;
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "last_message_at" TIMESTAMP(3);
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "unread_count_buyer" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "chat_rooms" ADD COLUMN IF NOT EXISTS "unread_count_seller" INTEGER NOT NULL DEFAULT 0;
+
+-- New indexes aligned with latest schema for chat scale
+CREATE INDEX IF NOT EXISTS "chat_rooms_buyer_id_updated_at_idx" ON "chat_rooms"("buyer_id", "updated_at");
+CREATE INDEX IF NOT EXISTS "chat_rooms_seller_id_updated_at_idx" ON "chat_rooms"("seller_id", "updated_at");
+CREATE INDEX IF NOT EXISTS "chat_rooms_updated_at_idx" ON "chat_rooms"("updated_at");
+CREATE INDEX IF NOT EXISTS "chat_messages_chat_room_id_is_read_created_at_idx" ON "chat_messages"("chat_room_id", "is_read", "created_at");
+CREATE INDEX IF NOT EXISTS "transactions_chat_room_id_status_idx" ON "transactions"("chat_room_id", "status");
+CREATE INDEX IF NOT EXISTS "transactions_status_created_at_idx" ON "transactions"("status", "created_at");
+

@@ -235,8 +235,8 @@ model User {
   facebookId String? @unique @map("facebook_id")
 
   // Verification flags
-  isEmailVerified Boolean @default(false) @map("is_email_verified")
-  isPhoneVerified Boolean @default(false) @map("is_phone_verified")
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  isPhoneVerified Boolean   @default(false) @map("is_phone_verified")
   emailVerifiedAt DateTime? @map("email_verified_at")
   phoneVerifiedAt DateTime? @map("phone_verified_at")
 
@@ -264,22 +264,22 @@ model User {
   profile       UserProfile?
   kbzPayAccount KbzPayAccount?
 
-  listings           Listing[]
-  sentMessages       ChatMessage[]       @relation("SenderMessages")
-  reviewsGiven       Review[]            @relation("ReviewerReviews")
-  reviewsReceived    Review[]            @relation("RevieweeReviews")
-  pointTransactions  PointTransaction[]
-  withdrawalRequests WithdrawalRequest[]
-  suggestions        Suggestion[]
-  reportsFiled       FraudReport[]       @relation("ReporterReports")
-  reportsAgainst     FraudReport[]       @relation("ReportedUserReports")
-  notifications      Notification[]
-  refreshTokens      RefreshToken[]
-  buyerTransactions  Transaction[]       @relation("BuyerTransactions")
-  sellerTransactions Transaction[]       @relation("SellerTransactions")
-  buyerChatRooms     ChatRoom[]          @relation("BuyerChatRooms")
-  sellerChatRooms    ChatRoom[]          @relation("SellerChatRooms")
-  locationShares     LocationShare[]
+  listings                  Listing[]
+  sentMessages              ChatMessage[]              @relation("SenderMessages")
+  reviewsGiven              Review[]                   @relation("ReviewerReviews")
+  reviewsReceived           Review[]                   @relation("RevieweeReviews")
+  pointTransactions         PointTransaction[]
+  withdrawalRequests        WithdrawalRequest[]
+  suggestions               Suggestion[]
+  reportsFiled              FraudReport[]              @relation("ReporterReports")
+  reportsAgainst            FraudReport[]              @relation("ReportedUserReports")
+  notifications             Notification[]
+  refreshTokens             RefreshToken[]
+  buyerTransactions         Transaction[]              @relation("BuyerTransactions")
+  sellerTransactions        Transaction[]              @relation("SellerTransactions")
+  buyerChatRooms            ChatRoom[]                 @relation("BuyerChatRooms")
+  sellerChatRooms           ChatRoom[]                 @relation("SellerChatRooms")
+  locationShares            LocationShare[]
   facebookFollowSubmissions FacebookFollowSubmission[]
 
   // Admin (null for regular clients)
@@ -351,14 +351,14 @@ model KbzPayAccount {
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  accountName String             @map("account_name")
-  phoneNumber String             @map("phone_number")
-  kbzTransactionId String?       @map("kbz_transaction_id")
-  status      VerificationStatus @default(PENDING)
-  isVerified  Boolean            @default(false) @map("is_verified")
+  accountName      String             @map("account_name")
+  phoneNumber      String             @map("phone_number")
+  kbzTransactionId String?            @map("kbz_transaction_id")
+  status           VerificationStatus @default(PENDING)
+  isVerified       Boolean            @default(false) @map("is_verified")
 
-  verifyRequestedAt     DateTime? @map("verify_requested_at")
-  adminPhoneForTransfer String?   @map("admin_phone_for_transfer")
+  verifyRequestedAt      DateTime? @map("verify_requested_at")
+  adminPhoneForTransfer  String?   @map("admin_phone_for_transfer")
   adminInstructionSentAt DateTime? @map("admin_instruction_sent_at")
 
   verifiedAt   DateTime? @map("verified_at")
@@ -505,13 +505,13 @@ model Listing {
   paymentMethods PaymentMethod[] @map("payment_methods")
 
   // Direct trade location (primary meeting point + map pin)
-  directTradeLocation  String? @map("direct_trade_location")
-  directTradeLatitude  Float?  @map("direct_trade_latitude")
-  directTradeLongitude Float?  @map("direct_trade_longitude")
+  directTradeLocation  String?                               @map("direct_trade_location")
+  directTradeLatitude  Float?                                @map("direct_trade_latitude")
+  directTradeLongitude Float?                                @map("direct_trade_longitude")
   geoLocation          Unsupported("geography(Point,4326)")? @map("geo_location")
-  mapScreenshotUrl     String? @map("map_screenshot_url")
-  nearbyLandmarks      String? @map("nearby_landmarks")
-  preferredTradeTime   String? @map("preferred_trade_time")
+  mapScreenshotUrl     String?                               @map("map_screenshot_url")
+  nearbyLandmarks      String?                               @map("nearby_landmarks")
+  preferredTradeTime   String?                               @map("preferred_trade_time")
 
   // Delivery
   isDeliveryAvailable Boolean           @default(false) @map("is_delivery_available")
@@ -609,7 +609,14 @@ model ChatRoom {
   sellerId  String  @map("seller_id")
   seller    User    @relation("SellerChatRooms", fields: [sellerId], references: [id])
 
-  isActive Boolean @default(true) @map("is_active")
+  isActive           Boolean      @default(true) @map("is_active")
+  // Denormalized chat list fields for high-scale room listing.
+  lastMessageId      String?      @map("last_message_id")
+  lastMessageType    MessageType? @map("last_message_type")
+  lastMessagePreview String?      @map("last_message_preview")
+  lastMessageAt      DateTime?    @map("last_message_at")
+  unreadCountBuyer   Int          @default(0) @map("unread_count_buyer")
+  unreadCountSeller  Int          @default(0) @map("unread_count_seller")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -7,9 +7,9 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
+  WsException,
 } from '@nestjs/websockets';
 import {
-  ForbiddenException,
   Logger,
   UnauthorizedException,
   UsePipes,
@@ -18,6 +18,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { Socket, Server } from 'socket.io';
 import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
+import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
 import { ChatService } from '../../../application/use-cases/chat/chat.service.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import {
@@ -30,10 +31,19 @@ type SocketUser = {
   phone?: string;
 };
 
+const LOCATION_UPDATE_WINDOW_SECONDS = 3;
+const LOCATION_UPDATE_MAX_ACTIONS = 1;
+const MESSAGE_BURST_WINDOW_SECONDS = 3;
+const MESSAGE_BURST_MAX_ACTIONS = 5;
+const MESSAGE_SUSTAINED_WINDOW_SECONDS = 60;
+const MESSAGE_SUSTAINED_MAX_ACTIONS = 60;
+
 @WebSocketGateway({
   namespace: '/chat',
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:3000'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? [
+      'http://localhost:3000',
+    ],
     credentials: true,
   },
 })
@@ -56,6 +66,7 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly realtime: ChatRealtimeService,
+    private readonly idempotency: ChatIdempotencyService,
     private readonly chats: ChatService,
   ) {}
 
@@ -71,8 +82,8 @@ export class ChatGateway
     }
     try {
       const payload = await this.jwtService.verifyAsync<SocketUser>(token);
-      client.data.user = payload;
-      client.join(`user:${payload.sub}`);
+      (client.data as { user?: SocketUser }).user = payload;
+      void client.join(`user:${payload.sub}`);
       this.activeConnections += 1;
       this.logger.debug(`chat.gateway.connections=${this.activeConnections}`);
     } catch {
@@ -81,7 +92,7 @@ export class ChatGateway
   }
 
   handleDisconnect(client: Socket): void {
-    const hasUser = Boolean((client.data.user as SocketUser | undefined)?.sub);
+    const hasUser = Boolean((client.data as { user?: SocketUser }).user?.sub);
     if (hasUser && this.activeConnections > 0) {
       this.activeConnections -= 1;
     }
@@ -94,11 +105,16 @@ export class ChatGateway
     @MessageBody() body: { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
-    const page = await this.chats.listMessages(userId, body.chatRoomId, null, 1);
+    const page = await this.chats.listMessages(
+      userId,
+      body.chatRoomId,
+      null,
+      1,
+    );
     if (page.items.length === 0 && !page.nextCursor) {
       await this.chats.listRooms(userId, null, 1);
     }
-    client.join(`chat:${body.chatRoomId}`);
+    void client.join(`chat:${body.chatRoomId}`);
     return { ok: true, chatRoomId: body.chatRoomId };
   }
 
@@ -107,7 +123,7 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { chatRoomId: string },
   ) {
-    client.leave(`chat:${body.chatRoomId}`);
+    void client.leave(`chat:${body.chatRoomId}`);
     return { ok: true, chatRoomId: body.chatRoomId };
   }
 
@@ -117,6 +133,28 @@ export class ChatGateway
     @MessageBody() body: SendChatMessageDto & { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
+    const burstAllowed = await this.idempotency.allowRateLimitedAction(
+      `chat:message-burst:${userId}:${body.chatRoomId}`,
+      MESSAGE_BURST_MAX_ACTIONS,
+      MESSAGE_BURST_WINDOW_SECONDS,
+    );
+    if (!burstAllowed) {
+      throw new WsException(
+        'Too many messages in a short time. Please slow down.',
+      );
+    }
+
+    const sustainedAllowed = await this.idempotency.allowRateLimitedAction(
+      `chat:message-sustained:${userId}`,
+      MESSAGE_SUSTAINED_MAX_ACTIONS,
+      MESSAGE_SUSTAINED_WINDOW_SECONDS,
+    );
+    if (!sustainedAllowed) {
+      throw new WsException(
+        'Message rate limit reached. Try again in a moment.',
+      );
+    }
+
     const message = await this.chats.sendMessage(
       userId,
       body.chatRoomId,
@@ -143,6 +181,16 @@ export class ChatGateway
     @MessageBody() body: UpdateLocationShareDto & { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
+    const allowed = await this.idempotency.allowRateLimitedAction(
+      `chat:location-update:${userId}:${body.chatRoomId}`,
+      LOCATION_UPDATE_MAX_ACTIONS,
+      LOCATION_UPDATE_WINDOW_SECONDS,
+    );
+    if (!allowed) {
+      throw new WsException(
+        'Location updates are limited to once every 3 seconds',
+      );
+    }
     await this.chats.updateLocationShare(
       userId,
       body.chatRoomId,
@@ -164,7 +212,8 @@ export class ChatGateway
   }
 
   private extractToken(client: Socket): string | null {
-    const authToken = client.handshake.auth?.token;
+    const auth = client.handshake.auth as Record<string, unknown> | undefined;
+    const authToken = auth?.token;
     if (typeof authToken === 'string' && authToken.length > 0) {
       return authToken.replace(/^Bearer\s+/i, '');
     }
@@ -176,7 +225,7 @@ export class ChatGateway
   }
 
   private getUserId(client: Socket): string {
-    const user = client.data.user as SocketUser | undefined;
+    const user = (client.data as { user?: SocketUser }).user;
     if (!user?.sub) {
       this.logger.warn('Socket action blocked due to missing user context');
       throw new UnauthorizedException();
