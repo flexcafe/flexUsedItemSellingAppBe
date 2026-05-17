@@ -1,18 +1,3 @@
--- DropIndex
-DROP INDEX "listings_category_status_deleted_idx";
-
--- DropIndex
-DROP INDEX "listings_description_trgm_idx";
-
--- DropIndex
-DROP INDEX "listings_geo_location_gix";
-
--- DropIndex
-DROP INDEX "listings_status_deleted_created_idx";
-
--- DropIndex
-DROP INDEX "listings_title_trgm_idx";
-
 -- AlterTable
 ALTER TABLE "chat_rooms" ADD COLUMN     "last_message_at" TIMESTAMP(3),
 ADD COLUMN     "last_message_id" TEXT,

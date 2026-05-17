@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { createHttpTestApp } from '../../../test-utils/http-test-app.js';
@@ -29,6 +30,11 @@ function configServiceProvider() {
     useValue: { get: jest.fn((_key: string, def?: string) => def) },
   };
 }
+
+const throttlerGuardOverride = {
+  guard: ThrottlerGuard,
+  canActivate: () => true,
+};
 
 describe(ClientProductsController.name, () => {
   it('GET /client/products is public', async () => {
@@ -60,7 +66,10 @@ describe(ClientProductsController.name, () => {
           useValue: buildUploadMediaMock(),
         },
       ],
-      overrideGuards: [{ guard: JwtAuthGuard, canActivate: () => true }],
+      overrideGuards: [
+        { guard: JwtAuthGuard, canActivate: () => true },
+        throttlerGuardOverride,
+      ],
     });
 
     const res = await request(app.getHttpServer())
@@ -97,7 +106,10 @@ describe(ClientProductsController.name, () => {
           useValue: buildUploadMediaMock(),
         },
       ],
-      overrideGuards: [{ guard: JwtAuthGuard, canActivate: () => false }],
+      overrideGuards: [
+        { guard: JwtAuthGuard, canActivate: () => false },
+        throttlerGuardOverride,
+      ],
     });
 
     await request(app.getHttpServer())
@@ -152,6 +164,7 @@ describe(ClientProductsController.name, () => {
             return true;
           },
         },
+        throttlerGuardOverride,
       ],
     });
 
@@ -224,6 +237,7 @@ describe(ClientProductsController.name, () => {
             return true;
           },
         },
+        throttlerGuardOverride,
       ],
     });
 
@@ -270,6 +284,7 @@ describe(ClientProductsController.name, () => {
             return true;
           },
         },
+        throttlerGuardOverride,
       ],
     });
 

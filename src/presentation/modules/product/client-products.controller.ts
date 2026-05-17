@@ -14,6 +14,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
@@ -219,6 +220,8 @@ export class ClientProductsController {
 
   @Public()
   @Get()
+  @Throttle({ 'catalog-search-ip': { limit: 60, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Search / list public product catalog (paginated)',
     description: CLIENT_PRODUCT_LIST_DOC,

@@ -74,6 +74,12 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
           limit: 80,
           getTracker: jwtUserSubTracker,
         },
+        {
+          name: 'catalog-search-ip',
+          ttl: 60_000,
+          limit: 60,
+          getTracker: authIpTracker,
+        },
       ],
     }),
 
