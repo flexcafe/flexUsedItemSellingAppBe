@@ -620,6 +620,9 @@ model ChatRoom {
   @@unique([listingId, buyerId, sellerId])
   @@index([buyerId])
   @@index([sellerId])
+  @@index([buyerId, updatedAt])
+  @@index([sellerId, updatedAt])
+  @@index([updatedAt])
   @@map("chat_rooms")
 }
 
@@ -639,6 +642,7 @@ model ChatMessage {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([chatRoomId, createdAt])
+  @@index([chatRoomId, isRead, createdAt])
   @@index([senderId])
   @@map("chat_messages")
 }
@@ -698,6 +702,8 @@ model Transaction {
   @@index([listingId])
   @@index([chatRoomId])
   @@index([status])
+  @@index([chatRoomId, status])
+  @@index([status, createdAt])
   @@map("transactions")
 }
 

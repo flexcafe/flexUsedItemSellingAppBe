@@ -7,6 +7,8 @@ export * from './rank-tier.enum.js';
 export * from './point-source-type.enum.js';
 export * from './withdrawal-status.enum.js';
 export * from './transaction-status.enum.js';
+export * from './transaction-type.enum.js';
+export * from './message-type.enum.js';
 export * from './gender.enum.js';
 export * from './marital-status.enum.js';
 export * from './verification-status.enum.js';
