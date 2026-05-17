@@ -304,6 +304,8 @@ export class ClientProductsController {
 
   @Public()
   @Get(':productId')
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Get one product by id (public)',
     description: CLIENT_PRODUCT_GET_DOC,

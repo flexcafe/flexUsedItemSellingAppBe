@@ -80,6 +80,12 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
           limit: 60,
           getTracker: authIpTracker,
         },
+        {
+          name: 'catalog-detail-ip',
+          ttl: 60_000,
+          limit: 120,
+          getTracker: authIpTracker,
+        },
       ],
     }),
 
