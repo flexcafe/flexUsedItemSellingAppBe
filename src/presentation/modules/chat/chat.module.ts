@@ -27,7 +27,11 @@ import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mar
 import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
+import { RequestChatSafePaymentUseCase } from '../../../application/use-cases/chat/request-chat-safe-payment.use-case.js';
+import { GetChatSafePaymentStatusUseCase } from '../../../application/use-cases/chat/get-chat-safe-payment-status.use-case.js';
 import { SubmitChatSafePaymentUseCase } from '../../../application/use-cases/chat/submit-chat-safe-payment.use-case.js';
+import { ListAwaitingSafePaymentInstructionsUseCase } from '../../../application/use-cases/chat/list-awaiting-safe-payment-instructions.use-case.js';
+import { AdminSendSafePaymentInstructionUseCase } from '../../../application/use-cases/chat/admin-send-safe-payment-instruction.use-case.js';
 import { CompleteChatTransactionUseCase } from '../../../application/use-cases/chat/complete-chat-transaction.use-case.js';
 import { AdminMarkSafePaymentReceivedUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-received.use-case.js';
 import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-transferred.use-case.js';
@@ -55,8 +59,12 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
     StartDirectTradeUseCase,
     UpdateChatLocationShareUseCase,
     StopChatLocationShareUseCase,
+    RequestChatSafePaymentUseCase,
+    GetChatSafePaymentStatusUseCase,
     SubmitChatSafePaymentUseCase,
     CompleteChatTransactionUseCase,
+    ListAwaitingSafePaymentInstructionsUseCase,
+    AdminSendSafePaymentInstructionUseCase,
     AdminMarkSafePaymentReceivedUseCase,
     AdminMarkSafePaymentTransferredUseCase,
     ListPendingSafePaymentsUseCase,

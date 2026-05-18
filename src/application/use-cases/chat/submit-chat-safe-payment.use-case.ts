@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -14,7 +15,6 @@ import {
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
-import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import type { SubmitSafePaymentDto } from '../../dtos/chat/chat.dto.js';
 import {
   CHAT_IDEMPOTENCY_STORE,
@@ -57,28 +57,29 @@ export class SubmitChatSafePaymentUseCase {
         throw new ConflictException('Duplicate safe payment request');
       }
     }
-    const transaction = await this.chats.getOrCreateTransaction(
-      room.id,
-      room.listingId,
-      room.buyerId,
-      room.sellerId,
-      TransactionType.SAFE_PAYMENT,
-      dto.paymentAmount,
-    );
+
+    const status = await this.chats.findSafePaymentStatusByChatRoom(room.id);
+    if (!status?.canSubmitPayment) {
+      throw new BadRequestException(
+        'Admin must send KBZPay receiving instructions before you can submit payment',
+      );
+    }
+
     await this.chats.submitSafePayment({
-      transactionId: transaction.id,
+      transactionId: status.transaction.id,
       payerKbzName: dto.payerKbzName,
       payerKbzPhone: dto.payerKbzPhone,
       paymentAmount: dto.paymentAmount,
       kbzTransactionId: dto.kbzTransactionId,
     });
+
     const message = await this.chats.createMessage({
       chatRoomId: room.id,
       senderId: userId,
       type: MessageType.SAFE_PAYMENT_INITIATED,
       content: 'Buyer submitted safe payment. Admin verification pending.',
       metadata: {
-        transactionId: transaction.id,
+        transactionId: status.transaction.id,
         payerKbzName: dto.payerKbzName,
         payerKbzPhone: dto.payerKbzPhone,
         paymentAmount: dto.paymentAmount,
@@ -92,24 +93,42 @@ export class SubmitChatSafePaymentUseCase {
       message,
       'chat.safePayment.submitted',
     );
+
     const adminIds = await this.users.findAdminUserIds();
-    await Promise.all(
-      adminIds.map((adminId) =>
+    await Promise.all([
+      ...adminIds.map((adminId) =>
         this.users.createNotification({
           userId: adminId,
           eventKey: 'CHAT_SAFE_PAYMENT_SUBMITTED_ADMIN',
           title: 'Safe payment needs review',
-          message: `Safe payment submitted for chat room ${room.id}.`,
-          referenceId: transaction.id,
+          message: `Buyer submitted KBZ transaction ID for chat room ${room.id}.\n\nTransaction: ${dto.kbzTransactionId}\nAmount: ${dto.paymentAmount} MMK`,
+          referenceId: status.transaction.id,
           metadata: {
-            transactionId: transaction.id,
+            transactionId: status.transaction.id,
             chatRoomId: room.id,
             buyerId: room.buyerId,
             sellerId: room.sellerId,
+            kbzTransactionId: dto.kbzTransactionId,
+            paymentAmount: dto.paymentAmount,
           },
         }),
       ),
-    );
-    return (await this.chats.findTransactionById(transaction.id))!;
+      this.users.createNotification({
+        userId: room.buyerId,
+        eventKey: 'CHAT_SAFE_PAYMENT_SUBMITTED_CLIENT',
+        title: 'Safe payment submitted',
+        message:
+          'Your KBZ transaction ID has been submitted. Admin will verify the transfer and update the chat when payment is received.',
+        referenceId: status.transaction.id,
+        metadata: {
+          transactionId: status.transaction.id,
+          chatRoomId: room.id,
+          kbzTransactionId: dto.kbzTransactionId,
+          paymentAmount: dto.paymentAmount,
+        },
+      }),
+    ]);
+
+    return (await this.chats.findTransactionById(status.transaction.id))!;
   }
 }

@@ -10,6 +10,7 @@ import { ListChatRoomsUseCase } from './list-chat-rooms.use-case.js';
 import { ListChatMessagesUseCase } from './list-chat-messages.use-case.js';
 import { SendChatMessageUseCase } from './send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from './mark-chat-room-read.use-case.js';
+import { RequestChatSafePaymentUseCase } from './request-chat-safe-payment.use-case.js';
 import { SubmitChatSafePaymentUseCase } from './submit-chat-safe-payment.use-case.js';
 import { CompleteChatTransactionUseCase } from './complete-chat-transaction.use-case.js';
 import { AdminMarkSafePaymentTransferredUseCase } from './admin-mark-safe-payment-transferred.use-case.js';
@@ -197,6 +198,53 @@ describe(MarkChatRoomReadUseCase.name, () => {
   });
 });
 
+describe(RequestChatSafePaymentUseCase.name, () => {
+  it('rejects when seller requests safe payment', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+
+    const useCase = new RequestChatSafePaymentUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(SELLER_ID, ROOM_ID)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('notifies admins when buyer requests safe payment', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    const publisher = buildPublisherMock();
+    const room = buildChatRoom();
+    const tx = buildTransaction({
+      status: TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+    });
+
+    chats.findRoomById.mockResolvedValue(room);
+    chats.requestSafePayment.mockResolvedValue({
+      transaction: tx,
+      safePayment: {} as never,
+    });
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    users.findAdminUserIds.mockResolvedValue(['admin-1']);
+    users.createNotification.mockResolvedValue(undefined as never);
+
+    const useCase = new RequestChatSafePaymentUseCase(
+      chats,
+      users,
+      publisher,
+    );
+    const result = await useCase.execute(BUYER_ID, ROOM_ID);
+
+    expect(result).toBe(tx);
+    expect(users.createNotification).toHaveBeenCalledTimes(2);
+    expect(publisher.publish).toHaveBeenCalled();
+  });
+});
+
 describe(SubmitChatSafePaymentUseCase.name, () => {
   it('rejects when seller submits safe payment', async () => {
     const chats = buildChatRepoMock();
@@ -227,7 +275,14 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
     const tx = buildTransaction();
 
     chats.findRoomById.mockResolvedValue(room);
-    chats.getOrCreateTransaction.mockResolvedValue(tx);
+    chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
+      transaction: tx,
+      safePayment: {
+        instructionSentAt: new Date(),
+        adminReceivingPhone: '09111111111',
+      } as never,
+      canSubmitPayment: true,
+    });
     chats.submitSafePayment.mockResolvedValue({} as never);
     chats.createMessage.mockResolvedValue(buildChatMessage());
     chats.findTransactionById.mockResolvedValue(tx);
@@ -249,7 +304,7 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
     });
 
     expect(result).toBe(tx);
-    expect(users.createNotification).toHaveBeenCalledTimes(1);
+    expect(users.createNotification).toHaveBeenCalledTimes(2);
     expect(publisher.publish).toHaveBeenCalled();
   });
 });

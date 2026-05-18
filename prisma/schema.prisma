@@ -78,6 +78,8 @@ enum TransactionType {
 
 enum TransactionStatus {
   INITIATED
+  SAFE_PAYMENT_AWAITING_INSTRUCTION
+  SAFE_PAYMENT_INSTRUCTION_SENT
   SAFE_PAYMENT_PENDING
   SAFE_PAYMENT_RECEIVED
   BUYER_COMPLETED
@@ -94,6 +96,8 @@ enum MessageType {
   TEXT
   IMAGE
   SYSTEM
+  SAFE_PAYMENT_REQUESTED
+  SAFE_PAYMENT_INSTRUCTION_SENT
   SAFE_PAYMENT_INITIATED
   SAFE_PAYMENT_VERIFIED
   PAYMENT_TRANSFERRED
@@ -719,11 +723,17 @@ model SafePayment {
   transactionId String      @unique @map("transaction_id")
   transaction   Transaction @relation(fields: [transactionId], references: [id])
 
-  // Buyer's KBZPay transfer details
-  payerKbzName     String  @map("payer_kbz_name")
-  payerKbzPhone    String  @map("payer_kbz_phone")
-  paymentAmount    Decimal @map("payment_amount") @db.Decimal(12, 2)
-  kbzTransactionId String  @map("kbz_transaction_id")
+  // Admin transfer instruction (sent before buyer pays)
+  adminReceivingPhone String?   @map("admin_receiving_phone")
+  instructionSentAt   DateTime? @map("instruction_sent_at")
+  instructionSentById String?   @map("instruction_sent_by_id")
+  instructionNote     String?   @map("instruction_note")
+
+  // Buyer's KBZPay transfer details (filled when buyer submits after instruction)
+  payerKbzName     String? @map("payer_kbz_name")
+  payerKbzPhone    String? @map("payer_kbz_phone")
+  paymentAmount    Decimal? @map("payment_amount") @db.Decimal(12, 2)
+  kbzTransactionId String? @map("kbz_transaction_id")
 
   // Admin verification
   isVerified   Boolean   @default(false) @map("is_verified")

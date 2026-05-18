@@ -43,6 +43,50 @@ export class AdminMarkSafePaymentReceivedUseCase {
       chatRoomId: next.chatRoomId,
       status: next.status,
     });
+
+    const noteSuffix = dto.adminNote ? `\n\nAdmin note: ${dto.adminNote}` : '';
+    await Promise.all([
+      this.users.createNotification({
+        userId: next.buyerId,
+        eventKey: 'CHAT_SAFE_PAYMENT_RECEIVED_CLIENT',
+        title: 'Safe payment received',
+        message: `Admin confirmed your safe payment. You can continue the trade and mark the transaction complete when finished.${noteSuffix}`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          role: 'buyer',
+          adminNote: dto.adminNote ?? null,
+        },
+      }),
+      this.users.createNotification({
+        userId: next.sellerId,
+        eventKey: 'CHAT_SAFE_PAYMENT_RECEIVED_CLIENT',
+        title: 'Buyer payment secured',
+        message: `Admin confirmed the buyer's safe payment. Complete the trade in chat when ready; funds will be released after both sides mark complete.${noteSuffix}`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          role: 'seller',
+          adminNote: dto.adminNote ?? null,
+        },
+      }),
+      this.users.createNotification({
+        userId: adminId,
+        eventKey: 'CHAT_SAFE_PAYMENT_RECEIVED_ADMIN',
+        title: 'Safe payment marked received',
+        message: `You marked safe payment ${next.id} as received for chat room ${next.chatRoomId}.`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          buyerId: next.buyerId,
+          sellerId: next.sellerId,
+        },
+      }),
+    ]);
+
     return next;
   }
 }

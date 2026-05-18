@@ -32,6 +32,7 @@ import {
   OpenChatRoomDto,
   SendChatMessageDto,
   StartDirectTradeDto,
+  SafePaymentStatusResponseDto,
   SubmitSafePaymentDto,
   TransactionResponseDto,
   UpdateLocationShareDto,
@@ -45,6 +46,8 @@ import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mar
 import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
+import { RequestChatSafePaymentUseCase } from '../../../application/use-cases/chat/request-chat-safe-payment.use-case.js';
+import { GetChatSafePaymentStatusUseCase } from '../../../application/use-cases/chat/get-chat-safe-payment-status.use-case.js';
 import { SubmitChatSafePaymentUseCase } from '../../../application/use-cases/chat/submit-chat-safe-payment.use-case.js';
 import { CompleteChatTransactionUseCase } from '../../../application/use-cases/chat/complete-chat-transaction.use-case.js';
 import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use-cases/chat/submit-chat-review-after-completion.use-case.js';
@@ -63,6 +66,8 @@ export class ClientChatController {
     private readonly startDirectTrade: StartDirectTradeUseCase,
     private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
     private readonly stopChatLocationShare: StopChatLocationShareUseCase,
+    private readonly requestChatSafePayment: RequestChatSafePaymentUseCase,
+    private readonly getChatSafePaymentStatus: GetChatSafePaymentStatusUseCase,
     private readonly submitChatSafePayment: SubmitChatSafePaymentUseCase,
     private readonly completeChatTransaction: CompleteChatTransactionUseCase,
     private readonly submitChatReviewAfterCompletion: SubmitChatReviewAfterCompletionUseCase,
@@ -235,9 +240,57 @@ export class ClientChatController {
     return ApiResponseDto.success(true, 'Location sharing stopped');
   }
 
-  @Post(':chatRoomId/safe-payment')
+  @Post(':chatRoomId/safe-payment/request')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Submit safe payment for chat transaction' })
+  @ApiOperation({
+    summary: 'Buyer requests safe payment (notifies admin to send KBZ number)',
+  })
+  @ApiParam({ name: 'chatRoomId' })
+  @ApiSuccessResponse(TransactionResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Safe payment requested',
+  })
+  async requestSafePayment(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+  ): Promise<ApiResponseDto<TransactionResponseDto>> {
+    const tx = await this.requestChatSafePayment.execute(user.sub, chatRoomId);
+    return ApiResponseDto.success(
+      new TransactionResponseDto(tx),
+      'Safe payment requested',
+    );
+  }
+
+  @Get(':chatRoomId/safe-payment')
+  @ApiOperation({
+    summary: 'Get safe payment status and admin transfer instruction for buyer',
+  })
+  @ApiParam({ name: 'chatRoomId' })
+  @ApiSuccessResponse(SafePaymentStatusResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Safe payment status retrieved',
+  })
+  async getSafePaymentStatus(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+  ): Promise<ApiResponseDto<SafePaymentStatusResponseDto>> {
+    const status = await this.getChatSafePaymentStatus.execute(
+      user.sub,
+      chatRoomId,
+    );
+    return ApiResponseDto.success(
+      new SafePaymentStatusResponseDto(status),
+      'Safe payment status retrieved',
+    );
+  }
+
+  @Post(':chatRoomId/safe-payment/submit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Buyer submits KBZ transaction ID after paying to admin receiving number',
+  })
+  @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,
     description: 'Safe payment submitted',

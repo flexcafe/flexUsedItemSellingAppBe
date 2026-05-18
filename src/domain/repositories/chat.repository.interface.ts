@@ -102,16 +102,35 @@ export interface TransactionData {
 export interface SafePaymentData {
   id: string;
   transactionId: string;
-  payerKbzName: string;
-  payerKbzPhone: string;
-  paymentAmount: number;
-  kbzTransactionId: string;
+  adminReceivingPhone: string | null;
+  instructionSentAt: Date | null;
+  instructionSentById: string | null;
+  instructionNote: string | null;
+  payerKbzName: string | null;
+  payerKbzPhone: string | null;
+  paymentAmount: number | null;
+  kbzTransactionId: string | null;
   isVerified: boolean;
   verifiedById: string | null;
   verifiedAt: Date | null;
   isTransferred: boolean;
   transferredAt: Date | null;
   transferRef: string | null;
+}
+
+export interface SafePaymentStatusData {
+  transaction: TransactionData;
+  safePayment: SafePaymentData;
+  canSubmitPayment: boolean;
+}
+
+export interface AwaitingSafePaymentInstructionData {
+  transactionId: string;
+  chatRoomId: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  createdAt: Date;
 }
 
 export interface PendingSafePaymentData {
@@ -162,11 +181,26 @@ export interface IChatRepository {
   upsertDirectTrade(data: DirectTradeData): Promise<void>;
   upsertLocationShare(data: LocationShareData): Promise<void>;
   stopLocationShare(directTradeId: string, userId: string): Promise<void>;
+  requestSafePayment(
+    chatRoomId: string,
+    listingId: string,
+    buyerId: string,
+    sellerId: string,
+  ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }>;
+  sendSafePaymentInstruction(
+    transactionId: string,
+    adminId: string,
+    adminReceivingPhone: string,
+    adminNote?: string,
+  ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }>;
+  findSafePaymentStatusByChatRoom(
+    chatRoomId: string,
+  ): Promise<SafePaymentStatusData | null>;
   submitSafePayment(data: SafePaymentSubmissionData): Promise<SafePaymentData>;
   markSafePaymentReceived(
     transactionId: string,
     adminId: string,
-    adminReceivingPhone: string,
+    adminReceivingPhone?: string,
     adminNote?: string,
   ): Promise<TransactionData>;
   markSafePaymentTransferred(
@@ -183,6 +217,10 @@ export interface IChatRepository {
     cursor: string | null,
     take: number,
   ): Promise<ChatCursorPage<PendingSafePaymentData>>;
+  listAwaitingSafePaymentInstructions(
+    cursor: string | null,
+    take: number,
+  ): Promise<ChatCursorPage<AwaitingSafePaymentInstructionData>>;
 }
 
 export const CHAT_REPOSITORY = Symbol('CHAT_REPOSITORY');

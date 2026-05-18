@@ -62,6 +62,50 @@ export class AdminMarkSafePaymentTransferredUseCase {
         transferRef: dto.transferRef,
       },
     );
+
+    const noteSuffix = dto.adminNote ? `\n\nAdmin note: ${dto.adminNote}` : '';
+    await Promise.all([
+      this.users.createNotification({
+        userId: next.sellerId,
+        eventKey: 'CHAT_SAFE_PAYMENT_TRANSFERRED_CLIENT',
+        title: 'Payment released to seller',
+        message: `Admin transferred your safe payment proceeds. Reference: ${dto.transferRef}.${noteSuffix}`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          transferRef: dto.transferRef,
+          role: 'seller',
+        },
+      }),
+      this.users.createNotification({
+        userId: next.buyerId,
+        eventKey: 'CHAT_SAFE_PAYMENT_TRANSFERRED_CLIENT',
+        title: 'Safe payment released',
+        message: `Admin released the safe payment to the seller. Reference: ${dto.transferRef}.${noteSuffix}`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          transferRef: dto.transferRef,
+          role: 'buyer',
+        },
+      }),
+      this.users.createNotification({
+        userId: adminId,
+        eventKey: 'CHAT_SAFE_PAYMENT_TRANSFERRED_ADMIN',
+        title: 'Safe payment transferred',
+        message: `You marked safe payment ${next.id} as transferred to seller.\n\nReference: ${dto.transferRef}`,
+        referenceId: next.id,
+        metadata: {
+          transactionId: next.id,
+          chatRoomId: next.chatRoomId,
+          sellerId: next.sellerId,
+          transferRef: dto.transferRef,
+        },
+      }),
+    ]);
+
     return next;
   }
 }

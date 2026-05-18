@@ -16,8 +16,10 @@ import {
   type DirectTradeData,
   type IChatRepository,
   type LocationShareData,
+  type AwaitingSafePaymentInstructionData,
   type PendingSafePaymentData,
   type SafePaymentData,
+  type SafePaymentStatusData,
   type SafePaymentSubmissionData,
   type TransactionData,
 } from '../../domain/repositories/chat.repository.interface.js';
@@ -359,9 +361,176 @@ export class ChatRepository implements IChatRepository {
     });
   }
 
+  async requestSafePayment(
+    chatRoomId: string,
+    listingId: string,
+    buyerId: string,
+    sellerId: string,
+  ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }> {
+    const active = await this.findActiveSafePaymentTransaction(chatRoomId);
+    const blockedAfterSubmit = new Set<string>([
+      PrismaTransactionStatus.SAFE_PAYMENT_PENDING,
+      PrismaTransactionStatus.SAFE_PAYMENT_RECEIVED,
+      PrismaTransactionStatus.BUYER_COMPLETED,
+      PrismaTransactionStatus.SELLER_COMPLETED,
+      PrismaTransactionStatus.COMPLETED,
+    ]);
+    if (active && blockedAfterSubmit.has(active.status)) {
+      throw new ConflictException(
+        'Safe payment is already in progress for this chat',
+      );
+    }
+
+    let transaction = active;
+    if (!transaction) {
+      const created = await this.prisma.transaction.create({
+        data: {
+          chatRoomId,
+          listingId,
+          buyerId,
+          sellerId,
+          type: PrismaPkg.TransactionType.SAFE_PAYMENT,
+          status: PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+          amount: 0,
+        },
+      });
+      transaction = created;
+    } else {
+      const updated = await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+        },
+      });
+      transaction = updated;
+    }
+
+    const safePayment = await this.prisma.safePayment.upsert({
+      where: { transactionId: transaction.id },
+      update: {},
+      create: { transactionId: transaction.id },
+    });
+
+    return {
+      transaction: this.mapTransaction(transaction),
+      safePayment: this.mapSafePayment(safePayment),
+    };
+  }
+
+  async sendSafePaymentInstruction(
+    transactionId: string,
+    adminId: string,
+    adminReceivingPhone: string,
+    adminNote?: string,
+  ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id: transactionId },
+      });
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+      if (
+        transaction.status !==
+        PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION
+      ) {
+        throw new BadRequestException(
+          'Safe payment is not awaiting admin transfer instruction',
+        );
+      }
+
+      const safePayment = await tx.safePayment.upsert({
+        where: { transactionId },
+        update: {
+          adminReceivingPhone,
+          instructionSentAt: new Date(),
+          instructionSentById: adminId,
+          instructionNote: adminNote ?? null,
+        },
+        create: {
+          transactionId,
+          adminReceivingPhone,
+          instructionSentAt: new Date(),
+          instructionSentById: adminId,
+          instructionNote: adminNote ?? null,
+        },
+      });
+
+      const updatedTx = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: PrismaTransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT,
+        },
+      });
+
+      await this.createMessageWithRoomSnapshot(tx, {
+        chatRoomId: updatedTx.chatRoomId,
+        senderId: adminId,
+        type: MessageType.SAFE_PAYMENT_INSTRUCTION_SENT,
+        content:
+          'Admin sent KBZPay transfer instruction. Buyer can pay and submit transaction ID.',
+        metadata: {
+          transactionId,
+          adminReceivingPhone,
+          adminNote: adminNote ?? null,
+          instructionSentAt: safePayment.instructionSentAt?.toISOString() ?? null,
+        },
+      });
+
+      return { transaction: updatedTx, safePayment };
+    });
+
+    return {
+      transaction: this.mapTransaction(row.transaction),
+      safePayment: this.mapSafePayment(row.safePayment),
+    };
+  }
+
+  async findSafePaymentStatusByChatRoom(
+    chatRoomId: string,
+  ): Promise<SafePaymentStatusData | null> {
+    const transaction = await this.findActiveSafePaymentTransaction(chatRoomId);
+    if (!transaction) {
+      return null;
+    }
+    const safePayment = await this.prisma.safePayment.findUnique({
+      where: { transactionId: transaction.id },
+    });
+    if (!safePayment) {
+      return null;
+    }
+    const mappedPayment = this.mapSafePayment(safePayment);
+    const mappedTx = this.mapTransaction(transaction);
+    return {
+      transaction: mappedTx,
+      safePayment: mappedPayment,
+      canSubmitPayment:
+        mappedTx.status === TransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT &&
+        mappedPayment.instructionSentAt != null,
+    };
+  }
+
   async submitSafePayment(
     data: SafePaymentSubmissionData,
   ): Promise<SafePaymentData> {
+    const existing = await this.prisma.transaction.findUnique({
+      where: { id: data.transactionId },
+      include: { safePayment: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Transaction not found');
+    }
+    if (
+      existing.status !== PrismaTransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT
+    ) {
+      throw new BadRequestException(
+        'Admin must send KBZPay receiving instructions before buyer can submit payment',
+      );
+    }
+    if (!existing.safePayment?.instructionSentAt) {
+      throw new BadRequestException('Transfer instruction has not been sent yet');
+    }
+
     await this.prisma.transaction.update({
       where: { id: data.transactionId },
       data: {
@@ -369,16 +538,9 @@ export class ChatRepository implements IChatRepository {
         amount: data.paymentAmount,
       },
     });
-    const row = await this.prisma.safePayment.upsert({
+    const row = await this.prisma.safePayment.update({
       where: { transactionId: data.transactionId },
-      update: {
-        payerKbzName: data.payerKbzName,
-        payerKbzPhone: data.payerKbzPhone,
-        paymentAmount: data.paymentAmount,
-        kbzTransactionId: data.kbzTransactionId,
-      },
-      create: {
-        transactionId: data.transactionId,
+      data: {
         payerKbzName: data.payerKbzName,
         payerKbzPhone: data.payerKbzPhone,
         paymentAmount: data.paymentAmount,
@@ -391,7 +553,7 @@ export class ChatRepository implements IChatRepository {
   async markSafePaymentReceived(
     transactionId: string,
     adminId: string,
-    adminReceivingPhone: string,
+    adminReceivingPhone?: string,
     adminNote?: string,
   ): Promise<TransactionData> {
     const row = await this.prisma.$transaction(async (tx) => {
@@ -401,6 +563,13 @@ export class ChatRepository implements IChatRepository {
       if (!safePayment) {
         throw new NotFoundException('Safe payment info not found');
       }
+      const receivingPhone =
+        adminReceivingPhone ?? safePayment.adminReceivingPhone;
+      if (!receivingPhone) {
+        throw new BadRequestException(
+          'Admin receiving phone is required to confirm payment',
+        );
+      }
 
       await tx.safePayment.update({
         where: { transactionId },
@@ -408,6 +577,7 @@ export class ChatRepository implements IChatRepository {
           isVerified: true,
           verifiedById: adminId,
           verifiedAt: new Date(),
+          adminReceivingPhone: receivingPhone,
         },
       });
 
@@ -422,9 +592,9 @@ export class ChatRepository implements IChatRepository {
         chatRoomId: transaction.chatRoomId,
         senderId: adminId,
         type: MessageType.SAFE_PAYMENT_VERIFIED,
-        content: 'Safe payment verified by admin.',
+        content: 'Safe payment verified by admin. Money is held until both sides complete.',
         metadata: {
-          adminReceivingPhone,
+          adminReceivingPhone: receivingPhone,
           adminNote: adminNote ?? null,
           verifiedAt: new Date().toISOString(),
         },
@@ -567,9 +737,9 @@ export class ChatRepository implements IChatRepository {
         buyerId: r.buyerId,
         sellerId: r.sellerId,
         amount: Number(r.amount),
-        payerKbzName: r.safePayment!.payerKbzName,
-        payerKbzPhone: r.safePayment!.payerKbzPhone,
-        kbzTransactionId: r.safePayment!.kbzTransactionId,
+        payerKbzName: r.safePayment!.payerKbzName ?? '',
+        payerKbzPhone: r.safePayment!.payerKbzPhone ?? '',
+        kbzTransactionId: r.safePayment!.kbzTransactionId ?? '',
         createdAt: r.createdAt,
       }));
     const last = slice.at(-1);
@@ -578,6 +748,61 @@ export class ChatRepository implements IChatRepository {
       nextCursor:
         hasNext && last ? this.encodeCursor(last.createdAt, last.id) : null,
     };
+  }
+
+  async listAwaitingSafePaymentInstructions(
+    cursor: string | null,
+    take: number,
+  ): Promise<ChatCursorPage<AwaitingSafePaymentInstructionData>> {
+    const pageSize = this.normalizeTake(take, 50);
+    const decoded = this.decodeCursor(cursor);
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        status: PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+        ...(decoded
+          ? {
+              OR: [
+                { createdAt: { lt: decoded.createdAt } },
+                { createdAt: decoded.createdAt, id: { lt: decoded.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: pageSize + 1,
+    });
+    const hasNext = rows.length > pageSize;
+    const slice = hasNext ? rows.slice(0, pageSize) : rows;
+    const items: AwaitingSafePaymentInstructionData[] = slice.map((r) => ({
+      transactionId: r.id,
+      chatRoomId: r.chatRoomId,
+      listingId: r.listingId,
+      buyerId: r.buyerId,
+      sellerId: r.sellerId,
+      createdAt: r.createdAt,
+    }));
+    const last = slice.at(-1);
+    return {
+      items,
+      nextCursor:
+        hasNext && last ? this.encodeCursor(last.createdAt, last.id) : null,
+    };
+  }
+
+  private async findActiveSafePaymentTransaction(chatRoomId: string) {
+    return this.prisma.transaction.findFirst({
+      where: {
+        chatRoomId,
+        type: PrismaPkg.TransactionType.SAFE_PAYMENT,
+        status: {
+          notIn: [
+            PrismaTransactionStatus.CANCELLED,
+            PrismaTransactionStatus.REFUNDED,
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   private mapRoom(row: {
@@ -661,10 +886,14 @@ export class ChatRepository implements IChatRepository {
   private mapSafePayment(row: {
     id: string;
     transactionId: string;
-    payerKbzName: string;
-    payerKbzPhone: string;
-    paymentAmount: PrismaPkg.Prisma.Decimal;
-    kbzTransactionId: string;
+    adminReceivingPhone: string | null;
+    instructionSentAt: Date | null;
+    instructionSentById: string | null;
+    instructionNote: string | null;
+    payerKbzName: string | null;
+    payerKbzPhone: string | null;
+    paymentAmount: PrismaPkg.Prisma.Decimal | null;
+    kbzTransactionId: string | null;
     isVerified: boolean;
     verifiedById: string | null;
     verifiedAt: Date | null;
@@ -675,9 +904,14 @@ export class ChatRepository implements IChatRepository {
     return {
       id: row.id,
       transactionId: row.transactionId,
+      adminReceivingPhone: row.adminReceivingPhone,
+      instructionSentAt: row.instructionSentAt,
+      instructionSentById: row.instructionSentById,
+      instructionNote: row.instructionNote,
       payerKbzName: row.payerKbzName,
       payerKbzPhone: row.payerKbzPhone,
-      paymentAmount: Number(row.paymentAmount),
+      paymentAmount:
+        row.paymentAmount != null ? Number(row.paymentAmount) : null,
       kbzTransactionId: row.kbzTransactionId,
       isVerified: row.isVerified,
       verifiedById: row.verifiedById,

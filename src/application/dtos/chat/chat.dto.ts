@@ -121,6 +121,55 @@ export class UpdateLocationShareDto {
   expiresInSeconds = 120;
 }
 
+export class AdminSendSafePaymentInstructionDto {
+  @ApiProperty({ example: '09xxxxxxxxx' })
+  @IsString()
+  @Length(6, 30)
+  adminReceivingPhone: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  adminNote?: string;
+}
+
+export class AwaitingSafePaymentInstructionResponseDto {
+  @ApiProperty()
+  transactionId: string;
+
+  @ApiProperty()
+  chatRoomId: string;
+
+  @ApiProperty()
+  listingId: string;
+
+  @ApiProperty()
+  buyerId: string;
+
+  @ApiProperty()
+  sellerId: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  constructor(data: {
+    transactionId: string;
+    chatRoomId: string;
+    listingId: string;
+    buyerId: string;
+    sellerId: string;
+    createdAt: Date;
+  }) {
+    this.transactionId = data.transactionId;
+    this.chatRoomId = data.chatRoomId;
+    this.listingId = data.listingId;
+    this.buyerId = data.buyerId;
+    this.sellerId = data.sellerId;
+    this.createdAt = data.createdAt;
+  }
+}
+
 export class SubmitSafePaymentDto {
   @ApiProperty()
   @IsString()
@@ -159,10 +208,15 @@ export class ConfirmTransactionCompleteDto {
 }
 
 export class AdminMarkSafePaymentReceivedDto {
-  @ApiProperty({ example: '09xxxxxxxxx' })
+  @ApiPropertyOptional({
+    example: '09xxxxxxxxx',
+    description:
+      'Optional when admin receiving phone was already sent in the transfer instruction step',
+  })
+  @IsOptional()
   @IsString()
   @Length(6, 30)
-  adminReceivingPhone: string;
+  adminReceivingPhone?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -346,6 +400,59 @@ export class TransactionResponseDto {
     this.buyerCompleted = data.buyerCompleted;
     this.sellerCompleted = data.sellerCompleted;
     this.completedAt = data.completedAt;
+  }
+}
+
+export class SafePaymentStatusResponseDto {
+  @ApiProperty({ type: TransactionResponseDto })
+  transaction: TransactionResponseDto;
+
+  @ApiPropertyOptional({ nullable: true })
+  adminReceivingPhone: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  instructionSentAt: Date | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  instructionNote: string | null;
+
+  @ApiProperty()
+  canSubmitPayment: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  payerKbzName: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  payerKbzPhone: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentAmount: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  kbzTransactionId: string | null;
+
+  constructor(data: {
+    transaction: TransactionData;
+    safePayment: {
+      adminReceivingPhone: string | null;
+      instructionSentAt: Date | null;
+      instructionNote: string | null;
+      payerKbzName: string | null;
+      payerKbzPhone: string | null;
+      paymentAmount: number | null;
+      kbzTransactionId: string | null;
+    };
+    canSubmitPayment: boolean;
+  }) {
+    this.transaction = new TransactionResponseDto(data.transaction);
+    this.adminReceivingPhone = data.safePayment.adminReceivingPhone;
+    this.instructionSentAt = data.safePayment.instructionSentAt;
+    this.instructionNote = data.safePayment.instructionNote;
+    this.canSubmitPayment = data.canSubmitPayment;
+    this.payerKbzName = data.safePayment.payerKbzName;
+    this.payerKbzPhone = data.safePayment.payerKbzPhone;
+    this.paymentAmount = data.safePayment.paymentAmount;
+    this.kbzTransactionId = data.safePayment.kbzTransactionId;
   }
 }
 

@@ -89,11 +89,15 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     upsertDirectTrade: jest.fn(),
     upsertLocationShare: jest.fn(),
     stopLocationShare: jest.fn(),
+    requestSafePayment: jest.fn(),
+    sendSafePaymentInstruction: jest.fn(),
+    findSafePaymentStatusByChatRoom: jest.fn(),
     submitSafePayment: jest.fn(),
     markSafePaymentReceived: jest.fn(),
     markSafePaymentTransferred: jest.fn(),
     markTransactionCompletedByUser: jest.fn(),
     listPendingSafePayments: jest.fn(),
+    listAwaitingSafePaymentInstructions: jest.fn(),
   };
 }
 
