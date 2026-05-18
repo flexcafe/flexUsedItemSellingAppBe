@@ -87,7 +87,9 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     findTransactionForChat: jest.fn(),
     findDirectTradeIdByTransactionId: jest.fn(),
     upsertDirectTrade: jest.fn(),
-    upsertLocationShare: jest.fn(),
+    upsertLocationShare: jest.fn(() =>
+      Promise.resolve({ startedNewSession: false }),
+    ),
     stopLocationShare: jest.fn(),
     requestSafePayment: jest.fn(),
     sendSafePaymentInstruction: jest.fn(),
@@ -118,6 +120,7 @@ export function buildUserRepoMock(): jest.Mocked<IUserRepository> {
     findById: jest.fn(),
     findAdminUserIds: jest.fn(),
     createNotification: jest.fn(),
+    getAuthDataByUserId: jest.fn(),
   } as unknown as jest.Mocked<IUserRepository>;
 }
 

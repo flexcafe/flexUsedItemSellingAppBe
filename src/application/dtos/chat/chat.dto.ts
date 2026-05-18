@@ -431,6 +431,19 @@ export class SafePaymentStatusResponseDto {
   @ApiPropertyOptional({ nullable: true })
   kbzTransactionId: string | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Buyer KBZPay account for safe-payment modal pre-fill (only when caller is the buyer)',
+  })
+  buyerKbzAccountName: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  buyerKbzPhoneNumber: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  buyerKbzIsVerified: boolean | null;
+
   constructor(data: {
     transaction: TransactionData;
     safePayment: {
@@ -443,6 +456,11 @@ export class SafePaymentStatusResponseDto {
       kbzTransactionId: string | null;
     };
     canSubmitPayment: boolean;
+    buyerKbzAccount: {
+      accountName: string;
+      phoneNumber: string;
+      isVerified: boolean;
+    } | null;
   }) {
     this.transaction = new TransactionResponseDto(data.transaction);
     this.adminReceivingPhone = data.safePayment.adminReceivingPhone;
@@ -453,6 +471,9 @@ export class SafePaymentStatusResponseDto {
     this.payerKbzPhone = data.safePayment.payerKbzPhone;
     this.paymentAmount = data.safePayment.paymentAmount;
     this.kbzTransactionId = data.safePayment.kbzTransactionId;
+    this.buyerKbzAccountName = data.buyerKbzAccount?.accountName ?? null;
+    this.buyerKbzPhoneNumber = data.buyerKbzAccount?.phoneNumber ?? null;
+    this.buyerKbzIsVerified = data.buyerKbzAccount?.isVerified ?? null;
   }
 }
 

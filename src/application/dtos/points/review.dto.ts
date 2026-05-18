@@ -9,7 +9,11 @@ export class CreateReviewDto {
   @Max(5)
   stars: number;
 
-  @ApiPropertyOptional({ example: 'Smooth trade and fast communication.' })
+  @ApiPropertyOptional({
+    example: 'Smooth trade and fast communication.',
+    description:
+      'Optional trade satisfaction feedback (long text). Stored as the review comment.',
+  })
   @IsString()
   @IsOptional()
   comment?: string;
@@ -31,7 +35,10 @@ export class ReviewResponseDto {
   @ApiProperty()
   stars: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({
+    nullable: true,
+    description: 'Trade satisfaction feedback when provided by the reviewer.',
+  })
   comment: string | null;
 
   @ApiProperty()

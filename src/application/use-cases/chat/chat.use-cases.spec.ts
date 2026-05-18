@@ -10,6 +10,7 @@ import { ListChatRoomsUseCase } from './list-chat-rooms.use-case.js';
 import { ListChatMessagesUseCase } from './list-chat-messages.use-case.js';
 import { SendChatMessageUseCase } from './send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from './mark-chat-room-read.use-case.js';
+import { GetChatSafePaymentStatusUseCase } from './get-chat-safe-payment-status.use-case.js';
 import { RequestChatSafePaymentUseCase } from './request-chat-safe-payment.use-case.js';
 import { SubmitChatSafePaymentUseCase } from './submit-chat-safe-payment.use-case.js';
 import { CompleteChatTransactionUseCase } from './complete-chat-transaction.use-case.js';
@@ -195,6 +196,41 @@ describe(MarkChatRoomReadUseCase.name, () => {
 
     expect(count).toBe(3);
     expect(chats.markRoomMessagesRead).toHaveBeenCalledWith(ROOM_ID, BUYER_ID);
+  });
+});
+
+describe(GetChatSafePaymentStatusUseCase.name, () => {
+  it('includes buyer KBZ account when buyer requests status', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    const room = buildChatRoom();
+    const tx = buildTransaction({
+      status: TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+    });
+
+    chats.findRoomById.mockResolvedValue(room);
+    chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
+      transaction: tx,
+      safePayment: {} as never,
+      canSubmitPayment: false,
+      buyerKbzAccount: null,
+    });
+    users.getAuthDataByUserId.mockResolvedValue({
+      kbzPayAccount: {
+        accountName: 'Buyer KBZ',
+        phoneNumber: '09123456789',
+        isVerified: true,
+      },
+    } as never);
+
+    const useCase = new GetChatSafePaymentStatusUseCase(chats, users);
+    const result = await useCase.execute(BUYER_ID, ROOM_ID);
+
+    expect(result.buyerKbzAccount).toEqual({
+      accountName: 'Buyer KBZ',
+      phoneNumber: '09123456789',
+      isVerified: true,
+    });
   });
 });
 

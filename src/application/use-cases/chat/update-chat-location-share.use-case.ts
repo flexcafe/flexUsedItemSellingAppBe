@@ -3,7 +3,12 @@ import {
   CHAT_REPOSITORY,
   type IChatRepository,
 } from '../../../domain/repositories/chat.repository.interface.js';
+import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
+import {
+  CHAT_MESSAGE_PUBLISHER,
+  type IChatMessagePublisher,
+} from '../../../domain/services/chat-message-publisher.interface.js';
 import {
   CHAT_REALTIME,
   type IChatRealtime,
@@ -17,6 +22,8 @@ export class UpdateChatLocationShareUseCase {
     private readonly chats: IChatRepository,
     @Inject(CHAT_REALTIME)
     private readonly realtime: IChatRealtime,
+    @Inject(CHAT_MESSAGE_PUBLISHER)
+    private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(
@@ -41,13 +48,37 @@ export class UpdateChatLocationShareUseCase {
       throw new NotFoundException('Direct trade details not found');
     }
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
-    await this.chats.upsertLocationShare({
+    const { startedNewSession } = await this.chats.upsertLocationShare({
       directTradeId,
       userId,
       latitude,
       longitude,
       expiresAt,
     });
+
+    if (startedNewSession) {
+      const systemMessage = await this.chats.createMessage({
+        chatRoomId: room.id,
+        senderId: userId,
+        type: MessageType.LOCATION_SHARING_STARTED,
+        content: 'Location sharing started.',
+        metadata: {
+          transactionId: transaction.id,
+          userId,
+          latitude,
+          longitude,
+          expiresAt: expiresAt.toISOString(),
+        },
+      });
+      this.publisher.publish(
+        room.id,
+        room.buyerId,
+        room.sellerId,
+        systemMessage,
+        'chat.location.started',
+      );
+    }
+
     this.realtime.emitToChatRoom(room.id, 'chat.location.updated', {
       chatRoomId: room.id,
       userId,

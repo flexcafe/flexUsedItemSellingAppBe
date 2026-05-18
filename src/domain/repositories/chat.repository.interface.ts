@@ -118,10 +118,18 @@ export interface SafePaymentData {
   transferRef: string | null;
 }
 
+export interface SafePaymentBuyerKbzAccountData {
+  accountName: string;
+  phoneNumber: string;
+  isVerified: boolean;
+}
+
 export interface SafePaymentStatusData {
   transaction: TransactionData;
   safePayment: SafePaymentData;
   canSubmitPayment: boolean;
+  /** Buyer KBZ account for safe-pay modal pre-fill (null for non-buyers or no account). */
+  buyerKbzAccount: SafePaymentBuyerKbzAccountData | null;
 }
 
 export interface AwaitingSafePaymentInstructionData {
@@ -179,7 +187,9 @@ export interface IChatRepository {
     transactionId: string,
   ): Promise<string | null>;
   upsertDirectTrade(data: DirectTradeData): Promise<void>;
-  upsertLocationShare(data: LocationShareData): Promise<void>;
+  upsertLocationShare(
+    data: LocationShareData,
+  ): Promise<{ startedNewSession: boolean }>;
   stopLocationShare(directTradeId: string, userId: string): Promise<void>;
   requestSafePayment(
     chatRoomId: string,

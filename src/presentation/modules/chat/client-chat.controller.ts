@@ -274,7 +274,8 @@ export class ClientChatController {
 
   @Get(':chatRoomId/safe-payment')
   @ApiOperation({
-    summary: 'Get safe payment status and admin transfer instruction for buyer',
+    summary:
+      'Get safe payment status, admin transfer instruction, and buyer KBZ account pre-fill',
   })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(SafePaymentStatusResponseDto, {

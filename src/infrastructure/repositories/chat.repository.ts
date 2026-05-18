@@ -317,7 +317,9 @@ export class ChatRepository implements IChatRepository {
     });
   }
 
-  async upsertLocationShare(data: LocationShareData): Promise<void> {
+  async upsertLocationShare(
+    data: LocationShareData,
+  ): Promise<{ startedNewSession: boolean }> {
     const active = await this.prisma.locationShare.findFirst({
       where: {
         directTradeId: data.directTradeId,
@@ -336,7 +338,7 @@ export class ChatRepository implements IChatRepository {
           isActive: true,
         },
       });
-      return;
+      return { startedNewSession: false };
     }
 
     await this.prisma.locationShare.create({
@@ -349,6 +351,7 @@ export class ChatRepository implements IChatRepository {
         isActive: true,
       },
     });
+    return { startedNewSession: true };
   }
 
   async stopLocationShare(
@@ -508,6 +511,7 @@ export class ChatRepository implements IChatRepository {
       canSubmitPayment:
         mappedTx.status === TransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT &&
         mappedPayment.instructionSentAt != null,
+      buyerKbzAccount: null,
     };
   }
 
