@@ -4,6 +4,7 @@ export * from './list-chat-messages.use-case.js';
 export * from './send-chat-message.use-case.js';
 export * from './mark-chat-room-read.use-case.js';
 export * from './start-direct-trade.use-case.js';
+export * from './start-chat-location-share.use-case.js';
 export * from './update-chat-location-share.use-case.js';
 export * from './stop-chat-location-share.use-case.js';
 export * from './submit-chat-safe-payment.use-case.js';

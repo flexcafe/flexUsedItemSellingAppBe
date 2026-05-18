@@ -27,6 +27,7 @@ import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-c
 import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
 import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
+import { StartChatLocationShareUseCase } from '../../../application/use-cases/chat/start-chat-location-share.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
@@ -82,6 +83,7 @@ export class ChatGateway
     private readonly listChatRooms: ListChatRoomsUseCase,
     private readonly sendChatMessage: SendChatMessageUseCase,
     private readonly markChatRoomRead: MarkChatRoomReadUseCase,
+    private readonly startChatLocationShare: StartChatLocationShareUseCase,
     private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
     private readonly stopChatLocationShare: StopChatLocationShareUseCase,
   ) {}
@@ -189,6 +191,22 @@ export class ChatGateway
     const userId = this.getUserId(client);
     const count = await this.markChatRoomRead.execute(userId, body.chatRoomId);
     return { ok: true, marked: count };
+  }
+
+  @SubscribeMessage('chat.location.start')
+  async onLocationStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: UpdateLocationShareDto & { chatRoomId: string },
+  ) {
+    const userId = this.getUserId(client);
+    const result = await this.startChatLocationShare.execute(
+      userId,
+      body.chatRoomId,
+      body.latitude,
+      body.longitude,
+      body.expiresInSeconds,
+    );
+    return { ok: true, alreadyActive: result.alreadyActive };
   }
 
   @SubscribeMessage('chat.location.update')

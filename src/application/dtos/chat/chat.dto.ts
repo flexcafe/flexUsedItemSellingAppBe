@@ -101,7 +101,7 @@ export class StartDirectTradeDto {
   meetingLongitude?: number;
 }
 
-export class UpdateLocationShareDto {
+export class LocationShareCoordinatesDto {
   @ApiProperty()
   @Type(() => Number)
   @IsLatitude()
@@ -119,6 +119,21 @@ export class UpdateLocationShareDto {
   @Min(30)
   @Max(1800)
   expiresInSeconds = 120;
+}
+
+/** @deprecated Use LocationShareCoordinatesDto — kept as alias for existing imports */
+export class UpdateLocationShareDto extends LocationShareCoordinatesDto {}
+
+export class StartLocationShareResponseDto {
+  @ApiProperty({
+    description:
+      'True when this user already had an active location share session',
+  })
+  alreadyActive: boolean;
+
+  constructor(alreadyActive: boolean) {
+    this.alreadyActive = alreadyActive;
+  }
 }
 
 export class AdminSendSafePaymentInstructionDto {

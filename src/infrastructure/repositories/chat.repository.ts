@@ -317,9 +317,9 @@ export class ChatRepository implements IChatRepository {
     });
   }
 
-  async upsertLocationShare(
+  async startLocationShare(
     data: LocationShareData,
-  ): Promise<{ startedNewSession: boolean }> {
+  ): Promise<{ alreadyActive: boolean }> {
     const active = await this.prisma.locationShare.findFirst({
       where: {
         directTradeId: data.directTradeId,
@@ -338,7 +338,7 @@ export class ChatRepository implements IChatRepository {
           isActive: true,
         },
       });
-      return { startedNewSession: false };
+      return { alreadyActive: true };
     }
 
     await this.prisma.locationShare.create({
@@ -351,7 +351,32 @@ export class ChatRepository implements IChatRepository {
         isActive: true,
       },
     });
-    return { startedNewSession: true };
+    return { alreadyActive: false };
+  }
+
+  async updateLocationShare(data: LocationShareData): Promise<void> {
+    const active = await this.prisma.locationShare.findFirst({
+      where: {
+        directTradeId: data.directTradeId,
+        userId: data.userId,
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!active) {
+      throw new BadRequestException(
+        'Start location sharing before sending location updates',
+      );
+    }
+    await this.prisma.locationShare.update({
+      where: { id: active.id },
+      data: {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        expiresAt: data.expiresAt,
+        isActive: true,
+      },
+    });
   }
 
   async stopLocationShare(

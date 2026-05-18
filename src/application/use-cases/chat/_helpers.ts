@@ -2,8 +2,10 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type {
   ChatRoomData,
   IChatRepository,
+  TransactionData,
 } from '../../../domain/repositories/chat.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 
 export async function requireRoomParticipant(
   chats: IChatRepository,
@@ -18,6 +20,32 @@ export async function requireRoomParticipant(
     throw new ForbiddenException('Not part of this chat room');
   }
   return room;
+}
+
+export async function requireDirectTradeContext(
+  chats: IChatRepository,
+  chatRoomId: string,
+  userId: string,
+): Promise<{
+  room: ChatRoomData;
+  transaction: TransactionData;
+  directTradeId: string;
+}> {
+  const room = await requireRoomParticipant(chats, chatRoomId, userId);
+  const transaction = await chats.findTransactionForChat(
+    room.id,
+    TransactionType.DIRECT_TRADE,
+  );
+  if (!transaction) {
+    throw new NotFoundException('Direct trade transaction not found');
+  }
+  const directTradeId = await chats.findDirectTradeIdByTransactionId(
+    transaction.id,
+  );
+  if (!directTradeId) {
+    throw new NotFoundException('Direct trade details not found');
+  }
+  return { room, transaction, directTradeId };
 }
 
 export async function requireAdmin(

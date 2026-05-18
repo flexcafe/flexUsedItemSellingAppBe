@@ -1,15 +1,14 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   CHAT_REPOSITORY,
   type IChatRepository,
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
-import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import {
   CHAT_MESSAGE_PUBLISHER,
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
-import { requireRoomParticipant } from './_helpers.js';
+import { requireDirectTradeContext } from './_helpers.js';
 
 @Injectable()
 export class StopChatLocationShareUseCase {
@@ -21,20 +20,8 @@ export class StopChatLocationShareUseCase {
   ) {}
 
   async execute(userId: string, chatRoomId: string): Promise<void> {
-    const room = await requireRoomParticipant(this.chats, chatRoomId, userId);
-    const transaction = await this.chats.findTransactionForChat(
-      room.id,
-      TransactionType.DIRECT_TRADE,
-    );
-    if (!transaction) {
-      throw new NotFoundException('Direct trade transaction not found');
-    }
-    const directTradeId = await this.chats.findDirectTradeIdByTransactionId(
-      transaction.id,
-    );
-    if (!directTradeId) {
-      throw new NotFoundException('Direct trade details not found');
-    }
+    const { room, transaction, directTradeId } =
+      await requireDirectTradeContext(this.chats, chatRoomId, userId);
     await this.chats.stopLocationShare(directTradeId, userId);
     const systemMessage = await this.chats.createMessage({
       chatRoomId: room.id,

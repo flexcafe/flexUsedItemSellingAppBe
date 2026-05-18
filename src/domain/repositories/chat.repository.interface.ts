@@ -187,9 +187,10 @@ export interface IChatRepository {
     transactionId: string,
   ): Promise<string | null>;
   upsertDirectTrade(data: DirectTradeData): Promise<void>;
-  upsertLocationShare(
+  startLocationShare(
     data: LocationShareData,
-  ): Promise<{ startedNewSession: boolean }>;
+  ): Promise<{ alreadyActive: boolean }>;
+  updateLocationShare(data: LocationShareData): Promise<void>;
   stopLocationShare(directTradeId: string, userId: string): Promise<void>;
   requestSafePayment(
     chatRoomId: string,

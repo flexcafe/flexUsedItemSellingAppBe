@@ -38,6 +38,8 @@ import {
   SafePaymentStatusResponseDto,
   SubmitSafePaymentDto,
   TransactionResponseDto,
+  LocationShareCoordinatesDto,
+  StartLocationShareResponseDto,
   UpdateLocationShareDto,
 } from '../../../application/dtos/chat/chat.dto.js';
 import {
@@ -50,6 +52,7 @@ import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/lis
 import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
 import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
+import { StartChatLocationShareUseCase } from '../../../application/use-cases/chat/start-chat-location-share.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
 import { RequestChatSafePaymentUseCase } from '../../../application/use-cases/chat/request-chat-safe-payment.use-case.js';
@@ -70,6 +73,7 @@ export class ClientChatController {
     private readonly sendChatMessage: SendChatMessageUseCase,
     private readonly markChatRoomRead: MarkChatRoomReadUseCase,
     private readonly startDirectTrade: StartDirectTradeUseCase,
+    private readonly startChatLocationShare: StartChatLocationShareUseCase,
     private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
     private readonly stopChatLocationShare: StopChatLocationShareUseCase,
     private readonly requestChatSafePayment: RequestChatSafePaymentUseCase,
@@ -213,10 +217,45 @@ export class ClientChatController {
     );
   }
 
+  @Post(':chatRoomId/location/start')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ 'review-submit-user': { limit: 60, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Start location sharing in direct trade (posts LOCATION_SHARING_STARTED to chat)',
+  })
+  @ApiParam({ name: 'chatRoomId' })
+  @ApiSuccessResponse(StartLocationShareResponseDto, {
+    status: HttpStatus.OK,
+    description: 'Location sharing started',
+  })
+  async startLocation(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+    @Body() dto: LocationShareCoordinatesDto,
+  ): Promise<ApiResponseDto<StartLocationShareResponseDto>> {
+    const result = await this.startChatLocationShare.execute(
+      user.sub,
+      chatRoomId,
+      dto.latitude,
+      dto.longitude,
+      dto.expiresInSeconds,
+    );
+    return ApiResponseDto.success(
+      new StartLocationShareResponseDto(result.alreadyActive),
+      result.alreadyActive
+        ? 'Location sharing already active'
+        : 'Location sharing started',
+    );
+  }
+
   @Post(':chatRoomId/location')
   @HttpCode(HttpStatus.OK)
   @Throttle({ 'review-submit-user': { limit: 240, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Update location sharing point in direct trade' })
+  @ApiOperation({
+    summary:
+      'Update location coordinates during an active share (call /location/start first)',
+  })
   @ApiSuccessResponse(Boolean, {
     status: HttpStatus.OK,
     description: 'Location updated',
