@@ -19,7 +19,12 @@ import { JwtService } from '@nestjs/jwt';
 import type { Socket, Server } from 'socket.io';
 import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
 import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
-import { ChatService } from '../../../application/use-cases/chat/chat.service.js';
+import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-chat-rooms.use-case.js';
+import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
+import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
+import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
+import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
+import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import {
   SendChatMessageDto,
@@ -67,7 +72,12 @@ export class ChatGateway
     private readonly jwtService: JwtService,
     private readonly realtime: ChatRealtimeService,
     private readonly idempotency: ChatIdempotencyService,
-    private readonly chats: ChatService,
+    private readonly listChatMessages: ListChatMessagesUseCase,
+    private readonly listChatRooms: ListChatRoomsUseCase,
+    private readonly sendChatMessage: SendChatMessageUseCase,
+    private readonly markChatRoomRead: MarkChatRoomReadUseCase,
+    private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
+    private readonly stopChatLocationShare: StopChatLocationShareUseCase,
   ) {}
 
   afterInit(server: Server) {
@@ -105,14 +115,14 @@ export class ChatGateway
     @MessageBody() body: { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
-    const page = await this.chats.listMessages(
+    const page = await this.listChatMessages.execute(
       userId,
       body.chatRoomId,
       null,
       1,
     );
     if (page.items.length === 0 && !page.nextCursor) {
-      await this.chats.listRooms(userId, null, 1);
+      await this.listChatRooms.execute(userId, null, 1);
     }
     void client.join(`chat:${body.chatRoomId}`);
     return { ok: true, chatRoomId: body.chatRoomId };
@@ -155,7 +165,7 @@ export class ChatGateway
       );
     }
 
-    const message = await this.chats.sendMessage(
+    const message = await this.sendChatMessage.execute(
       userId,
       body.chatRoomId,
       body.content,
@@ -171,7 +181,7 @@ export class ChatGateway
     @MessageBody() body: { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
-    const count = await this.chats.markRead(userId, body.chatRoomId);
+    const count = await this.markChatRoomRead.execute(userId, body.chatRoomId);
     return { ok: true, marked: count };
   }
 
@@ -191,7 +201,7 @@ export class ChatGateway
         'Location updates are limited to once every 3 seconds',
       );
     }
-    await this.chats.updateLocationShare(
+    await this.updateChatLocationShare.execute(
       userId,
       body.chatRoomId,
       body.latitude,
@@ -207,7 +217,7 @@ export class ChatGateway
     @MessageBody() body: { chatRoomId: string },
   ) {
     const userId = this.getUserId(client);
-    await this.chats.stopLocationShare(userId, body.chatRoomId);
+    await this.stopChatLocationShare.execute(userId, body.chatRoomId);
     return { ok: true };
   }
 

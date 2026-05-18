@@ -36,15 +36,37 @@ import {
   TransactionResponseDto,
   UpdateLocationShareDto,
 } from '../../../application/dtos/chat/chat.dto.js';
-import { ChatService } from '../../../application/use-cases/chat/chat.service.js';
 import { CreateReviewDto, ReviewResponseDto } from '../../../application/dtos/points/review.dto.js';
+import { OpenChatRoomUseCase } from '../../../application/use-cases/chat/open-chat-room.use-case.js';
+import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-chat-rooms.use-case.js';
+import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
+import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
+import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
+import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
+import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
+import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
+import { SubmitChatSafePaymentUseCase } from '../../../application/use-cases/chat/submit-chat-safe-payment.use-case.js';
+import { CompleteChatTransactionUseCase } from '../../../application/use-cases/chat/complete-chat-transaction.use-case.js';
+import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use-cases/chat/submit-chat-review-after-completion.use-case.js';
 
 @ApiTags('Client Chat')
 @Controller(`${ROUTE_PREFIX.client}/chats`)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ClientChatController {
-  constructor(private readonly chats: ChatService) {}
+  constructor(
+    private readonly openChatRoom: OpenChatRoomUseCase,
+    private readonly listChatRooms: ListChatRoomsUseCase,
+    private readonly listChatMessages: ListChatMessagesUseCase,
+    private readonly sendChatMessage: SendChatMessageUseCase,
+    private readonly markChatRoomRead: MarkChatRoomReadUseCase,
+    private readonly startDirectTrade: StartDirectTradeUseCase,
+    private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
+    private readonly stopChatLocationShare: StopChatLocationShareUseCase,
+    private readonly submitChatSafePayment: SubmitChatSafePaymentUseCase,
+    private readonly completeChatTransaction: CompleteChatTransactionUseCase,
+    private readonly submitChatReviewAfterCompletion: SubmitChatReviewAfterCompletionUseCase,
+  ) {}
 
   @Post('rooms')
   @HttpCode(HttpStatus.CREATED)
@@ -57,7 +79,7 @@ export class ClientChatController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: OpenChatRoomDto,
   ): Promise<ApiResponseDto<ChatRoomResponseDto>> {
-    const room = await this.chats.openRoom(user.sub, dto);
+    const room = await this.openChatRoom.execute(user.sub, dto);
     return ApiResponseDto.success(new ChatRoomResponseDto(room), 'Chat room ready');
   }
 
@@ -71,7 +93,7 @@ export class ClientChatController {
     @CurrentUser() user: JwtPayload,
     @Query() query: CursorQueryDto,
   ): Promise<ApiResponseDto<CursorPageResponseDto<ChatRoomSummaryResponseDto>>> {
-    const page = await this.chats.listRooms(
+    const page = await this.listChatRooms.execute(
       user.sub,
       query.cursor ?? null,
       query.take,
@@ -97,7 +119,7 @@ export class ClientChatController {
     @Param('chatRoomId') chatRoomId: string,
     @Query() query: CursorQueryDto,
   ): Promise<ApiResponseDto<CursorPageResponseDto<ChatMessageResponseDto>>> {
-    const page = await this.chats.listMessages(
+    const page = await this.listChatMessages.execute(
       user.sub,
       chatRoomId,
       query.cursor ?? null,
@@ -126,7 +148,7 @@ export class ClientChatController {
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: SendChatMessageDto,
   ): Promise<ApiResponseDto<ChatMessageResponseDto>> {
-    const message = await this.chats.sendMessage(
+    const message = await this.sendChatMessage.execute(
       user.sub,
       chatRoomId,
       dto.content,
@@ -151,7 +173,7 @@ export class ClientChatController {
     @CurrentUser() user: JwtPayload,
     @Param('chatRoomId') chatRoomId: string,
   ): Promise<ApiResponseDto<number>> {
-    const count = await this.chats.markRead(user.sub, chatRoomId);
+    const count = await this.markChatRoomRead.execute(user.sub, chatRoomId);
     return ApiResponseDto.success(count, 'Messages marked as read');
   }
 
@@ -163,12 +185,12 @@ export class ClientChatController {
     status: HttpStatus.OK,
     description: 'Direct trade updated',
   })
-  async startDirectTrade(
+  async startDirectTradeHandler(
     @CurrentUser() user: JwtPayload,
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: StartDirectTradeDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.chats.startDirectTrade(user.sub, chatRoomId, dto);
+    const tx = await this.startDirectTrade.execute(user.sub, chatRoomId, dto);
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Direct trade updated',
@@ -188,7 +210,7 @@ export class ClientChatController {
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: UpdateLocationShareDto,
   ): Promise<ApiResponseDto<boolean>> {
-    await this.chats.updateLocationShare(
+    await this.updateChatLocationShare.execute(
       user.sub,
       chatRoomId,
       dto.latitude,
@@ -209,7 +231,7 @@ export class ClientChatController {
     @CurrentUser() user: JwtPayload,
     @Param('chatRoomId') chatRoomId: string,
   ): Promise<ApiResponseDto<boolean>> {
-    await this.chats.stopLocationShare(user.sub, chatRoomId);
+    await this.stopChatLocationShare.execute(user.sub, chatRoomId);
     return ApiResponseDto.success(true, 'Location sharing stopped');
   }
 
@@ -225,7 +247,7 @@ export class ClientChatController {
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: SubmitSafePaymentDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.chats.submitSafePayment(user.sub, chatRoomId, dto);
+    const tx = await this.submitChatSafePayment.execute(user.sub, chatRoomId, dto);
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Safe payment submitted',
@@ -245,7 +267,10 @@ export class ClientChatController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: ConfirmTransactionCompleteDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.chats.completeTransaction(user.sub, dto.transactionId);
+    const tx = await this.completeChatTransaction.execute(
+      user.sub,
+      dto.transactionId,
+    );
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Transaction completion updated',
@@ -266,7 +291,7 @@ export class ClientChatController {
     @Param('transactionId') transactionId: string,
     @Body() dto: CreateReviewDto,
   ): Promise<ApiResponseDto<ReviewResponseDto>> {
-    const review = await this.chats.submitReviewAfterCompletion(
+    const review = await this.submitChatReviewAfterCompletion.execute(
       user.sub,
       transactionId,
       dto,

@@ -23,7 +23,6 @@ import {
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ApiSuccessResponse } from '../../../common/decorators/api-response.decorator.js';
-import { ChatService } from '../../../application/use-cases/chat/chat.service.js';
 import {
   AdminMarkSafePaymentReceivedDto,
   AdminMarkSafePaymentTransferredDto,
@@ -32,13 +31,20 @@ import {
   PendingSafePaymentResponseDto,
   TransactionResponseDto,
 } from '../../../application/dtos/chat/chat.dto.js';
+import { ListPendingSafePaymentsUseCase } from '../../../application/use-cases/chat/list-pending-safe-payments.use-case.js';
+import { AdminMarkSafePaymentReceivedUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-received.use-case.js';
+import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-transferred.use-case.js';
 
 @ApiTags('Admin Chat')
 @Controller(`${ROUTE_PREFIX.adminDashboard}/chats`)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AdminChatController {
-  constructor(private readonly chats: ChatService) {}
+  constructor(
+    private readonly listPendingSafePayments: ListPendingSafePaymentsUseCase,
+    private readonly adminMarkSafePaymentReceived: AdminMarkSafePaymentReceivedUseCase,
+    private readonly adminMarkSafePaymentTransferred: AdminMarkSafePaymentTransferredUseCase,
+  ) {}
 
   @Get('safe-payments/pending')
   @ApiOperation({ summary: 'List pending safe payment submissions for admin' })
@@ -46,10 +52,10 @@ export class AdminChatController {
     status: HttpStatus.OK,
     description: 'Pending safe payments listed',
   })
-  async listPendingSafePayments(
+  async listPendingSafePaymentsHandler(
     @Query() query: CursorQueryDto,
   ): Promise<ApiResponseDto<CursorPageResponseDto<PendingSafePaymentResponseDto>>> {
-    const page = await this.chats.listPendingSafePayments(
+    const page = await this.listPendingSafePayments.execute(
       query.cursor ?? null,
       query.take,
     );
@@ -75,7 +81,7 @@ export class AdminChatController {
     @Param('transactionId') transactionId: string,
     @Body() dto: AdminMarkSafePaymentReceivedDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.chats.adminMarkSafePaymentReceived(
+    const tx = await this.adminMarkSafePaymentReceived.execute(
       user.sub,
       transactionId,
       dto,
@@ -99,7 +105,7 @@ export class AdminChatController {
     @Param('transactionId') transactionId: string,
     @Body() dto: AdminMarkSafePaymentTransferredDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.chats.adminMarkSafePaymentTransferred(
+    const tx = await this.adminMarkSafePaymentTransferred.execute(
       user.sub,
       transactionId,
       dto,
