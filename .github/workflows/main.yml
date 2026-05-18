@@ -18,6 +18,8 @@ jobs:
           port: 22
           script: |
             cd /home/admin/flexusedmarket/flexUsedItemSellingAppBe
+
+            sudo systemctl stop flex-used-market-be.service
             
             # 1. Update source code
             git pull origin main
@@ -53,6 +55,7 @@ jobs:
             # 8. Reload and Restart
             echo "🚀 Restarting service..."
             sudo systemctl daemon-reload
+            sudo systemctl start flex-used-market-be.service
             sudo systemctl restart flex-used-market-be.service
             
             # 9. Health Check
