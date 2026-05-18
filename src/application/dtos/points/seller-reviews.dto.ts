@@ -76,12 +76,10 @@ export class SellerReviewsPageDto {
   @ApiProperty()
   hasPrevPage: boolean;
 
-  constructor(
-    data: SellerReviewsResultData,
-    page: number,
-    limit: number,
-  ) {
-    this.starBreakdown = data.starBreakdown.map((r) => new ReviewStarCountDto(r));
+  constructor(data: SellerReviewsResultData, page: number, limit: number) {
+    this.starBreakdown = data.starBreakdown.map(
+      (r) => new ReviewStarCountDto(r),
+    );
     this.items = data.items.map((r) => new SellerReviewItemDto(r));
     this.total = data.total;
     this.page = page;

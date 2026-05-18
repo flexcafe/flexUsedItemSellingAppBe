@@ -19,7 +19,10 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
-import { CurrentUser, type JwtPayload } from '../../../common/decorators/current-user.decorator.js';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ApiSuccessResponse } from '../../../common/decorators/api-response.decorator.js';
 import {
@@ -37,7 +40,10 @@ import {
   TransactionResponseDto,
   UpdateLocationShareDto,
 } from '../../../application/dtos/chat/chat.dto.js';
-import { CreateReviewDto, ReviewResponseDto } from '../../../application/dtos/points/review.dto.js';
+import {
+  CreateReviewDto,
+  ReviewResponseDto,
+} from '../../../application/dtos/points/review.dto.js';
 import { OpenChatRoomUseCase } from '../../../application/use-cases/chat/open-chat-room.use-case.js';
 import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-chat-rooms.use-case.js';
 import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
@@ -85,7 +91,10 @@ export class ClientChatController {
     @Body() dto: OpenChatRoomDto,
   ): Promise<ApiResponseDto<ChatRoomResponseDto>> {
     const room = await this.openChatRoom.execute(user.sub, dto);
-    return ApiResponseDto.success(new ChatRoomResponseDto(room), 'Chat room ready');
+    return ApiResponseDto.success(
+      new ChatRoomResponseDto(room),
+      'Chat room ready',
+    );
   }
 
   @Get('rooms')
@@ -97,7 +106,9 @@ export class ClientChatController {
   async listRooms(
     @CurrentUser() user: JwtPayload,
     @Query() query: CursorQueryDto,
-  ): Promise<ApiResponseDto<CursorPageResponseDto<ChatRoomSummaryResponseDto>>> {
+  ): Promise<
+    ApiResponseDto<CursorPageResponseDto<ChatRoomSummaryResponseDto>>
+  > {
     const page = await this.listChatRooms.execute(
       user.sub,
       query.cursor ?? null,
@@ -300,7 +311,11 @@ export class ClientChatController {
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: SubmitSafePaymentDto,
   ): Promise<ApiResponseDto<TransactionResponseDto>> {
-    const tx = await this.submitChatSafePayment.execute(user.sub, chatRoomId, dto);
+    const tx = await this.submitChatSafePayment.execute(
+      user.sub,
+      chatRoomId,
+      dto,
+    );
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Safe payment submitted',
@@ -310,7 +325,8 @@ export class ClientChatController {
   @Post('transactions/complete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Mark transaction completed by buyer/seller (two-sided confirmation)',
+    summary:
+      'Mark transaction completed by buyer/seller (two-sided confirmation)',
   })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,

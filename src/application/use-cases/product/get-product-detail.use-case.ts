@@ -38,10 +38,13 @@ export class GetProductDetailUseCase {
       'LISTING_DISPLAY_TIMEZONE',
       'UTC',
     );
-    const createdAtDisplay = formatPublicListingCreatedLabel(listing.createdAt, {
-      now: new Date(),
-      timeZone,
-    });
+    const createdAtDisplay = formatPublicListingCreatedLabel(
+      listing.createdAt,
+      {
+        now: new Date(),
+        timeZone,
+      },
+    );
 
     return new PublicProductDetailResponseDto(
       listing,

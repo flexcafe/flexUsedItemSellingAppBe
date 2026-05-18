@@ -31,10 +31,7 @@ export class RequestChatSafePaymentUseCase {
     private readonly publisher: IChatMessagePublisher,
   ) {}
 
-  async execute(
-    userId: string,
-    chatRoomId: string,
-  ): Promise<TransactionData> {
+  async execute(userId: string, chatRoomId: string): Promise<TransactionData> {
     const room = await requireRoomParticipant(this.chats, chatRoomId, userId);
     if (room.buyerId !== userId) {
       throw new ForbiddenException('Only buyer can request safe payment');
@@ -50,7 +47,9 @@ export class RequestChatSafePaymentUseCase {
       );
     } catch (err) {
       if (err instanceof ConflictException) {
-        const status = await this.chats.findSafePaymentStatusByChatRoom(room.id);
+        const status = await this.chats.findSafePaymentStatusByChatRoom(
+          room.id,
+        );
         if (status) {
           return status.transaction;
         }

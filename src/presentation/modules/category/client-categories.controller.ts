@@ -1,9 +1,11 @@
-import { Controller, Get, HttpStatus, Param, ParseUUIDPipe } from '@nestjs/common';
 import {
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-} from '@nestjs/swagger';
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   ApiArraySuccessResponse,
   ApiErrorResponse,
@@ -14,7 +16,10 @@ import { CategoryResponseDto } from '../../../application/dtos/category/index.js
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { ListCategoriesUseCase } from '../../../application/use-cases/category/list-categories.use-case.js';
 import { GetCategoryUseCase } from '../../../application/use-cases/category/get-category.use-case.js';
-import { CLIENT_CATEGORY_GET_DOC, CLIENT_CATEGORY_LIST_DOC } from './category.swagger.js';
+import {
+  CLIENT_CATEGORY_GET_DOC,
+  CLIENT_CATEGORY_LIST_DOC,
+} from './category.swagger.js';
 
 @ApiTags('Client Categories')
 @Controller(`${ROUTE_PREFIX.client}/categories`)

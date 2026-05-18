@@ -114,7 +114,9 @@ export class AdminChatController {
   })
   async listPendingSafePaymentsHandler(
     @Query() query: CursorQueryDto,
-  ): Promise<ApiResponseDto<CursorPageResponseDto<PendingSafePaymentResponseDto>>> {
+  ): Promise<
+    ApiResponseDto<CursorPageResponseDto<PendingSafePaymentResponseDto>>
+  > {
     const page = await this.listPendingSafePayments.execute(
       query.cursor ?? null,
       query.take,

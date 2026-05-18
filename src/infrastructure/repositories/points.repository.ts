@@ -282,9 +282,7 @@ export class PointsRepository implements IPointsRepository {
       }),
     ]);
 
-    const countByStar = new Map(
-      grouped.map((g) => [g.stars, g._count.stars]),
-    );
+    const countByStar = new Map(grouped.map((g) => [g.stars, g._count.stars]));
     const starBreakdown = [1, 2, 3, 4, 5].map((stars) => ({
       stars,
       count: countByStar.get(stars) ?? 0,

@@ -20,11 +20,7 @@ export class SubmitChatReviewAfterCompletionUseCase {
     private readonly createTransactionReviewUseCase: CreateTransactionReviewUseCase,
   ) {}
 
-  async execute(
-    userId: string,
-    transactionId: string,
-    dto: CreateReviewDto,
-  ) {
+  async execute(userId: string, transactionId: string, dto: CreateReviewDto) {
     const transaction = await this.chats.findTransactionById(transactionId);
     if (!transaction) {
       throw new NotFoundException('Transaction not found');

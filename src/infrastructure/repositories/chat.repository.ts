@@ -473,7 +473,8 @@ export class ChatRepository implements IChatRepository {
           transactionId,
           adminReceivingPhone,
           adminNote: adminNote ?? null,
-          instructionSentAt: safePayment.instructionSentAt?.toISOString() ?? null,
+          instructionSentAt:
+            safePayment.instructionSentAt?.toISOString() ?? null,
         },
       });
 
@@ -528,7 +529,9 @@ export class ChatRepository implements IChatRepository {
       );
     }
     if (!existing.safePayment?.instructionSentAt) {
-      throw new BadRequestException('Transfer instruction has not been sent yet');
+      throw new BadRequestException(
+        'Transfer instruction has not been sent yet',
+      );
     }
 
     await this.prisma.transaction.update({
@@ -592,7 +595,8 @@ export class ChatRepository implements IChatRepository {
         chatRoomId: transaction.chatRoomId,
         senderId: adminId,
         type: MessageType.SAFE_PAYMENT_VERIFIED,
-        content: 'Safe payment verified by admin. Money is held until both sides complete.',
+        content:
+          'Safe payment verified by admin. Money is held until both sides complete.',
         metadata: {
           adminReceivingPhone: receivingPhone,
           adminNote: adminNote ?? null,

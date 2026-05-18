@@ -123,8 +123,8 @@ export function buildUserRepoMock(): jest.Mocked<IUserRepository> {
 
 export function buildIdempotencyMock(): jest.Mocked<IChatIdempotencyStore> {
   return {
-    reserve: jest.fn(async () => true),
-    allowRateLimitedAction: jest.fn(async () => true),
+    reserve: jest.fn(() => Promise.resolve(true)),
+    allowRateLimitedAction: jest.fn(() => Promise.resolve(true)),
   };
 }
 

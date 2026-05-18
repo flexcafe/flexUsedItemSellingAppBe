@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient, type RedisClientType } from 'redis';
-import type { ServerOptions } from 'socket.io';
+import type { Server, ServerOptions } from 'socket.io';
 
 /** Wired manually in main.ts — not a Nest DI provider (IoAdapter needs the app instance). */
 export class RedisIoAdapter extends IoAdapter {
@@ -31,14 +31,16 @@ export class RedisIoAdapter extends IoAdapter {
     this.logger.log('Socket.IO Redis adapter connected');
   }
 
-  createIOServer(port: number, options?: ServerOptions) {
+  override createIOServer(port: number, options?: ServerOptions): Server {
     const server = super.createIOServer(port, {
       cors: {
-        origin: process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:3000'],
+        origin: process.env.ALLOWED_ORIGINS?.split(',') ?? [
+          'http://localhost:3000',
+        ],
         credentials: true,
       },
       ...options,
-    });
+    }) as Server;
     if (this.pubClient && this.subClient) {
       server.adapter(createAdapter(this.pubClient, this.subClient));
     }
