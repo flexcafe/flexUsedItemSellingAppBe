@@ -1,23 +1,20 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Logger, type INestApplicationContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient, type RedisClientType } from 'redis';
-import type { INestApplicationContext } from '@nestjs/common';
 import type { ServerOptions } from 'socket.io';
 
-@Injectable()
-export class RedisIoAdapter extends IoAdapter implements OnModuleDestroy {
+/** Wired manually in main.ts — not a Nest DI provider (IoAdapter needs the app instance). */
+export class RedisIoAdapter extends IoAdapter {
   private readonly logger = new Logger(RedisIoAdapter.name);
   private pubClient: RedisClientType | null = null;
   private subClient: RedisClientType | null = null;
   private readonly redisUrl: string | null;
 
-  constructor(
-    app: INestApplicationContext,
-    configService: ConfigService,
-  ) {
+  constructor(app: INestApplicationContext) {
     super(app);
+    const configService = app.get(ConfigService);
     this.redisUrl = configService.get<string>('REDIS_URL') ?? null;
   }
 
@@ -48,7 +45,7 @@ export class RedisIoAdapter extends IoAdapter implements OnModuleDestroy {
     return server;
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async close(): Promise<void> {
     if (this.pubClient?.isOpen) {
       await this.pubClient.quit();
     }

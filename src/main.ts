@@ -9,7 +9,7 @@ import { RedisIoAdapter } from './infrastructure/realtime/redis-io.adapter.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
-  const redisIoAdapter = app.get(RedisIoAdapter);
+  const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
 
