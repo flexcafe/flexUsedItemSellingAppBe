@@ -16,9 +16,15 @@ import {
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import type { SubmitSafePaymentDto } from '../../dtos/chat/chat.dto.js';
-import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
+import {
+  CHAT_IDEMPOTENCY_STORE,
+  type IChatIdempotencyStore,
+} from '../../../domain/services/chat-idempotency.interface.js';
+import {
+  CHAT_MESSAGE_PUBLISHER,
+  type IChatMessagePublisher,
+} from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
-import { ChatMessagePublisher } from './chat-message.publisher.js';
 
 @Injectable()
 export class SubmitChatSafePaymentUseCase {
@@ -27,8 +33,10 @@ export class SubmitChatSafePaymentUseCase {
     private readonly chats: IChatRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: IUserRepository,
-    private readonly idempotency: ChatIdempotencyService,
-    private readonly publisher: ChatMessagePublisher,
+    @Inject(CHAT_IDEMPOTENCY_STORE)
+    private readonly idempotency: IChatIdempotencyStore,
+    @Inject(CHAT_MESSAGE_PUBLISHER)
+    private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(

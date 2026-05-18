@@ -9,7 +9,10 @@ import {
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
 import type { AdminMarkSafePaymentReceivedDto } from '../../dtos/chat/chat.dto.js';
-import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
+import {
+  CHAT_REALTIME,
+  type IChatRealtime,
+} from '../../../domain/services/chat-realtime.interface.js';
 import { requireAdmin } from './_helpers.js';
 
 @Injectable()
@@ -19,7 +22,8 @@ export class AdminMarkSafePaymentReceivedUseCase {
     private readonly chats: IChatRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: IUserRepository,
-    private readonly realtime: ChatRealtimeService,
+    @Inject(CHAT_REALTIME)
+    private readonly realtime: IChatRealtime,
   ) {}
 
   async execute(

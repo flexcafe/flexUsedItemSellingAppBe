@@ -1,9 +1,12 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type RedisClientType } from 'redis';
+import type { IChatIdempotencyStore } from '../../domain/services/chat-idempotency.interface.js';
 
 @Injectable()
-export class ChatIdempotencyService implements OnModuleDestroy {
+export class ChatIdempotencyService
+  implements IChatIdempotencyStore, OnModuleDestroy
+{
   private readonly logger = new Logger(ChatIdempotencyService.name);
   private readonly memory = new Map<string, number>();
   private readonly memoryCounters = new Map<

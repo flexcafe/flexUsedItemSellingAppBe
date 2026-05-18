@@ -139,11 +139,26 @@ Most endpoints return:
 
 - `ApiResponseDto.success(data, message)`
 
-Pagination uses:
+### Offset pagination (default)
 
-- `PaginatedResponseDto`
+Catalog-style lists use:
 
-Keep this consistent for new endpoints unless there is a deliberate exception.
+- `PaginatedResponseDto` with `page` + `limit` query params
+
+### Cursor pagination (high-volume lists)
+
+Chat and other feeds that must scale without deep `OFFSET` cost use:
+
+- `CursorPageResponseDto` with `cursor` + `take` query params (`CursorQueryDto`)
+- Response shape: `{ items, nextCursor }` inside the API envelope
+
+**Chat routes using cursor pagination:**
+
+- `GET /api/v1/client/chats/rooms`
+- `GET /api/v1/client/chats/:chatRoomId/messages`
+- `GET /api/v1/admin/dashboard/chats/safe-payments/pending`
+
+Use cursor pagination for new room/message/history endpoints; keep `PaginatedResponseDto` for admin tables and shallow catalogs unless there is a documented reason not to.
 
 ---
 

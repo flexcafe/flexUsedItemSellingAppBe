@@ -4,7 +4,10 @@ import {
   type IChatRepository,
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
-import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
+import {
+  CHAT_REALTIME,
+  type IChatRealtime,
+} from '../../../domain/services/chat-realtime.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
 
 @Injectable()
@@ -12,7 +15,8 @@ export class UpdateChatLocationShareUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
-    private readonly realtime: ChatRealtimeService,
+    @Inject(CHAT_REALTIME)
+    private readonly realtime: IChatRealtime,
   ) {}
 
   async execute(

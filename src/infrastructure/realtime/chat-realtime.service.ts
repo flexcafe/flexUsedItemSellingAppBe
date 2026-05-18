@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Server } from 'socket.io';
+import type { IChatRealtime } from '../../domain/services/chat-realtime.interface.js';
 
 @Injectable()
-export class ChatRealtimeService {
+export class ChatRealtimeService implements IChatRealtime {
   private readonly logger = new Logger(ChatRealtimeService.name);
   private server: Server | null = null;
 

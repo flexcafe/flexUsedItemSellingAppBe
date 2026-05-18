@@ -5,15 +5,19 @@ import {
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
+import {
+  CHAT_MESSAGE_PUBLISHER,
+  type IChatMessagePublisher,
+} from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
-import { ChatMessagePublisher } from './chat-message.publisher.js';
 
 @Injectable()
 export class StopChatLocationShareUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
-    private readonly publisher: ChatMessagePublisher,
+    @Inject(CHAT_MESSAGE_PUBLISHER)
+    private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(userId: string, chatRoomId: string): Promise<void> {

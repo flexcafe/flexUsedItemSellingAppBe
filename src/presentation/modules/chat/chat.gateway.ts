@@ -10,6 +10,7 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import {
+  Inject,
   Logger,
   UnauthorizedException,
   UsePipes,
@@ -17,8 +18,11 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Socket, Server } from 'socket.io';
+import {
+  CHAT_IDEMPOTENCY_STORE,
+  type IChatIdempotencyStore,
+} from '../../../domain/services/chat-idempotency.interface.js';
 import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
-import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
 import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-chat-rooms.use-case.js';
 import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
 import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
@@ -70,8 +74,10 @@ export class ChatGateway
 
   constructor(
     private readonly jwtService: JwtService,
+    /** Concrete service required to bind Socket.IO server on gateway init. */
     private readonly realtime: ChatRealtimeService,
-    private readonly idempotency: ChatIdempotencyService,
+    @Inject(CHAT_IDEMPOTENCY_STORE)
+    private readonly idempotency: IChatIdempotencyStore,
     private readonly listChatMessages: ListChatMessagesUseCase,
     private readonly listChatRooms: ListChatRoomsUseCase,
     private readonly sendChatMessage: SendChatMessageUseCase,

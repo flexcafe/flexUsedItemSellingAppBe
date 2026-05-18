@@ -9,17 +9,25 @@ import {
   type IChatRepository,
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
-import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
+import {
+  CHAT_IDEMPOTENCY_STORE,
+  type IChatIdempotencyStore,
+} from '../../../domain/services/chat-idempotency.interface.js';
+import {
+  CHAT_MESSAGE_PUBLISHER,
+  type IChatMessagePublisher,
+} from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
-import { ChatMessagePublisher } from './chat-message.publisher.js';
 
 @Injectable()
 export class SendChatMessageUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
-    private readonly idempotency: ChatIdempotencyService,
-    private readonly publisher: ChatMessagePublisher,
+    @Inject(CHAT_IDEMPOTENCY_STORE)
+    private readonly idempotency: IChatIdempotencyStore,
+    @Inject(CHAT_MESSAGE_PUBLISHER)
+    private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(

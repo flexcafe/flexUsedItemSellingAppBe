@@ -12,10 +12,13 @@ import { CHAT_REPOSITORY } from '../../../domain/repositories/chat.repository.in
 import { PRODUCT_REPOSITORY } from '../../../domain/repositories/product.repository.interface.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
+import { CHAT_REALTIME } from '../../../domain/services/chat-realtime.interface.js';
+import { CHAT_IDEMPOTENCY_STORE } from '../../../domain/services/chat-idempotency.interface.js';
+import { CHAT_MESSAGE_PUBLISHER } from '../../../domain/services/chat-message-publisher.interface.js';
 import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
 import { ChatIdempotencyService } from '../../../infrastructure/realtime/chat-idempotency.service.js';
+import { ChatMessagePublisherService } from '../../../infrastructure/realtime/chat-message.publisher.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
-import { ChatMessagePublisher } from '../../../application/use-cases/chat/chat-message.publisher.js';
 import { OpenChatRoomUseCase } from '../../../application/use-cases/chat/open-chat-room.use-case.js';
 import { ListChatRoomsUseCase } from '../../../application/use-cases/chat/list-chat-rooms.use-case.js';
 import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/list-chat-messages.use-case.js';
@@ -44,7 +47,6 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
   controllers: [ClientChatController, AdminChatController],
   providers: [
     ChatGateway,
-    ChatMessagePublisher,
     OpenChatRoomUseCase,
     ListChatRoomsUseCase,
     ListChatMessagesUseCase,
@@ -61,6 +63,7 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
     SubmitChatReviewAfterCompletionUseCase,
     ChatRealtimeService,
     ChatIdempotencyService,
+    ChatMessagePublisherService,
     CreateTransactionReviewUseCase,
     {
       provide: CHAT_REPOSITORY,
@@ -77,6 +80,18 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
     {
       provide: POINTS_REPOSITORY,
       useClass: PointsRepository,
+    },
+    {
+      provide: CHAT_REALTIME,
+      useExisting: ChatRealtimeService,
+    },
+    {
+      provide: CHAT_IDEMPOTENCY_STORE,
+      useExisting: ChatIdempotencyService,
+    },
+    {
+      provide: CHAT_MESSAGE_PUBLISHER,
+      useExisting: ChatMessagePublisherService,
     },
   ],
 })

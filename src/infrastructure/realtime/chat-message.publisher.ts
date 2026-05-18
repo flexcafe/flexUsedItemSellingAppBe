@@ -1,15 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
-import type { ChatMessageData } from '../../../domain/repositories/chat.repository.interface.js';
-import { PusherService } from '../../../infrastructure/realtime/pusher.service.js';
-import { ChatRealtimeService } from '../../../infrastructure/realtime/chat-realtime.service.js';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { ChatMessageData } from '../../domain/repositories/chat.repository.interface.js';
+import {
+  CHAT_REALTIME,
+  type IChatRealtime,
+} from '../../domain/services/chat-realtime.interface.js';
+import type { IChatMessagePublisher } from '../../domain/services/chat-message-publisher.interface.js';
+import { PusherService } from './pusher.service.js';
 
 @Injectable()
-export class ChatMessagePublisher {
-  private readonly logger = new Logger(ChatMessagePublisher.name);
+export class ChatMessagePublisherService implements IChatMessagePublisher {
+  private readonly logger = new Logger(ChatMessagePublisherService.name);
 
   constructor(
+    @Inject(CHAT_REALTIME)
+    private readonly realtime: IChatRealtime,
     private readonly pusher: PusherService,
-    private readonly realtime: ChatRealtimeService,
   ) {}
 
   publish(

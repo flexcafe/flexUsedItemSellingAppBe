@@ -12,4 +12,3 @@ export * from './admin-mark-safe-payment-received.use-case.js';
 export * from './admin-mark-safe-payment-transferred.use-case.js';
 export * from './list-pending-safe-payments.use-case.js';
 export * from './submit-chat-review-after-completion.use-case.js';
-export * from './chat-message.publisher.js';

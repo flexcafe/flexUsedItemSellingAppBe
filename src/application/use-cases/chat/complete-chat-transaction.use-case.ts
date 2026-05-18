@@ -11,14 +11,18 @@ import {
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
-import { ChatMessagePublisher } from './chat-message.publisher.js';
+import {
+  CHAT_MESSAGE_PUBLISHER,
+  type IChatMessagePublisher,
+} from '../../../domain/services/chat-message-publisher.interface.js';
 
 @Injectable()
 export class CompleteChatTransactionUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
-    private readonly publisher: ChatMessagePublisher,
+    @Inject(CHAT_MESSAGE_PUBLISHER)
+    private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(
