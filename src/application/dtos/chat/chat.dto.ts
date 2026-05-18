@@ -73,11 +73,14 @@ export class SendChatMessageDto {
 }
 
 export class StartDirectTradeDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'ISO date for in-person meeting (direct trade)' })
   @IsDateString()
   meetingDate: string;
 
-  @ApiProperty({ example: '15:30' })
+  @ApiProperty({
+    example: '15:30',
+    description: 'Local meeting time label shown in chat',
+  })
   @IsString()
   @Length(1, 20)
   meetingTime: string;
@@ -137,12 +140,17 @@ export class StartLocationShareResponseDto {
 }
 
 export class AdminSendSafePaymentInstructionDto {
-  @ApiProperty({ example: '09xxxxxxxxx' })
+  @ApiProperty({
+    example: '09xxxxxxxxx',
+    description: 'Admin KBZPay phone number buyer must transfer to',
+  })
   @IsString()
   @Length(6, 30)
   adminReceivingPhone: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Optional note shown to buyer in notification and chat',
+  })
   @IsOptional()
   @IsString()
   @Length(0, 500)
@@ -186,23 +194,32 @@ export class AwaitingSafePaymentInstructionResponseDto {
 }
 
 export class SubmitSafePaymentDto {
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Buyer KBZPay account holder name (pre-fill from GET .../safe-payment buyerKbzAccountName)',
+  })
   @IsString()
   @Length(2, 120)
   payerKbzName: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Buyer KBZPay phone used for transfer (pre-fill from buyerKbzPhoneNumber)',
+  })
   @IsString()
   @Length(6, 30)
   payerKbzPhone: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Payment amount in MMK transferred to admin' })
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   paymentAmount: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'KBZPay transaction ID from buyer transfer to adminReceivingPhone',
+  })
   @IsString()
   @Length(4, 80)
   kbzTransactionId: string;
@@ -217,7 +234,10 @@ export class SubmitSafePaymentDto {
 }
 
 export class ConfirmTransactionCompleteDto {
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Safe-payment or direct-trade transaction id. Buyer and seller each call once; status becomes COMPLETED when both have confirmed.',
+  })
   @IsUUID()
   transactionId: string;
 }
@@ -241,7 +261,10 @@ export class AdminMarkSafePaymentReceivedDto {
 }
 
 export class AdminMarkSafePaymentTransferredDto {
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Reference for seller payout (KBZ transfer id or internal ref). Required after both parties COMPLETED.',
+  })
   @IsString()
   @Length(4, 80)
   transferRef: string;
@@ -391,7 +414,11 @@ export class TransactionResponseDto {
   @ApiProperty({ enum: TransactionType })
   type: TransactionType;
 
-  @ApiProperty({ enum: TransactionStatus })
+  @ApiProperty({
+    enum: TransactionStatus,
+    description:
+      'Safe payment: AWAITING_INSTRUCTION → INSTRUCTION_SENT → PENDING → RECEIVED → BUYER_COMPLETED/SELLER_COMPLETED → COMPLETED',
+  })
   status: TransactionStatus;
 
   @ApiProperty()

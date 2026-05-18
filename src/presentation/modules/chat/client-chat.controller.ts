@@ -12,10 +12,27 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import {
+  CHAT_DIRECT_TRADE_DOC,
+  CHAT_LIST_MESSAGES_DOC,
+  CHAT_LIST_ROOMS_DOC,
+  CHAT_LOCATION_START_DOC,
+  CHAT_LOCATION_STOP_DOC,
+  CHAT_LOCATION_UPDATE_DOC,
+  CHAT_MARK_READ_DOC,
+  CHAT_OPEN_ROOM_DOC,
+  CHAT_SAFE_PAYMENT_REQUEST_DOC,
+  CHAT_SAFE_PAYMENT_STATUS_DOC,
+  CHAT_SAFE_PAYMENT_SUBMIT_DOC,
+  CHAT_SEND_MESSAGE_DOC,
+  CHAT_TRANSACTION_COMPLETE_DOC,
+  CHAT_TRANSACTION_REVIEW_DOC,
+} from './chat-transaction-flow.swagger.js';
 import { Throttle } from '@nestjs/throttler';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
@@ -24,7 +41,10 @@ import {
   type JwtPayload,
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
-import { ApiSuccessResponse } from '../../../common/decorators/api-response.decorator.js';
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import {
   ChatMessageResponseDto,
   ChatRoomResponseDto,
@@ -85,7 +105,10 @@ export class ClientChatController {
 
   @Post('rooms')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Open or reuse chat room for buyer/seller/listing' })
+  @ApiOperation({
+    summary: 'Open or reuse chat room for buyer/seller/listing',
+    description: CHAT_OPEN_ROOM_DOC,
+  })
   @ApiSuccessResponse(ChatRoomResponseDto, {
     status: HttpStatus.CREATED,
     description: 'Chat room opened',
@@ -102,7 +125,10 @@ export class ClientChatController {
   }
 
   @Get('rooms')
-  @ApiOperation({ summary: 'List my chat rooms (cursor pagination)' })
+  @ApiOperation({
+    summary: 'List my chat rooms (cursor pagination)',
+    description: CHAT_LIST_ROOMS_DOC,
+  })
   @ApiSuccessResponse(CursorPageResponseDto, {
     status: HttpStatus.OK,
     description: 'Chat rooms retrieved',
@@ -128,7 +154,10 @@ export class ClientChatController {
   }
 
   @Get(':chatRoomId/messages')
-  @ApiOperation({ summary: 'List chat room messages (cursor pagination)' })
+  @ApiOperation({
+    summary: 'List chat room messages (cursor pagination)',
+    description: CHAT_LIST_MESSAGES_DOC,
+  })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(CursorPageResponseDto, {
     status: HttpStatus.OK,
@@ -157,7 +186,11 @@ export class ClientChatController {
   @Post(':chatRoomId/messages')
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ 'review-submit-user': { limit: 120, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Fallback HTTP send message endpoint' })
+  @ApiOperation({
+    summary: 'Fallback HTTP send message endpoint',
+    description: CHAT_SEND_MESSAGE_DOC,
+  })
+  @ApiBody({ type: SendChatMessageDto })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(ChatMessageResponseDto, {
     status: HttpStatus.CREATED,
@@ -183,7 +216,10 @@ export class ClientChatController {
 
   @Patch(':chatRoomId/read')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mark unread messages as read in room' })
+  @ApiOperation({
+    summary: 'Mark unread messages as read in room',
+    description: CHAT_MARK_READ_DOC,
+  })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(Number, {
     status: HttpStatus.OK,
@@ -199,7 +235,11 @@ export class ClientChatController {
 
   @Post(':chatRoomId/direct-trade')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Start or update direct trade request' })
+  @ApiOperation({
+    summary: 'Start or update direct trade request',
+    description: CHAT_DIRECT_TRADE_DOC,
+  })
+  @ApiBody({ type: StartDirectTradeDto })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,
@@ -223,6 +263,12 @@ export class ClientChatController {
   @ApiOperation({
     summary:
       'Start location sharing in direct trade (posts LOCATION_SHARING_STARTED to chat)',
+    description: CHAT_LOCATION_START_DOC,
+  })
+  @ApiBody({ type: LocationShareCoordinatesDto })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Direct trade not started for this chat room',
   })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(StartLocationShareResponseDto, {
@@ -255,6 +301,13 @@ export class ClientChatController {
   @ApiOperation({
     summary:
       'Update location coordinates during an active share (call /location/start first)',
+    description: CHAT_LOCATION_UPDATE_DOC,
+  })
+  @ApiBody({ type: UpdateLocationShareDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Location sharing not started — call POST .../location/start first',
   })
   @ApiSuccessResponse(Boolean, {
     status: HttpStatus.OK,
@@ -277,7 +330,10 @@ export class ClientChatController {
 
   @Post(':chatRoomId/location/stop')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stop location sharing in direct trade' })
+  @ApiOperation({
+    summary: 'Stop location sharing in direct trade',
+    description: CHAT_LOCATION_STOP_DOC,
+  })
   @ApiSuccessResponse(Boolean, {
     status: HttpStatus.OK,
     description: 'Location sharing stopped',
@@ -294,6 +350,11 @@ export class ClientChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Buyer requests safe payment (notifies admin to send KBZ number)',
+    description: CHAT_SAFE_PAYMENT_REQUEST_DOC,
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Only the buyer can request safe payment',
   })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(TransactionResponseDto, {
@@ -315,6 +376,11 @@ export class ClientChatController {
   @ApiOperation({
     summary:
       'Get safe payment status, admin transfer instruction, and buyer KBZ account pre-fill',
+    description: CHAT_SAFE_PAYMENT_STATUS_DOC,
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'No safe payment in progress for this chat',
   })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(SafePaymentStatusResponseDto, {
@@ -340,6 +406,17 @@ export class ClientChatController {
   @ApiOperation({
     summary:
       'Buyer submits KBZ transaction ID after paying to admin receiving number',
+    description: CHAT_SAFE_PAYMENT_SUBMIT_DOC,
+  })
+  @ApiBody({ type: SubmitSafePaymentDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Admin instruction not sent yet (canSubmitPayment is false) or invalid payload',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Only the buyer can submit safe payment',
   })
   @ApiParam({ name: 'chatRoomId' })
   @ApiSuccessResponse(TransactionResponseDto, {
@@ -367,7 +444,9 @@ export class ClientChatController {
   @ApiOperation({
     summary:
       'Mark transaction completed by buyer/seller (two-sided confirmation)',
+    description: CHAT_TRANSACTION_COMPLETE_DOC,
   })
+  @ApiBody({ type: ConfirmTransactionCompleteDto })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,
     description: 'Transaction completion updated',
@@ -390,6 +469,12 @@ export class ClientChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Submit review and trade satisfaction after completed transaction',
+    description: CHAT_TRANSACTION_REVIEW_DOC,
+  })
+  @ApiBody({ type: CreateReviewDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Transaction not COMPLETED or review already submitted',
   })
   @ApiSuccessResponse(ReviewResponseDto, {
     status: HttpStatus.CREATED,

@@ -11,10 +11,18 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import {
+  CHAT_ADMIN_AWAITING_INSTRUCTION_DOC,
+  CHAT_ADMIN_PENDING_DOC,
+  CHAT_ADMIN_RECEIVED_DOC,
+  CHAT_ADMIN_SEND_INSTRUCTION_DOC,
+  CHAT_ADMIN_TRANSFERRED_DOC,
+} from './chat-transaction-flow.swagger.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import {
@@ -22,7 +30,10 @@ import {
   type JwtPayload,
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
-import { ApiSuccessResponse } from '../../../common/decorators/api-response.decorator.js';
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import {
   AdminMarkSafePaymentReceivedDto,
   AdminMarkSafePaymentTransferredDto,
@@ -55,6 +66,7 @@ export class AdminChatController {
   @Get('safe-payments/awaiting-instruction')
   @ApiOperation({
     summary: 'List safe payments waiting for admin KBZ receiving number',
+    description: CHAT_ADMIN_AWAITING_INSTRUCTION_DOC,
   })
   @ApiSuccessResponse(CursorPageResponseDto, {
     status: HttpStatus.OK,
@@ -84,6 +96,12 @@ export class AdminChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Send KBZPay receiving number to buyer (like KBZ verification)',
+    description: CHAT_ADMIN_SEND_INSTRUCTION_DOC,
+  })
+  @ApiBody({ type: AdminSendSafePaymentInstructionDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Transaction not awaiting admin instruction',
   })
   @ApiParam({ name: 'transactionId' })
   @ApiSuccessResponse(TransactionResponseDto, {
@@ -107,7 +125,10 @@ export class AdminChatController {
   }
 
   @Get('safe-payments/pending')
-  @ApiOperation({ summary: 'List pending safe payment submissions for admin' })
+  @ApiOperation({
+    summary: 'List pending safe payment submissions for admin',
+    description: CHAT_ADMIN_PENDING_DOC,
+  })
   @ApiSuccessResponse(CursorPageResponseDto, {
     status: HttpStatus.OK,
     description: 'Pending safe payments listed',
@@ -132,7 +153,11 @@ export class AdminChatController {
 
   @Post('safe-payments/:transactionId/received')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mark safe payment as received by admin' })
+  @ApiOperation({
+    summary: 'Mark safe payment as received by admin',
+    description: CHAT_ADMIN_RECEIVED_DOC,
+  })
+  @ApiBody({ type: AdminMarkSafePaymentReceivedDto })
   @ApiParam({ name: 'transactionId' })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,
@@ -156,7 +181,16 @@ export class AdminChatController {
 
   @Post('safe-payments/:transactionId/transferred')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mark safe payment as transferred to seller' })
+  @ApiOperation({
+    summary: 'Mark safe payment as transferred to seller',
+    description: CHAT_ADMIN_TRANSFERRED_DOC,
+  })
+  @ApiBody({ type: AdminMarkSafePaymentTransferredDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Transaction must be COMPLETED by both buyer and seller before transfer',
+  })
   @ApiParam({ name: 'transactionId' })
   @ApiSuccessResponse(TransactionResponseDto, {
     status: HttpStatus.OK,

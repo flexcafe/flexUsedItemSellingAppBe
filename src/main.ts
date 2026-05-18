@@ -40,9 +40,18 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  const {
+    CHAT_CLIENT_TAG_DOC,
+    CHAT_ADMIN_TAG_DOC,
+    CHAT_TRANSACTION_FLOW_DOC,
+    CHAT_WS_EVENTS_DOC,
+  } =
+    await import('./presentation/modules/chat/chat-transaction-flow.swagger.js');
   const swaggerConfig = new DocumentBuilder()
     .setTitle('FlexCafe - Second-Hand Marketplace API')
-    .setDescription('Client-to-client second-hand selling platform')
+    .setDescription(
+      `Client-to-client second-hand selling platform.\n\n## Client Chat\n${CHAT_CLIENT_TAG_DOC}\n\n## Admin Chat\n${CHAT_ADMIN_TAG_DOC}\n\n${CHAT_TRANSACTION_FLOW_DOC}\n\n${CHAT_WS_EVENTS_DOC}`,
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
