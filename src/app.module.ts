@@ -77,19 +77,13 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
         {
           name: 'catalog-search-ip',
           ttl: 60_000,
-          limit: 300,
-          getTracker: authIpTracker,
-        },
-        {
-          name: 'catalog-search-burst',
-          ttl: 10_000,
-          limit: 40,
+          limit: 60,
           getTracker: authIpTracker,
         },
         {
           name: 'catalog-detail-ip',
           ttl: 60_000,
-          limit: 240,
+          limit: 120,
           getTracker: authIpTracker,
         },
       ],

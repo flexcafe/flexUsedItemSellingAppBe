@@ -13,14 +13,7 @@ async function bootstrap() {
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
 
-  const disableTrustProxy =
-    process.env.TRUST_PROXY === '0' || process.env.TRUST_PROXY === 'false';
-  const enableTrustProxy =
-    !disableTrustProxy &&
-    (process.env.TRUST_PROXY === '1' ||
-      process.env.TRUST_PROXY === 'true' ||
-      process.env.NODE_ENV === 'production');
-  if (enableTrustProxy) {
+  if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', 1);
     logger.log('Trust proxy enabled (rate limit / IP uses X-Forwarded-For)');
   }

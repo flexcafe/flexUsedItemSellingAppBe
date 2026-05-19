@@ -12,6 +12,7 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiExtraModels,
   ApiOperation,
   ApiParam,
   ApiTags,
@@ -31,6 +32,7 @@ import {
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import {
+  ApiCursorPageSuccessResponse,
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '../../../common/decorators/api-response.decorator.js';
@@ -51,6 +53,14 @@ import { AdminMarkSafePaymentReceivedUseCase } from '../../../application/use-ca
 import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-transferred.use-case.js';
 
 @ApiTags('Admin Chat')
+@ApiExtraModels(
+  TransactionResponseDto,
+  PendingSafePaymentResponseDto,
+  AwaitingSafePaymentInstructionResponseDto,
+  AdminSendSafePaymentInstructionDto,
+  AdminMarkSafePaymentReceivedDto,
+  AdminMarkSafePaymentTransferredDto,
+)
 @Controller(`${ROUTE_PREFIX.adminDashboard}/chats`)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -68,7 +78,7 @@ export class AdminChatController {
     summary: 'List safe payments waiting for admin KBZ receiving number',
     description: CHAT_ADMIN_AWAITING_INSTRUCTION_DOC,
   })
-  @ApiSuccessResponse(CursorPageResponseDto, {
+  @ApiCursorPageSuccessResponse(AwaitingSafePaymentInstructionResponseDto, {
     status: HttpStatus.OK,
     description: 'Awaiting instruction list retrieved',
   })
@@ -129,7 +139,7 @@ export class AdminChatController {
     summary: 'List pending safe payment submissions for admin',
     description: CHAT_ADMIN_PENDING_DOC,
   })
-  @ApiSuccessResponse(CursorPageResponseDto, {
+  @ApiCursorPageSuccessResponse(PendingSafePaymentResponseDto, {
     status: HttpStatus.OK,
     description: 'Pending safe payments listed',
   })

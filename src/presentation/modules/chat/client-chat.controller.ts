@@ -13,6 +13,7 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiExtraModels,
   ApiOperation,
   ApiParam,
   ApiTags,
@@ -42,7 +43,10 @@ import {
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import {
+  ApiBooleanSuccessResponse,
+  ApiCursorPageSuccessResponse,
   ApiErrorResponse,
+  ApiNumberSuccessResponse,
   ApiSuccessResponse,
 } from '../../../common/decorators/api-response.decorator.js';
 import {
@@ -82,6 +86,20 @@ import { CompleteChatTransactionUseCase } from '../../../application/use-cases/c
 import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use-cases/chat/submit-chat-review-after-completion.use-case.js';
 
 @ApiTags('Client Chat')
+@ApiExtraModels(
+  ChatRoomResponseDto,
+  ChatRoomSummaryResponseDto,
+  ChatMessageResponseDto,
+  TransactionResponseDto,
+  SafePaymentStatusResponseDto,
+  StartLocationShareResponseDto,
+  OpenChatRoomDto,
+  SendChatMessageDto,
+  StartDirectTradeDto,
+  LocationShareCoordinatesDto,
+  SubmitSafePaymentDto,
+  ConfirmTransactionCompleteDto,
+)
 @Controller(`${ROUTE_PREFIX.client}/chats`)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -109,6 +127,7 @@ export class ClientChatController {
     summary: 'Open or reuse chat room for buyer/seller/listing',
     description: CHAT_OPEN_ROOM_DOC,
   })
+  @ApiBody({ type: OpenChatRoomDto })
   @ApiSuccessResponse(ChatRoomResponseDto, {
     status: HttpStatus.CREATED,
     description: 'Chat room opened',
@@ -129,7 +148,7 @@ export class ClientChatController {
     summary: 'List my chat rooms (cursor pagination)',
     description: CHAT_LIST_ROOMS_DOC,
   })
-  @ApiSuccessResponse(CursorPageResponseDto, {
+  @ApiCursorPageSuccessResponse(ChatRoomSummaryResponseDto, {
     status: HttpStatus.OK,
     description: 'Chat rooms retrieved',
   })
@@ -159,7 +178,7 @@ export class ClientChatController {
     description: CHAT_LIST_MESSAGES_DOC,
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(CursorPageResponseDto, {
+  @ApiCursorPageSuccessResponse(ChatMessageResponseDto, {
     status: HttpStatus.OK,
     description: 'Messages retrieved',
   })
@@ -221,9 +240,9 @@ export class ClientChatController {
     description: CHAT_MARK_READ_DOC,
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(Number, {
+  @ApiNumberSuccessResponse({
     status: HttpStatus.OK,
-    description: 'Messages marked as read',
+    description: 'Count of messages marked as read (numeric `data` field)',
   })
   async markRead(
     @CurrentUser() user: JwtPayload,
@@ -309,9 +328,9 @@ export class ClientChatController {
     description:
       'Location sharing not started — call POST .../location/start first',
   })
-  @ApiSuccessResponse(Boolean, {
+  @ApiBooleanSuccessResponse({
     status: HttpStatus.OK,
-    description: 'Location updated',
+    description: 'Location updated (`data`: true)',
   })
   async updateLocation(
     @CurrentUser() user: JwtPayload,
@@ -334,9 +353,9 @@ export class ClientChatController {
     summary: 'Stop location sharing in direct trade',
     description: CHAT_LOCATION_STOP_DOC,
   })
-  @ApiSuccessResponse(Boolean, {
+  @ApiBooleanSuccessResponse({
     status: HttpStatus.OK,
-    description: 'Location sharing stopped',
+    description: 'Location sharing stopped (`data`: true)',
   })
   async stopLocation(
     @CurrentUser() user: JwtPayload,

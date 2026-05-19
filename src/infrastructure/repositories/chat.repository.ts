@@ -109,46 +109,12 @@ export class ChatRepository implements IChatRepository {
         unreadCountSeller: true,
         updatedAt: true,
       },
-      orderBy: [
-        { lastMessageAt: { sort: 'desc', nulls: 'last' } },
-        { updatedAt: 'desc' },
-        { id: 'desc' },
-      ],
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: pageSize + 1,
     });
 
     const hasNext = rows.length > pageSize;
     const slice = hasNext ? rows.slice(0, pageSize) : rows;
-
-    const staleRoomIds = slice
-      .filter((row) => !row.lastMessageId)
-      .map((row) => row.id);
-    if (staleRoomIds.length > 0) {
-      await this.backfillStaleRoomSummaries(staleRoomIds);
-      const refreshed = await this.prisma.chatRoom.findMany({
-        where: { id: { in: staleRoomIds } },
-        select: {
-          id: true,
-          listingId: true,
-          buyerId: true,
-          sellerId: true,
-          lastMessageId: true,
-          lastMessagePreview: true,
-          lastMessageType: true,
-          lastMessageAt: true,
-          unreadCountBuyer: true,
-          unreadCountSeller: true,
-          updatedAt: true,
-        },
-      });
-      const refreshedById = new Map(refreshed.map((row) => [row.id, row]));
-      for (let i = 0; i < slice.length; i += 1) {
-        const replacement = refreshedById.get(slice[i].id);
-        if (replacement) {
-          slice[i] = replacement;
-        }
-      }
-    }
 
     const items = slice.map((row) => {
       const unreadCount =
@@ -168,13 +134,10 @@ export class ChatRepository implements IChatRepository {
     });
 
     const last = slice.at(-1);
-    const lastSortAt = last ? (last.lastMessageAt ?? last.updatedAt) : null;
     return {
       items,
       nextCursor:
-        hasNext && last && lastSortAt
-          ? this.encodeCursor(lastSortAt, last.id)
-          : null,
+        hasNext && last ? this.encodeCursor(last.updatedAt, last.id) : null,
     };
   }
 
@@ -994,31 +957,6 @@ export class ChatRepository implements IChatRepository {
 
   private normalizeTake(value: number, max: number): number {
     return Math.max(1, Math.min(value, max));
-  }
-
-  /** Rooms that had messages before denormalized columns existed. */
-  private async backfillStaleRoomSummaries(roomIds: string[]): Promise<void> {
-    await Promise.all(
-      roomIds.map(async (roomId) => {
-        const latest = await this.prisma.chatMessage.findFirst({
-          where: { chatRoomId: roomId },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        });
-        if (!latest) {
-          return;
-        }
-        await this.prisma.chatRoom.update({
-          where: { id: roomId },
-          data: {
-            lastMessageId: latest.id,
-            lastMessageType: latest.type,
-            lastMessagePreview: this.toMessagePreview(latest.content),
-            lastMessageAt: latest.createdAt,
-            updatedAt: latest.createdAt,
-          },
-        });
-      }),
-    );
   }
 
   private async createMessageWithRoomSnapshot(

@@ -220,10 +220,7 @@ export class ClientProductsController {
 
   @Public()
   @Get()
-  @Throttle({
-    'catalog-search-ip': { limit: 300, ttl: 60_000 },
-    'catalog-search-burst': { limit: 40, ttl: 10_000 },
-  })
+  @Throttle({ 'catalog-search-ip': { limit: 60, ttl: 60_000 } })
   @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Search / list public product catalog (paginated)',

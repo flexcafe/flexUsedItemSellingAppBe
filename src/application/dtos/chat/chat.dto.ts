@@ -392,10 +392,16 @@ export class ChatRoomSummaryResponseDto {
 }
 
 export class CursorPageResponseDto<T> {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Page items (see endpoint response schema for element type)',
+    isArray: true,
+  })
   items: T[];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Pass as `cursor` query param to fetch the next page',
+  })
   nextCursor: string | null;
 
   constructor(items: T[], nextCursor: string | null) {
@@ -446,7 +452,7 @@ export class TransactionResponseDto {
 }
 
 export class SafePaymentStatusResponseDto {
-  @ApiProperty({ type: TransactionResponseDto })
+  @ApiProperty({ type: () => TransactionResponseDto })
   transaction: TransactionResponseDto;
 
   @ApiPropertyOptional({ nullable: true })

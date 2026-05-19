@@ -109,6 +109,52 @@ export function ApiBooleanSuccessResponse(options: ResponseOptions) {
   );
 }
 
+export function ApiNumberSuccessResponse(options: ResponseOptions) {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto),
+    ApiResponse({
+      status: options.status ?? HttpStatus.OK,
+      description: options.description,
+      schema: baseResponseSchema({
+        type: 'number',
+        example: 0,
+        description: 'Numeric payload in `data`',
+      }),
+    }),
+  );
+}
+
+/** Cursor page (`items` + `nextCursor`) with typed item schema in `data`. */
+export function ApiCursorPageSuccessResponse<TModel extends Type<unknown>>(
+  model: TModel,
+  options: ResponseOptions,
+) {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto, model),
+    ApiResponse({
+      status: options.status ?? HttpStatus.OK,
+      description: options.description,
+      schema: baseResponseSchema({
+        type: 'object',
+        required: ['items', 'nextCursor'],
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: getSchemaPath(model) as unknown as string },
+          },
+          nextCursor: {
+            type: 'string',
+            nullable: true,
+            description:
+              'Opaque cursor for the next page, or null if no more pages',
+            example: null,
+          },
+        },
+      }),
+    }),
+  );
+}
+
 export function ApiErrorResponse(options: ResponseOptions) {
   return applyDecorators(
     ApiExtraModels(ApiResponseDto),
