@@ -14,8 +14,11 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiExtraModels,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -42,13 +45,19 @@ import {
   type JwtPayload,
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
+import { ApiErrorResponse } from '../../../common/decorators/api-response.decorator.js';
 import {
-  ApiBooleanSuccessResponse,
-  ApiCursorPageSuccessResponse,
-  ApiErrorResponse,
-  ApiNumberSuccessResponse,
-  ApiSuccessResponse,
-} from '../../../common/decorators/api-response.decorator.js';
+  ApiResponseChatBooleanDto,
+  ApiResponseChatMessageDto,
+  ApiResponseChatMessageListDto,
+  ApiResponseChatNumberDto,
+  ApiResponseChatReviewDto,
+  ApiResponseChatRoomDto,
+  ApiResponseChatRoomListDto,
+  ApiResponseChatTransactionDto,
+  ApiResponseSafePaymentStatusDto,
+  ApiResponseStartLocationShareDto,
+} from '../../../application/dtos/chat/chat-api-response.dto.js';
 import {
   ChatMessageResponseDto,
   ChatRoomResponseDto,
@@ -87,18 +96,17 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
 
 @ApiTags('Client Chat')
 @ApiExtraModels(
-  ChatRoomResponseDto,
-  ChatRoomSummaryResponseDto,
-  ChatMessageResponseDto,
-  TransactionResponseDto,
-  SafePaymentStatusResponseDto,
-  StartLocationShareResponseDto,
-  OpenChatRoomDto,
-  SendChatMessageDto,
-  StartDirectTradeDto,
-  LocationShareCoordinatesDto,
-  SubmitSafePaymentDto,
-  ConfirmTransactionCompleteDto,
+  ApiResponseChatRoomListDto,
+  ApiResponseChatMessageListDto,
+  ApiResponseChatRoomDto,
+  ApiResponseChatMessageDto,
+  ApiResponseChatTransactionDto,
+  ApiResponseSafePaymentStatusDto,
+  ApiResponseStartLocationShareDto,
+  ApiResponseChatBooleanDto,
+  ApiResponseChatNumberDto,
+  ApiResponseChatReviewDto,
+  CursorQueryDto,
 )
 @Controller(`${ROUTE_PREFIX.client}/chats`)
 @UseGuards(JwtAuthGuard)
@@ -128,8 +136,8 @@ export class ClientChatController {
     description: CHAT_OPEN_ROOM_DOC,
   })
   @ApiBody({ type: OpenChatRoomDto })
-  @ApiSuccessResponse(ChatRoomResponseDto, {
-    status: HttpStatus.CREATED,
+  @ApiCreatedResponse({
+    type: ApiResponseChatRoomDto,
     description: 'Chat room opened',
   })
   async openRoom(
@@ -148,9 +156,11 @@ export class ClientChatController {
     summary: 'List my chat rooms (cursor pagination)',
     description: CHAT_LIST_ROOMS_DOC,
   })
-  @ApiCursorPageSuccessResponse(ChatRoomSummaryResponseDto, {
-    status: HttpStatus.OK,
-    description: 'Chat rooms retrieved',
+  @ApiQuery({ type: CursorQueryDto })
+  @ApiOkResponse({
+    type: ApiResponseChatRoomListDto,
+    description:
+      'Wrapped list: `data.items` is ChatRoomSummaryResponseDto[], `data.nextCursor` for pagination',
   })
   async listRooms(
     @CurrentUser() user: JwtPayload,
@@ -161,7 +171,7 @@ export class ClientChatController {
     const page = await this.listChatRooms.execute(
       user.sub,
       query.cursor ?? null,
-      query.take,
+      query.take ?? 20,
     );
     return ApiResponseDto.success(
       new CursorPageResponseDto(
@@ -178,9 +188,11 @@ export class ClientChatController {
     description: CHAT_LIST_MESSAGES_DOC,
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiCursorPageSuccessResponse(ChatMessageResponseDto, {
-    status: HttpStatus.OK,
-    description: 'Messages retrieved',
+  @ApiQuery({ type: CursorQueryDto })
+  @ApiOkResponse({
+    type: ApiResponseChatMessageListDto,
+    description:
+      'Wrapped list: `data.items` is ChatMessageResponseDto[], `data.nextCursor` for pagination',
   })
   async listMessages(
     @CurrentUser() user: JwtPayload,
@@ -191,7 +203,7 @@ export class ClientChatController {
       user.sub,
       chatRoomId,
       query.cursor ?? null,
-      query.take,
+      query.take ?? 20,
     );
     return ApiResponseDto.success(
       new CursorPageResponseDto(
@@ -211,8 +223,8 @@ export class ClientChatController {
   })
   @ApiBody({ type: SendChatMessageDto })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(ChatMessageResponseDto, {
-    status: HttpStatus.CREATED,
+  @ApiCreatedResponse({
+    type: ApiResponseChatMessageDto,
     description: 'Message sent',
   })
   async sendMessage(
@@ -240,9 +252,9 @@ export class ClientChatController {
     description: CHAT_MARK_READ_DOC,
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiNumberSuccessResponse({
-    status: HttpStatus.OK,
-    description: 'Count of messages marked as read (numeric `data` field)',
+  @ApiOkResponse({
+    type: ApiResponseChatNumberDto,
+    description: 'Count of messages marked as read in `data`',
   })
   async markRead(
     @CurrentUser() user: JwtPayload,
@@ -260,8 +272,8 @@ export class ClientChatController {
   })
   @ApiBody({ type: StartDirectTradeDto })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Direct trade updated',
   })
   async startDirectTradeHandler(
@@ -290,8 +302,8 @@ export class ClientChatController {
     description: 'Direct trade not started for this chat room',
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(StartLocationShareResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseStartLocationShareDto,
     description: 'Location sharing started',
   })
   async startLocation(
@@ -328,8 +340,8 @@ export class ClientChatController {
     description:
       'Location sharing not started — call POST .../location/start first',
   })
-  @ApiBooleanSuccessResponse({
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatBooleanDto,
     description: 'Location updated (`data`: true)',
   })
   async updateLocation(
@@ -353,8 +365,8 @@ export class ClientChatController {
     summary: 'Stop location sharing in direct trade',
     description: CHAT_LOCATION_STOP_DOC,
   })
-  @ApiBooleanSuccessResponse({
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatBooleanDto,
     description: 'Location sharing stopped (`data`: true)',
   })
   async stopLocation(
@@ -376,8 +388,8 @@ export class ClientChatController {
     description: 'Only the buyer can request safe payment',
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Safe payment requested',
   })
   async requestSafePayment(
@@ -402,8 +414,8 @@ export class ClientChatController {
     description: 'No safe payment in progress for this chat',
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(SafePaymentStatusResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseSafePaymentStatusDto,
     description: 'Safe payment status retrieved',
   })
   async getSafePaymentStatus(
@@ -438,8 +450,8 @@ export class ClientChatController {
     description: 'Only the buyer can submit safe payment',
   })
   @ApiParam({ name: 'chatRoomId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Safe payment submitted',
   })
   async submitSafePayment(
@@ -466,8 +478,8 @@ export class ClientChatController {
     description: CHAT_TRANSACTION_COMPLETE_DOC,
   })
   @ApiBody({ type: ConfirmTransactionCompleteDto })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Transaction completion updated',
   })
   async completeTransaction(
@@ -495,8 +507,8 @@ export class ClientChatController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Transaction not COMPLETED or review already submitted',
   })
-  @ApiSuccessResponse(ReviewResponseDto, {
-    status: HttpStatus.CREATED,
+  @ApiCreatedResponse({
+    type: ApiResponseChatReviewDto,
     description: 'Review created',
   })
   async createReview(

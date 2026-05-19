@@ -27,18 +27,28 @@ import type {
 import type { JsonValue } from '../../../domain/repositories/user.repository.interface.js';
 
 export class CursorQueryDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Opaque cursor from the previous page `nextCursor`',
+  })
   @IsOptional()
   @IsString()
   cursor?: string;
 
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    type: Number,
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+    description: 'Number of items per page',
+    example: 20,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(100)
-  take = 20;
+  take?: number;
 }
 
 export class OpenChatRoomDto {
@@ -292,7 +302,13 @@ export class ChatMessageResponseDto {
   @ApiProperty()
   content: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    type: 'object',
+    nullable: true,
+    additionalProperties: true,
+    example: { transactionId: 'uuid' },
+    description: 'System message payload (varies by MessageType)',
+  })
   metadata: JsonValue | null;
 
   @ApiProperty()
@@ -359,16 +375,21 @@ export class ChatRoomSummaryResponseDto {
   @ApiProperty()
   sellerId: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true, example: null })
   latestMessageId: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true, example: null })
   latestMessageContent: string | null;
 
-  @ApiPropertyOptional({ enum: MessageType, nullable: true })
+  @ApiPropertyOptional({ enum: MessageType, nullable: true, example: null })
   latestMessageType: MessageType | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    example: null,
+  })
   latestMessageCreatedAt: Date | null;
 
   @ApiProperty()

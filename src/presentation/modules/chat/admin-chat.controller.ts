@@ -13,8 +13,10 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiExtraModels,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -31,11 +33,12 @@ import {
   type JwtPayload,
 } from '../../../common/decorators/current-user.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
+import { ApiErrorResponse } from '../../../common/decorators/api-response.decorator.js';
 import {
-  ApiCursorPageSuccessResponse,
-  ApiErrorResponse,
-  ApiSuccessResponse,
-} from '../../../common/decorators/api-response.decorator.js';
+  ApiResponseAwaitingInstructionListDto,
+  ApiResponseChatTransactionDto,
+  ApiResponsePendingSafePaymentListDto,
+} from '../../../application/dtos/chat/chat-api-response.dto.js';
 import {
   AdminMarkSafePaymentReceivedDto,
   AdminMarkSafePaymentTransferredDto,
@@ -54,12 +57,10 @@ import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use
 
 @ApiTags('Admin Chat')
 @ApiExtraModels(
-  TransactionResponseDto,
-  PendingSafePaymentResponseDto,
-  AwaitingSafePaymentInstructionResponseDto,
-  AdminSendSafePaymentInstructionDto,
-  AdminMarkSafePaymentReceivedDto,
-  AdminMarkSafePaymentTransferredDto,
+  ApiResponseAwaitingInstructionListDto,
+  ApiResponsePendingSafePaymentListDto,
+  ApiResponseChatTransactionDto,
+  CursorQueryDto,
 )
 @Controller(`${ROUTE_PREFIX.adminDashboard}/chats`)
 @UseGuards(JwtAuthGuard)
@@ -78,9 +79,11 @@ export class AdminChatController {
     summary: 'List safe payments waiting for admin KBZ receiving number',
     description: CHAT_ADMIN_AWAITING_INSTRUCTION_DOC,
   })
-  @ApiCursorPageSuccessResponse(AwaitingSafePaymentInstructionResponseDto, {
-    status: HttpStatus.OK,
-    description: 'Awaiting instruction list retrieved',
+  @ApiQuery({ type: CursorQueryDto })
+  @ApiOkResponse({
+    type: ApiResponseAwaitingInstructionListDto,
+    description:
+      'Wrapped list: `data.items` is AwaitingSafePaymentInstructionResponseDto[]',
   })
   async listAwaitingInstruction(
     @Query() query: CursorQueryDto,
@@ -91,7 +94,7 @@ export class AdminChatController {
   > {
     const page = await this.listAwaitingSafePaymentInstructions.execute(
       query.cursor ?? null,
-      query.take,
+      query.take ?? 20,
     );
     return ApiResponseDto.success(
       new CursorPageResponseDto(
@@ -114,8 +117,8 @@ export class AdminChatController {
     description: 'Transaction not awaiting admin instruction',
   })
   @ApiParam({ name: 'transactionId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Transfer instruction sent to buyer',
   })
   async sendInstruction(
@@ -139,9 +142,11 @@ export class AdminChatController {
     summary: 'List pending safe payment submissions for admin',
     description: CHAT_ADMIN_PENDING_DOC,
   })
-  @ApiCursorPageSuccessResponse(PendingSafePaymentResponseDto, {
-    status: HttpStatus.OK,
-    description: 'Pending safe payments listed',
+  @ApiQuery({ type: CursorQueryDto })
+  @ApiOkResponse({
+    type: ApiResponsePendingSafePaymentListDto,
+    description:
+      'Wrapped list: `data.items` is PendingSafePaymentResponseDto[]',
   })
   async listPendingSafePaymentsHandler(
     @Query() query: CursorQueryDto,
@@ -150,7 +155,7 @@ export class AdminChatController {
   > {
     const page = await this.listPendingSafePayments.execute(
       query.cursor ?? null,
-      query.take,
+      query.take ?? 20,
     );
     return ApiResponseDto.success(
       new CursorPageResponseDto(
@@ -169,8 +174,8 @@ export class AdminChatController {
   })
   @ApiBody({ type: AdminMarkSafePaymentReceivedDto })
   @ApiParam({ name: 'transactionId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Safe payment marked as received',
   })
   async markReceived(
@@ -202,8 +207,8 @@ export class AdminChatController {
       'Transaction must be COMPLETED by both buyer and seller before transfer',
   })
   @ApiParam({ name: 'transactionId' })
-  @ApiSuccessResponse(TransactionResponseDto, {
-    status: HttpStatus.OK,
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
     description: 'Safe payment marked as transferred',
   })
   async markTransferred(
