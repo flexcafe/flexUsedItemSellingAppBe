@@ -20,6 +20,19 @@ export const SELLER_ID = '33333333-3333-3333-3333-333333333333';
 export const LISTING_ID = '44444444-4444-4444-4444-444444444444';
 export const TX_ID = '55555555-5555-5555-5555-555555555555';
 
+const defaultListingSnapshot = {
+  id: LISTING_ID,
+  title: 'Test listing',
+  price: 100_000,
+  imageUrl: null as string | null,
+};
+
+const defaultCounterpartySnapshot = {
+  userId: SELLER_ID,
+  displayName: 'Test seller',
+  avatarUrl: null as string | null,
+};
+
 export function buildChatRoom(
   overrides: Partial<ChatRoomData> = {},
 ): ChatRoomData {
@@ -31,6 +44,8 @@ export function buildChatRoom(
     isActive: true,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-02'),
+    listing: { ...defaultListingSnapshot, ...overrides.listing },
+    counterparty: { ...defaultCounterpartySnapshot, ...overrides.counterparty },
     ...overrides,
   };
 }

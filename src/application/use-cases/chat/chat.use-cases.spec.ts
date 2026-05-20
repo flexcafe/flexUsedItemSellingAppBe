@@ -94,11 +94,14 @@ describe(OpenChatRoomUseCase.name, () => {
     });
 
     expect(result).toBe(room);
-    expect(chats.getOrCreateRoom).toHaveBeenCalledWith({
-      listingId: LISTING_ID,
-      buyerId: BUYER_ID,
-      sellerId: SELLER_ID,
-    });
+    expect(chats.getOrCreateRoom).toHaveBeenCalledWith(
+      {
+        listingId: LISTING_ID,
+        buyerId: BUYER_ID,
+        sellerId: SELLER_ID,
+      },
+      BUYER_ID,
+    );
   });
 });
 

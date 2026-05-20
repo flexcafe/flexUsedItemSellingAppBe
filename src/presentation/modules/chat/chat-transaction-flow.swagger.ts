@@ -78,7 +78,7 @@ export const CHAT_OPEN_ROOM_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 
 export const CHAT_LIST_ROOMS_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 
-**This endpoint — Step A.2.** Cursor-paginated inbox with last message preview and unread count per room. Use \`nextCursor\` until null.`;
+**This endpoint — Step A.2.** Cursor-paginated inbox with last message preview and unread count per room. Each item includes \`listing\` (title, price, image) and \`counterparty\` (nickname, avatar) so sellers can distinguish multiple buyers/products without extra API calls. Use \`nextCursor\` until null.`;
 
 export const CHAT_LIST_MESSAGES_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 

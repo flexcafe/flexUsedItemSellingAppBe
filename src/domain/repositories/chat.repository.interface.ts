@@ -3,6 +3,29 @@ import { TransactionStatus } from '../enums/transaction-status.enum.js';
 import { TransactionType } from '../enums/transaction-type.enum.js';
 import type { JsonValue } from './user.repository.interface.js';
 
+/** Listing card for chat inbox / room header (avoids per-room product fetches). */
+export interface ChatRoomListingSnapshot {
+  id: string;
+  title: string;
+  price: number;
+  imageUrl: string | null;
+}
+
+/** Other party in the room (buyer for seller, seller for buyer). */
+export interface ChatRoomCounterpartySnapshot {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+/** Minimal room row for auth checks (no listing/counterparty joins). */
+export interface ChatRoomParticipantData {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+}
+
 export interface ChatRoomData {
   id: string;
   listingId: string;
@@ -11,6 +34,8 @@ export interface ChatRoomData {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  listing: ChatRoomListingSnapshot;
+  counterparty: ChatRoomCounterpartySnapshot;
 }
 
 export interface ChatRoomSummaryData {
@@ -24,6 +49,8 @@ export interface ChatRoomSummaryData {
   latestMessageCreatedAt: Date | null;
   unreadCount: number;
   updatedAt: Date;
+  listing: ChatRoomListingSnapshot;
+  counterparty: ChatRoomCounterpartySnapshot;
 }
 
 export interface ChatMessageData {
@@ -155,8 +182,11 @@ export interface PendingSafePaymentData {
 }
 
 export interface IChatRepository {
-  getOrCreateRoom(data: CreateChatRoomData): Promise<ChatRoomData>;
-  findRoomById(chatRoomId: string): Promise<ChatRoomData | null>;
+  getOrCreateRoom(
+    data: CreateChatRoomData,
+    viewerUserId: string,
+  ): Promise<ChatRoomData>;
+  findRoomById(chatRoomId: string): Promise<ChatRoomParticipantData | null>;
   listRoomsForUser(
     userId: string,
     cursor: string | null,

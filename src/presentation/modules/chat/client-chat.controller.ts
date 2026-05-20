@@ -60,6 +60,8 @@ import {
 } from '../../../application/dtos/chat/chat-api-response.dto.js';
 import {
   ChatMessageResponseDto,
+  ChatRoomCounterpartySnapshotDto,
+  ChatRoomListingSnapshotDto,
   ChatRoomResponseDto,
   ChatRoomSummaryResponseDto,
   ConfirmTransactionCompleteDto,
@@ -99,6 +101,8 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
   ApiResponseChatRoomListDto,
   ApiResponseChatMessageListDto,
   ApiResponseChatRoomDto,
+  ChatRoomCounterpartySnapshotDto,
+  ChatRoomListingSnapshotDto,
   ApiResponseChatMessageDto,
   ApiResponseChatTransactionDto,
   ApiResponseSafePaymentStatusDto,

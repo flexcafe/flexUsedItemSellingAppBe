@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type {
-  ChatRoomData,
+  ChatRoomParticipantData,
   IChatRepository,
   TransactionData,
 } from '../../../domain/repositories/chat.repository.interface.js';
@@ -11,7 +11,7 @@ export async function requireRoomParticipant(
   chats: IChatRepository,
   chatRoomId: string,
   userId: string,
-): Promise<ChatRoomData> {
+): Promise<ChatRoomParticipantData> {
   const room = await chats.findRoomById(chatRoomId);
   if (!room) {
     throw new NotFoundException('Chat room not found');
@@ -27,7 +27,7 @@ export async function requireDirectTradeContext(
   chatRoomId: string,
   userId: string,
 ): Promise<{
-  room: ChatRoomData;
+  room: ChatRoomParticipantData;
   transaction: TransactionData;
   directTradeId: string;
 }> {

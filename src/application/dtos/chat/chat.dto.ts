@@ -19,7 +19,9 @@ import { TransactionStatus } from '../../../domain/enums/transaction-status.enum
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import type {
   ChatMessageData,
+  ChatRoomCounterpartySnapshot,
   ChatRoomData,
+  ChatRoomListingSnapshot,
   ChatRoomSummaryData,
   PendingSafePaymentData,
   TransactionData,
@@ -329,6 +331,50 @@ export class ChatMessageResponseDto {
   }
 }
 
+export class ChatRoomListingSnapshotDto {
+  @ApiProperty({ description: 'Listing (product) id' })
+  id: string;
+
+  @ApiProperty({ example: 'iPhone 13 128GB' })
+  title: string;
+
+  @ApiProperty({ example: 450000 })
+  price: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'First listing image URL',
+  })
+  imageUrl: string | null;
+
+  constructor(data: ChatRoomListingSnapshot) {
+    this.id = data.id;
+    this.title = data.title;
+    this.price = data.price;
+    this.imageUrl = data.imageUrl;
+  }
+}
+
+export class ChatRoomCounterpartySnapshotDto {
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty({
+    description: 'Nickname of the other party (seller for buyer, buyer for seller)',
+  })
+  displayName: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  avatarUrl: string | null;
+
+  constructor(data: ChatRoomCounterpartySnapshot) {
+    this.userId = data.userId;
+    this.displayName = data.displayName;
+    this.avatarUrl = data.avatarUrl;
+  }
+}
+
 export class ChatRoomResponseDto {
   @ApiProperty()
   id: string;
@@ -351,6 +397,15 @@ export class ChatRoomResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
+  @ApiProperty({ type: ChatRoomListingSnapshotDto })
+  listing: ChatRoomListingSnapshotDto;
+
+  @ApiProperty({
+    type: ChatRoomCounterpartySnapshotDto,
+    description: 'The other participant relative to the caller',
+  })
+  counterparty: ChatRoomCounterpartySnapshotDto;
+
   constructor(data: ChatRoomData) {
     this.id = data.id;
     this.listingId = data.listingId;
@@ -359,6 +414,8 @@ export class ChatRoomResponseDto {
     this.isActive = data.isActive;
     this.createdAt = data.createdAt;
     this.updatedAt = data.updatedAt;
+    this.listing = new ChatRoomListingSnapshotDto(data.listing);
+    this.counterparty = new ChatRoomCounterpartySnapshotDto(data.counterparty);
   }
 }
 
@@ -398,6 +455,15 @@ export class ChatRoomSummaryResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
+  @ApiProperty({ type: ChatRoomListingSnapshotDto })
+  listing: ChatRoomListingSnapshotDto;
+
+  @ApiProperty({
+    type: ChatRoomCounterpartySnapshotDto,
+    description: 'The other participant relative to the current user',
+  })
+  counterparty: ChatRoomCounterpartySnapshotDto;
+
   constructor(data: ChatRoomSummaryData) {
     this.chatRoomId = data.chatRoomId;
     this.listingId = data.listingId;
@@ -409,6 +475,8 @@ export class ChatRoomSummaryResponseDto {
     this.latestMessageCreatedAt = data.latestMessageCreatedAt;
     this.unreadCount = data.unreadCount;
     this.updatedAt = data.updatedAt;
+    this.listing = new ChatRoomListingSnapshotDto(data.listing);
+    this.counterparty = new ChatRoomCounterpartySnapshotDto(data.counterparty);
   }
 }
 

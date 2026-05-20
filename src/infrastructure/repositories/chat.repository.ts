@@ -9,7 +9,10 @@ import { PrismaService } from '../database/prisma.service.js';
 import {
   type ChatCursorPage,
   type ChatMessageData,
+  type ChatRoomCounterpartySnapshot,
   type ChatRoomData,
+  type ChatRoomListingSnapshot,
+  type ChatRoomParticipantData,
   type ChatRoomSummaryData,
   type CreateChatMessageData,
   type CreateChatRoomData,
@@ -39,7 +42,10 @@ type CursorToken = {
 export class ChatRepository implements IChatRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOrCreateRoom(data: CreateChatRoomData): Promise<ChatRoomData> {
+  async getOrCreateRoom(
+    data: CreateChatRoomData,
+    viewerUserId: string,
+  ): Promise<ChatRoomData> {
     const existing = await this.prisma.chatRoom.findUnique({
       where: {
         listingId_buyerId_sellerId: {
@@ -48,9 +54,10 @@ export class ChatRepository implements IChatRepository {
           sellerId: data.sellerId,
         },
       },
+      select: { id: true },
     });
     if (existing) {
-      return this.mapRoom(existing);
+      return this.loadRoomById(existing.id, viewerUserId);
     }
     const row = await this.prisma.chatRoom.create({
       data: {
@@ -58,15 +65,24 @@ export class ChatRepository implements IChatRepository {
         buyerId: data.buyerId,
         sellerId: data.sellerId,
       },
+      select: { id: true },
     });
-    return this.mapRoom(row);
+    return this.loadRoomById(row.id, viewerUserId);
   }
 
-  async findRoomById(chatRoomId: string): Promise<ChatRoomData | null> {
+  async findRoomById(
+    chatRoomId: string,
+  ): Promise<ChatRoomParticipantData | null> {
     const row = await this.prisma.chatRoom.findUnique({
       where: { id: chatRoomId },
+      select: {
+        id: true,
+        listingId: true,
+        buyerId: true,
+        sellerId: true,
+      },
     });
-    return row ? this.mapRoom(row) : null;
+    return row ? this.mapRoomParticipant(row) : null;
   }
 
   async listRoomsForUser(
@@ -96,19 +112,7 @@ export class ChatRepository implements IChatRepository {
             AND: [userScopeWhere, cursorWhere],
           }
         : userScopeWhere,
-      select: {
-        id: true,
-        listingId: true,
-        buyerId: true,
-        sellerId: true,
-        lastMessageId: true,
-        lastMessagePreview: true,
-        lastMessageType: true,
-        lastMessageAt: true,
-        unreadCountBuyer: true,
-        unreadCountSeller: true,
-        updatedAt: true,
-      },
+      select: this.roomListSelect(),
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: pageSize + 1,
     });
@@ -116,22 +120,7 @@ export class ChatRepository implements IChatRepository {
     const hasNext = rows.length > pageSize;
     const slice = hasNext ? rows.slice(0, pageSize) : rows;
 
-    const items = slice.map((row) => {
-      const unreadCount =
-        row.buyerId === userId ? row.unreadCountBuyer : row.unreadCountSeller;
-      return {
-        chatRoomId: row.id,
-        listingId: row.listingId,
-        buyerId: row.buyerId,
-        sellerId: row.sellerId,
-        latestMessageId: row.lastMessageId,
-        latestMessageContent: row.lastMessagePreview,
-        latestMessageType: row.lastMessageType as unknown as MessageType | null,
-        latestMessageCreatedAt: row.lastMessageAt,
-        unreadCount,
-        updatedAt: row.updatedAt,
-      } satisfies ChatRoomSummaryData;
-    });
+    const items = slice.map((row) => this.mapRoomSummary(row, userId));
 
     const last = slice.at(-1);
     return {
@@ -838,15 +827,221 @@ export class ChatRepository implements IChatRepository {
     });
   }
 
-  private mapRoom(row: {
+  private async loadRoomById(
+    chatRoomId: string,
+    viewerUserId: string,
+  ): Promise<ChatRoomData> {
+    const row = await this.prisma.chatRoom.findUnique({
+      where: { id: chatRoomId },
+      select: this.roomDetailSelect(),
+    });
+    if (!row) {
+      throw new NotFoundException('Chat room not found');
+    }
+    return this.mapRoomDetail(row, viewerUserId);
+  }
+
+  private roomListSelect() {
+    return {
+      id: true,
+      listingId: true,
+      buyerId: true,
+      sellerId: true,
+      lastMessageId: true,
+      lastMessagePreview: true,
+      lastMessageType: true,
+      lastMessageAt: true,
+      unreadCountBuyer: true,
+      unreadCountSeller: true,
+      updatedAt: true,
+      listing: this.listingRelationSelect(),
+      buyer: this.userRelationSelect(),
+      seller: this.userRelationSelect(),
+    };
+  }
+
+  private roomDetailSelect() {
+    return {
+      id: true,
+      listingId: true,
+      buyerId: true,
+      sellerId: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      listing: this.listingRelationSelect(),
+      buyer: this.userRelationSelect(),
+      seller: this.userRelationSelect(),
+    };
+  }
+
+  private listingRelationSelect() {
+    return {
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        images: {
+          orderBy: { sortOrder: 'asc' as const },
+          take: 1,
+          select: { url: true },
+        },
+      },
+    };
+  }
+
+  private userRelationSelect() {
+    return {
+      select: {
+        id: true,
+        nickname: true,
+        profile: { select: { avatar: true } },
+      },
+    };
+  }
+
+  private mapRoomParticipant(row: {
     id: string;
     listingId: string;
     buyerId: string;
     sellerId: string;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }): ChatRoomData {
+  }): ChatRoomParticipantData {
+    return {
+      id: row.id,
+      listingId: row.listingId,
+      buyerId: row.buyerId,
+      sellerId: row.sellerId,
+    };
+  }
+
+  private mapListingSnapshot(listing: {
+    id: string;
+    title: string;
+    price: PrismaPkg.Prisma.Decimal;
+    images: { url: string }[];
+  }): ChatRoomListingSnapshot {
+    return {
+      id: listing.id,
+      title: listing.title,
+      price: Number(listing.price),
+      imageUrl: listing.images[0]?.url ?? null,
+    };
+  }
+
+  private mapCounterpartySnapshot(user: {
+    id: string;
+    nickname: string;
+    profile: { avatar: string | null } | null;
+  }): ChatRoomCounterpartySnapshot {
+    return {
+      userId: user.id,
+      displayName: user.nickname,
+      avatarUrl: user.profile?.avatar ?? null,
+    };
+  }
+
+  private resolveCounterpartyUser(
+    row: {
+      buyerId: string;
+      sellerId: string;
+      buyer: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+      seller: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+    },
+    viewerUserId: string,
+  ) {
+    return row.buyerId === viewerUserId ? row.seller : row.buyer;
+  }
+
+  private mapRoomSummary(
+    row: {
+      id: string;
+      listingId: string;
+      buyerId: string;
+      sellerId: string;
+      lastMessageId: string | null;
+      lastMessagePreview: string | null;
+      lastMessageType: PrismaPkg.MessageType | null;
+      lastMessageAt: Date | null;
+      unreadCountBuyer: number;
+      unreadCountSeller: number;
+      updatedAt: Date;
+      listing: {
+        id: string;
+        title: string;
+        price: PrismaPkg.Prisma.Decimal;
+        images: { url: string }[];
+      };
+      buyer: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+      seller: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+    },
+    viewerUserId: string,
+  ): ChatRoomSummaryData {
+    const unreadCount =
+      row.buyerId === viewerUserId
+        ? row.unreadCountBuyer
+        : row.unreadCountSeller;
+    const counterpartyUser = this.resolveCounterpartyUser(row, viewerUserId);
+    return {
+      chatRoomId: row.id,
+      listingId: row.listingId,
+      buyerId: row.buyerId,
+      sellerId: row.sellerId,
+      latestMessageId: row.lastMessageId,
+      latestMessageContent: row.lastMessagePreview,
+      latestMessageType: row.lastMessageType as unknown as MessageType | null,
+      latestMessageCreatedAt: row.lastMessageAt,
+      unreadCount,
+      updatedAt: row.updatedAt,
+      listing: this.mapListingSnapshot(row.listing),
+      counterparty: this.mapCounterpartySnapshot(counterpartyUser),
+    };
+  }
+
+  private mapRoomDetail(
+    row: {
+      id: string;
+      listingId: string;
+      buyerId: string;
+      sellerId: string;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      listing: {
+        id: string;
+        title: string;
+        price: PrismaPkg.Prisma.Decimal;
+        images: { url: string }[];
+      };
+      buyer: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+      seller: {
+        id: string;
+        nickname: string;
+        profile: { avatar: string | null } | null;
+      };
+    },
+    viewerUserId: string,
+  ): ChatRoomData {
+    const counterpartyUser = this.resolveCounterpartyUser(row, viewerUserId);
     return {
       id: row.id,
       listingId: row.listingId,
@@ -855,6 +1050,8 @@ export class ChatRepository implements IChatRepository {
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      listing: this.mapListingSnapshot(row.listing),
+      counterparty: this.mapCounterpartySnapshot(counterpartyUser),
     };
   }
 

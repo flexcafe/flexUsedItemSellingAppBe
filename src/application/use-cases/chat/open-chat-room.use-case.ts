@@ -47,10 +47,13 @@ export class OpenChatRoomUseCase {
       throw new NotFoundException('User not found');
     }
 
-    return this.chats.getOrCreateRoom({
-      listingId: dto.listingId,
-      buyerId: userId,
-      sellerId: dto.sellerId,
-    });
+    return this.chats.getOrCreateRoom(
+      {
+        listingId: dto.listingId,
+        buyerId: userId,
+        sellerId: dto.sellerId,
+      },
+      userId,
+    );
   }
 }
