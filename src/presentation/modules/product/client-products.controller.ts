@@ -14,7 +14,17 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
+
+/** Auth/notify/review throttlers are for other routes; public catalog uses catalog-*-ip only. */
+const PUBLIC_CATALOG_SKIP_THROTTLES = {
+  'auth-ip': true,
+  'auth-id': true,
+  'admin-notify-ip': true,
+  'admin-notify-user': true,
+  'review-submit-ip': true,
+  'review-submit-user': true,
+};
 import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
@@ -220,6 +230,7 @@ export class ClientProductsController {
 
   @Public()
   @Get()
+  @SkipThrottle(PUBLIC_CATALOG_SKIP_THROTTLES)
   @Throttle({ 'catalog-search-ip': { limit: 60, ttl: 60_000 } })
   @UseGuards(ThrottlerGuard)
   @ApiOperation({
@@ -304,6 +315,7 @@ export class ClientProductsController {
 
   @Public()
   @Get(':productId')
+  @SkipThrottle(PUBLIC_CATALOG_SKIP_THROTTLES)
   @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
   @UseGuards(ThrottlerGuard)
   @ApiOperation({
