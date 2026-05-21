@@ -100,6 +100,7 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     getOrCreateTransaction: jest.fn(),
     findTransactionById: jest.fn(),
     findTransactionForChat: jest.fn(),
+    findBlockingSafePaymentForChat: jest.fn(() => Promise.resolve(null)),
     findDirectTradeIdByTransactionId: jest.fn(),
     upsertDirectTrade: jest.fn(),
     startLocationShare: jest.fn(() =>
@@ -107,6 +108,7 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     ),
     updateLocationShare: jest.fn(),
     stopLocationShare: jest.fn(),
+    stopAllLocationSharesForChatRoom: jest.fn(() => Promise.resolve(0)),
     requestSafePayment: jest.fn(),
     sendSafePaymentInstruction: jest.fn(),
     findSafePaymentStatusByChatRoom: jest.fn(),

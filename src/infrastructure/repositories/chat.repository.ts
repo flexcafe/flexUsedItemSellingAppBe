@@ -275,6 +275,25 @@ export class ChatRepository implements IChatRepository {
     return row ? this.mapTransaction(row) : null;
   }
 
+  async findBlockingSafePaymentForChat(
+    chatRoomId: string,
+  ): Promise<TransactionData | null> {
+    const row = await this.prisma.transaction.findFirst({
+      where: {
+        chatRoomId,
+        type: PrismaPkg.TransactionType.SAFE_PAYMENT,
+        status: {
+          notIn: [
+            PrismaTransactionStatus.CANCELLED,
+            PrismaTransactionStatus.REFUNDED,
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return row ? this.mapTransaction(row) : null;
+  }
+
   async findDirectTradeIdByTransactionId(
     transactionId: string,
   ): Promise<string | null> {
@@ -376,6 +395,27 @@ export class ChatRepository implements IChatRepository {
       where: { directTradeId, userId, isActive: true },
       data: { isActive: false },
     });
+  }
+
+  async stopAllLocationSharesForChatRoom(chatRoomId: string): Promise<number> {
+    const directTrade = await this.prisma.directTrade.findFirst({
+      where: {
+        transaction: {
+          chatRoomId,
+          type: PrismaPkg.TransactionType.DIRECT_TRADE,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!directTrade) {
+      return 0;
+    }
+    const result = await this.prisma.locationShare.updateMany({
+      where: { directTradeId: directTrade.id, isActive: true },
+      data: { isActive: false },
+    });
+    return result.count;
   }
 
   async requestSafePayment(

@@ -482,6 +482,11 @@ export class ClientChatController {
     description: CHAT_TRANSACTION_COMPLETE_DOC,
   })
   @ApiBody({ type: ConfirmTransactionCompleteDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'Safe payment not yet received by admin, or transaction cannot be completed',
+  })
   @ApiOkResponse({
     type: ApiResponseChatTransactionDto,
     description: 'Transaction completion updated',

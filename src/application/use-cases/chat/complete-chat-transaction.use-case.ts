@@ -15,6 +15,7 @@ import {
   CHAT_MESSAGE_PUBLISHER,
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
+import { assertTransactionCompletable } from './_helpers.js';
 
 @Injectable()
 export class CompleteChatTransactionUseCase {
@@ -36,6 +37,7 @@ export class CompleteChatTransactionUseCase {
     if (tx.buyerId !== userId && tx.sellerId !== userId) {
       throw new ForbiddenException('Not part of this transaction');
     }
+    await assertTransactionCompletable(this.chats, tx);
     const next = await this.chats.markTransactionCompletedByUser(
       transactionId,
       userId,
@@ -66,6 +68,32 @@ export class CompleteChatTransactionUseCase {
           ? 'chat.transaction.completedByBuyer'
           : 'chat.transaction.completedBySeller',
     );
+    if (next.status === TransactionStatus.COMPLETED) {
+      const stoppedCount = await this.chats.stopAllLocationSharesForChatRoom(
+        next.chatRoomId,
+      );
+      if (stoppedCount > 0) {
+        const locationMessage = await this.chats.createMessage({
+          chatRoomId: next.chatRoomId,
+          senderId: userId,
+          type: MessageType.LOCATION_SHARING_STOPPED,
+          content:
+            'Location sharing stopped for both parties because the transaction was completed.',
+          metadata: {
+            transactionId: next.id,
+            stoppedCount,
+            reason: 'transaction_completed',
+          },
+        });
+        this.publisher.publish(
+          next.chatRoomId,
+          next.buyerId,
+          next.sellerId,
+          locationMessage,
+          'chat.location.stopped',
+        );
+      }
+    }
     return next;
   }
 }

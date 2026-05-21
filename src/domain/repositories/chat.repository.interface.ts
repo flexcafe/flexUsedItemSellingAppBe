@@ -213,6 +213,10 @@ export interface IChatRepository {
     chatRoomId: string,
     type: TransactionType,
   ): Promise<TransactionData | null>;
+  /** Safe payment in this chat that is not cancelled/refunded (blocks direct-trade completion). */
+  findBlockingSafePaymentForChat(
+    chatRoomId: string,
+  ): Promise<TransactionData | null>;
   findDirectTradeIdByTransactionId(
     transactionId: string,
   ): Promise<string | null>;
@@ -222,6 +226,7 @@ export interface IChatRepository {
   ): Promise<{ alreadyActive: boolean }>;
   updateLocationShare(data: LocationShareData): Promise<void>;
   stopLocationShare(directTradeId: string, userId: string): Promise<void>;
+  stopAllLocationSharesForChatRoom(chatRoomId: string): Promise<number>;
   requestSafePayment(
     chatRoomId: string,
     listingId: string,

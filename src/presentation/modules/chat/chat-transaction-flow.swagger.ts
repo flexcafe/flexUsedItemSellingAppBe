@@ -53,8 +53,21 @@ export const CHAT_TRANSACTION_FLOW_DOC = `## End-to-end trade flows
 **Chat system messages:** \`SAFE_PAYMENT_REQUESTED\`, \`SAFE_PAYMENT_INSTRUCTION_SENT\`, \`SAFE_PAYMENT_INITIATED\`, \`SAFE_PAYMENT_VERIFIED\`, \`PAYMENT_TRANSFERRED\`.
 
 ### D. Completion + reviews (button 3)
-1. After admin marks payment received, **both** buyer and seller call \`POST /client/chats/transactions/complete\` with \`transactionId\`.
-2. When status is \`COMPLETED\`, each party may call \`POST .../transactions/:transactionId/reviews\` once:
+
+**Which \`transactionId\` to use (one authoritative completion per chat):**
+
+| Payment choice | Transaction Complete uses | When the trade is truly done |
+|----------------|---------------------------|------------------------------|
+| Safe payment started (KBZ) | **Safe payment** \`transactionId\` | Admin received, then **buyer and seller each tap Transaction Complete** on that id |
+| Cash only (no safe payment, or cancelled/refunded) | **Direct trade** \`transactionId\` | **Buyer and seller each tap Transaction Complete** on that id |
+
+Meetup and location sharing stay available until **both** parties have confirmed via Transaction Complete on the authoritative id above — not when escrow admin steps alone finish, and not when only one side has tapped complete.
+
+Direct trade (meetup/location) can run alongside safe payment, but **cannot** close the trade via direct-trade complete while a safe payment is in progress. If safe payment was started, finish escrow, then both must complete **that** safe-payment transaction.
+
+1. **Safe payment path:** after admin marks payment received, both call complete with the **safe payment** \`transactionId\`.
+2. **Cash path:** both call complete with the **direct trade** \`transactionId\` (only when no active safe payment exists).
+3. When status is \`COMPLETED\`, each party may call \`POST .../transactions/:transactionId/reviews\` once (use the same id you completed):
    - \`stars\` (1–5, required)
    - \`comment\` (optional) — **trade satisfaction** long text; no separate field.
 
@@ -144,6 +157,12 @@ export const CHAT_TRANSACTION_COMPLETE_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 **This endpoint — Flow D step 1.**
 
 Buyer and seller each call once with \`transactionId\`. Status progresses \`SAFE_PAYMENT_RECEIVED\` → \`BUYER_COMPLETED\` / \`SELLER_COMPLETED\` → \`COMPLETED\` when both have confirmed.
+
+**Safe payment gate:** for \`SAFE_PAYMENT\` transactions, completion is rejected until admin has marked payment received (\`SAFE_PAYMENT_RECEIVED\` or later partial-completion statuses).
+
+**Direct trade gate:** \`DIRECT_TRADE\` completion is rejected while a safe payment exists for the chat that is not cancelled/refunded (buyer must finish safe payment and complete that transaction instead).
+
+**Location sharing:** when the authoritative transaction reaches \`COMPLETED\` (safe payment or direct trade, per table above), all active location shares for the chat's direct trade are stopped for both parties automatically.
 
 After \`COMPLETED\`, admin may release funds (\`transferred\` endpoint).`;
 

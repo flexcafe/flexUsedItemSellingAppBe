@@ -555,6 +555,101 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
 });
 
 describe(CompleteChatTransactionUseCase.name, () => {
+  it('rejects when safe payment is not yet received by admin', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_PENDING,
+      }),
+    );
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+  });
+
+  it('rejects direct trade completion while safe payment is in progress', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findBlockingSafePaymentForChat.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_PENDING,
+      }),
+    );
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+  });
+
+  it('rejects direct trade completion when safe payment already completed', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findBlockingSafePaymentForChat.mockResolvedValue(
+      buildTransaction({
+        id: 'safe-pay-tx-id',
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.COMPLETED,
+      }),
+    );
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('allows direct trade completion without safe payment received', async () => {
+    const chats = buildChatRepoMock();
+    const publisher = buildPublisherMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findBlockingSafePaymentForChat.mockResolvedValue(null);
+    const next = buildTransaction({
+      type: TransactionType.DIRECT_TRADE,
+      status: TransactionStatus.BUYER_COMPLETED,
+      buyerCompleted: true,
+      sellerCompleted: false,
+    });
+    chats.markTransactionCompletedByUser.mockResolvedValue(next);
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+
+    await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(chats.markTransactionCompletedByUser).toHaveBeenCalled();
+    expect(chats.stopAllLocationSharesForChatRoom).not.toHaveBeenCalled();
+  });
+
   it('rejects when transaction does not exist', async () => {
     const chats = buildChatRepoMock();
     chats.findTransactionById.mockResolvedValue(null);
@@ -570,7 +665,9 @@ describe(CompleteChatTransactionUseCase.name, () => {
 
   it('rejects when user is not part of transaction', async () => {
     const chats = buildChatRepoMock();
-    chats.findTransactionById.mockResolvedValue(buildTransaction());
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
+    );
 
     const useCase = new CompleteChatTransactionUseCase(
       chats,
@@ -585,7 +682,9 @@ describe(CompleteChatTransactionUseCase.name, () => {
   it('publishes partial completion event when only one side completes', async () => {
     const chats = buildChatRepoMock();
     const publisher = buildPublisherMock();
-    chats.findTransactionById.mockResolvedValue(buildTransaction());
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
+    );
     const next = buildTransaction({
       status: TransactionStatus.BUYER_COMPLETED,
       buyerCompleted: true,
@@ -615,7 +714,9 @@ describe(CompleteChatTransactionUseCase.name, () => {
   it('publishes final completion event when both sides completed', async () => {
     const chats = buildChatRepoMock();
     const publisher = buildPublisherMock();
-    chats.findTransactionById.mockResolvedValue(buildTransaction());
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
+    );
     const next = buildTransaction({
       status: TransactionStatus.COMPLETED,
       buyerCompleted: true,
@@ -628,16 +729,56 @@ describe(CompleteChatTransactionUseCase.name, () => {
     });
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(msg);
+    chats.stopAllLocationSharesForChatRoom.mockResolvedValue(0);
     const useCase = new CompleteChatTransactionUseCase(chats, publisher);
 
     await useCase.execute(SELLER_ID, TX_ID);
 
+    expect(chats.stopAllLocationSharesForChatRoom).toHaveBeenCalledWith(ROOM_ID);
     expect(publisher.publish).toHaveBeenCalledWith(
       ROOM_ID,
       BUYER_ID,
       SELLER_ID,
       msg,
       'chat.transaction.completed',
+    );
+  });
+
+  it('stops location sharing for both parties when transaction becomes completed', async () => {
+    const chats = buildChatRepoMock();
+    const publisher = buildPublisherMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
+    );
+    const next = buildTransaction({
+      status: TransactionStatus.COMPLETED,
+      buyerCompleted: true,
+      sellerCompleted: true,
+    });
+    const completionMsg = buildChatMessage({
+      type: MessageType.TRANSACTION_COMPLETED,
+    });
+    const locationMsg = buildChatMessage({
+      type: MessageType.LOCATION_SHARING_STOPPED,
+      content:
+        'Location sharing stopped for both parties because the transaction was completed.',
+    });
+    chats.markTransactionCompletedByUser.mockResolvedValue(next);
+    chats.createMessage
+      .mockResolvedValueOnce(completionMsg)
+      .mockResolvedValueOnce(locationMsg);
+    chats.stopAllLocationSharesForChatRoom.mockResolvedValue(2);
+    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+
+    await useCase.execute(SELLER_ID, TX_ID);
+
+    expect(chats.stopAllLocationSharesForChatRoom).toHaveBeenCalledWith(ROOM_ID);
+    expect(publisher.publish).toHaveBeenCalledWith(
+      ROOM_ID,
+      BUYER_ID,
+      SELLER_ID,
+      locationMsg,
+      'chat.location.stopped',
     );
   });
 });
