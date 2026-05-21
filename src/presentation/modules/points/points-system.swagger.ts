@@ -42,10 +42,10 @@ export const CLIENT_PUBLIC_PROFILE_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 
 Public profile visibility policy:
 - This endpoint is for viewing another user's public profile card.
-- It intentionally excludes private account data (phone, email, KBZ verification tags, withdrawal history, admin notes, transaction references, referral data, and point ledger details).
-- It returns trust-facing fields only: nickname, avatar, region, rank, average stars, total reviews, completed sales, completed purchases, and memberSince.
-- Use this endpoint for other-user profile screens, seller/buyer mini cards, or trust summary panels.
-- **Public (no JWT).** Product detail also embeds a subset of these fields under \`data.seller\`.`;
+- It intentionally excludes private account data (phone, email, KBZ verification tags, withdrawal history, admin notes, transaction references, and point ledger details).
+- It returns trust-facing fields: nickname, avatar, region, **referralCode** (invite code — use as \`referralId\` at register), rank, average stars, total reviews, completed sales, completed purchases, and memberSince.
+- Use for other-user profile screens, seller/buyer mini cards, product detail seller card, and the upcoming fraud/report flow (load this profile for the reported user).
+- **Public (no JWT).** Product detail also embeds seller fields under \`data.seller\` including \`referralCode\`.`;
 
 export const CLIENT_SELLER_REVIEWS_DOC = `${POINTS_SYSTEM_OVERVIEW_DOC}
 

@@ -194,6 +194,7 @@ export class PointsRepository implements IPointsRepository {
       select: {
         id: true,
         nickname: true,
+        referralCode: true,
         currentRank: true,
         createdAt: true,
         profile: {
@@ -234,6 +235,7 @@ export class PointsRepository implements IPointsRepository {
       nickname: user.nickname,
       avatar: user.profile?.avatar ?? null,
       region: user.profile?.inputRegion ?? null,
+      referralCode: user.referralCode,
       currentRank: user.currentRank as RankTier,
       averageStars: Number(reviewAggregate._avg.stars ?? 0),
       totalReviews: reviewAggregate._count.stars ?? 0,

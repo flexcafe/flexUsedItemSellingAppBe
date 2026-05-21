@@ -15,6 +15,13 @@ export class PublicUserProfileDto {
   @ApiProperty({ nullable: true })
   region: string | null;
 
+  @ApiProperty({
+    example: 'A1B2C3D4',
+    description:
+      'Invite code for registration (send as referralId). Shown on public profile and report screens.',
+  })
+  referralCode: string;
+
   @ApiProperty({ enum: RankTier })
   currentRank: RankTier;
 
@@ -38,6 +45,7 @@ export class PublicUserProfileDto {
     this.nickname = data.nickname;
     this.avatar = data.avatar;
     this.region = data.region;
+    this.referralCode = data.referralCode;
     this.currentRank = data.currentRank;
     this.averageStars = data.averageStars;
     this.totalReviews = data.totalReviews;

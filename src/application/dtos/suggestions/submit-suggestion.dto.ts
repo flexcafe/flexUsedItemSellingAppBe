@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class SubmitSuggestionDto {
-  @ApiProperty({ example: 'Ko Ko', description: 'Display nickname for this suggestion' })
+  @ApiProperty({
+    example: 'Ko Ko',
+    description: 'Display nickname for this suggestion',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)

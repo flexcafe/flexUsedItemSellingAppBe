@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import {
   SUGGESTION_REPOSITORY,
   type ISuggestionRepository,

@@ -22,6 +22,12 @@ export class ProductSellerSummaryDto {
   @ApiProperty({ example: 12 })
   totalReviews: number;
 
+  @ApiProperty({
+    example: 'A1B2C3D4',
+    description: 'Seller invite code (registration referralId)',
+  })
+  referralCode: string;
+
   constructor(data: PublicUserProfileData) {
     this.userId = data.userId;
     this.nickname = data.nickname;
@@ -29,5 +35,6 @@ export class ProductSellerSummaryDto {
     this.currentRank = data.currentRank;
     this.averageStars = data.averageStars;
     this.totalReviews = data.totalReviews;
+    this.referralCode = data.referralCode;
   }
 }

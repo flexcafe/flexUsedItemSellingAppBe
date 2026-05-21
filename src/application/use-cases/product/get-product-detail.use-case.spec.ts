@@ -60,6 +60,7 @@ describe(GetProductDetailUseCase.name, () => {
         nickname: 'Seller A',
         avatar: null,
         region: 'Yangon',
+        referralCode: 'SELLER01',
         currentRank: RankTier.BRONZE,
         averageStars: 4.5,
         totalReviews: 10,

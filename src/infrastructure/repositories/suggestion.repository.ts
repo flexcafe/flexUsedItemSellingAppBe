@@ -29,11 +29,46 @@ const SUGGESTION_USER_SELECT = {
 } as const;
 
 const DEFAULT_RANK_CONFIGS: RankConfigData[] = [
-  { tier: RankTier.NEWBIE, minPoints: 0, maxPoints: 99, label: 'Newbie', badgeUrl: null, sortOrder: 1 },
-  { tier: RankTier.BRONZE, minPoints: 100, maxPoints: 299, label: 'Bronze', badgeUrl: null, sortOrder: 2 },
-  { tier: RankTier.SILVER, minPoints: 300, maxPoints: 699, label: 'Silver', badgeUrl: null, sortOrder: 3 },
-  { tier: RankTier.GOLD, minPoints: 700, maxPoints: 1499, label: 'Gold', badgeUrl: null, sortOrder: 4 },
-  { tier: RankTier.VIP, minPoints: 1500, maxPoints: null, label: 'VIP', badgeUrl: null, sortOrder: 5 },
+  {
+    tier: RankTier.NEWBIE,
+    minPoints: 0,
+    maxPoints: 99,
+    label: 'Newbie',
+    badgeUrl: null,
+    sortOrder: 1,
+  },
+  {
+    tier: RankTier.BRONZE,
+    minPoints: 100,
+    maxPoints: 299,
+    label: 'Bronze',
+    badgeUrl: null,
+    sortOrder: 2,
+  },
+  {
+    tier: RankTier.SILVER,
+    minPoints: 300,
+    maxPoints: 699,
+    label: 'Silver',
+    badgeUrl: null,
+    sortOrder: 3,
+  },
+  {
+    tier: RankTier.GOLD,
+    minPoints: 700,
+    maxPoints: 1499,
+    label: 'Gold',
+    badgeUrl: null,
+    sortOrder: 4,
+  },
+  {
+    tier: RankTier.VIP,
+    minPoints: 1500,
+    maxPoints: null,
+    label: 'VIP',
+    badgeUrl: null,
+    sortOrder: 5,
+  },
 ];
 
 @Injectable()
@@ -157,7 +192,9 @@ export class SuggestionRepository implements ISuggestionRepository {
         throw new NotFoundException('Suggestion not found');
       }
       if (suggestion.status !== PrismaSuggestionStatus.PENDING) {
-        throw new ConflictException('Only pending suggestions can be dismissed');
+        throw new ConflictException(
+          'Only pending suggestions can be dismissed',
+        );
       }
 
       return tx.suggestion.update({

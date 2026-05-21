@@ -361,7 +361,8 @@ export class ChatRoomCounterpartySnapshotDto {
   userId: string;
 
   @ApiProperty({
-    description: 'Nickname of the other party (seller for buyer, buyer for seller)',
+    description:
+      'Nickname of the other party (seller for buyer, buyer for seller)',
   })
   displayName: string;
 

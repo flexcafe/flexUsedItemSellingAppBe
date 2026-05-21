@@ -46,7 +46,8 @@ export class AdminSuggestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List user suggestions for admin review',
-    description: 'Filter by status (default: all). Pending items await reward or dismiss.',
+    description:
+      'Filter by status (default: all). Pending items await reward or dismiss.',
   })
   @ApiArraySuccessResponse(SuggestionDto, {
     status: HttpStatus.OK,

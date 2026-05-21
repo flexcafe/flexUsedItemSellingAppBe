@@ -101,7 +101,8 @@ export class RegisterDto {
   @ApiProperty({
     example: 'REF12345',
     required: false,
-    description: 'Optional referral code from existing user',
+    description:
+      'Optional invite code from another user (their referralCode from public profile or auth/me — not userId)',
   })
   @IsString()
   @IsOptional()

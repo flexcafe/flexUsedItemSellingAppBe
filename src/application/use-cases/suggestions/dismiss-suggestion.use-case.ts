@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import {
   SUGGESTION_REPOSITORY,
   type ISuggestionRepository,
@@ -36,9 +32,7 @@ export class DismissSuggestionUseCase {
       adminNote: dto.adminNote,
     });
 
-    const noteSuffix = dto.adminNote
-      ? `\n\nAdmin note: ${dto.adminNote}`
-      : '';
+    const noteSuffix = dto.adminNote ? `\n\nAdmin note: ${dto.adminNote}` : '';
     await this.users.createNotification({
       userId: row.userId,
       eventKey: 'SUGGESTION_DISMISSED_CLIENT',

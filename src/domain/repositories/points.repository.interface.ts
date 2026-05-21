@@ -40,6 +40,8 @@ export interface PublicUserProfileData {
   nickname: string;
   avatar: string | null;
   region: string | null;
+  /** Shareable code for registration referralId field. */
+  referralCode: string;
   currentRank: RankTier;
   averageStars: number;
   totalReviews: number;

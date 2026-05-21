@@ -18,7 +18,10 @@ import {
 } from '../../../common/decorators/api-response.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
-import { SubmitSuggestionDto, SuggestionDto } from '../../../application/dtos/suggestions/index.js';
+import {
+  SubmitSuggestionDto,
+  SuggestionDto,
+} from '../../../application/dtos/suggestions/index.js';
 import { SubmitSuggestionUseCase } from '../../../application/use-cases/suggestions/submit-suggestion.use-case.js';
 import { ListMySuggestionsUseCase } from '../../../application/use-cases/suggestions/list-my-suggestions.use-case.js';
 
