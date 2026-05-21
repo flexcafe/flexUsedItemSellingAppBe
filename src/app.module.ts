@@ -25,6 +25,7 @@ import { SliderAdsModule } from './presentation/modules/slider-ads/slider-ads.mo
 import { CategoryModule } from './presentation/modules/category/category.module.js';
 import { ProductModule } from './presentation/modules/product/product.module.js';
 import { ChatModule } from './presentation/modules/chat/chat.module.js';
+import { SuggestionsModule } from './presentation/modules/suggestions/suggestions.module.js';
 import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
 
 @Module({
@@ -104,11 +105,11 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
     CategoryModule,
     ProductModule,
     ChatModule,
+    SuggestionsModule,
     // ─── Future feature modules ───
-    // CategoryModule,
+
     // OfferModule,
-    // ChatModule,
-    // NotificationModule,
+
     // ReviewModule,
     // FavoriteModule,
   ],
