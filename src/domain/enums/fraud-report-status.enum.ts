@@ -1,0 +1,6 @@
+export enum FraudReportStatus {
+  PENDING = 'PENDING',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  CONFIRMED_FRAUD = 'CONFIRMED_FRAUD',
+  DISMISSED = 'DISMISSED',
+}

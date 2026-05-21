@@ -933,11 +933,12 @@ model FraudReport {
   reportedUserId String @map("reported_user_id")
   reportedUser   User   @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
 
-  fraudUserName String    @map("fraud_user_name")
-  tradeDate     DateTime  @map("trade_date")
-  tradeTime     String?   @map("trade_time")
-  fraudType     FraudType @map("fraud_type")
-  details       String    @db.Text
+  fraudUserName          String    @map("fraud_user_name")
+  reportedReferralCode String    @map("reported_referral_code")
+  tradeDate              DateTime  @map("trade_date")
+  tradeTime              String?   @map("trade_time")
+  fraudType              FraudType @map("fraud_type")
+  details                String    @db.Text
 
   status       FraudReportStatus @default(PENDING)
   adminNote    String?           @map("admin_note")

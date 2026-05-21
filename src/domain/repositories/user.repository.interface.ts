@@ -154,6 +154,11 @@ export interface IUserRepository {
   findByReferralCode(referralCode: string): Promise<UserEntity | null>;
   findAll(): Promise<UserEntity[]>;
   update(id: string, data: UpdateUserData): Promise<UserEntity>;
+  setUserBanned(
+    userId: string,
+    banned: boolean,
+    banReason?: string | null,
+  ): Promise<UserEntity>;
   delete(id: string): Promise<boolean>;
   getProfileAvatarUrl(userId: string): Promise<string | null>;
   setProfileAvatar(userId: string, avatarUrl: string | null): Promise<void>;

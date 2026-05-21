@@ -119,6 +119,28 @@ export class UserRepository implements IUserRepository {
     return UserMapper.toDomain(user);
   }
 
+  async setUserBanned(
+    userId: string,
+    banned: boolean,
+    banReason?: string | null,
+  ): Promise<UserEntity> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: banned
+        ? {
+            isBanned: true,
+            banReason: banReason ?? null,
+            bannedAt: new Date(),
+          }
+        : {
+            isBanned: false,
+            banReason: null,
+            bannedAt: null,
+          },
+    });
+    return UserMapper.toDomain(user);
+  }
+
   async delete(id: string): Promise<boolean> {
     await this.prisma.user.update({
       where: { id },
