@@ -27,6 +27,7 @@ import { ProductModule } from './presentation/modules/product/product.module.js'
 import { ChatModule } from './presentation/modules/chat/chat.module.js';
 import { SuggestionsModule } from './presentation/modules/suggestions/suggestions.module.js';
 import { FraudReportsModule } from './presentation/modules/fraud-reports/fraud-reports.module.js';
+import { AdminRolesModule } from './presentation/modules/admin-roles/admin-roles.module.js';
 import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
 
 @Module({
@@ -108,6 +109,7 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
     ChatModule,
     SuggestionsModule,
     FraudReportsModule,
+    AdminRolesModule,
     // ─── Future feature modules ───
 
     // OfferModule,
