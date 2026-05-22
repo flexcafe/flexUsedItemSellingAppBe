@@ -1,11 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type RedisClientType } from 'redis';
 import type { IChatIdempotencyStore } from '../../domain/services/chat-idempotency.interface.js';
 
 @Injectable()
 export class ChatIdempotencyService
-  implements IChatIdempotencyStore, OnModuleDestroy
+  implements IChatIdempotencyStore, OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(ChatIdempotencyService.name);
   private readonly memory = new Map<string, number>();
@@ -15,18 +20,49 @@ export class ChatIdempotencyService
   >();
   private readonly redisClient: RedisClientType | null = null;
 
+  private readonly redisUrl: string | null;
+
   constructor(configService: ConfigService) {
-    const redisUrl = configService.get<string>('REDIS_URL');
-    if (!redisUrl) {
+    this.redisUrl = configService.get<string>('REDIS_URL') ?? null;
+    if (!this.redisUrl) {
       return;
     }
-    this.redisClient = createClient({ url: redisUrl });
+    this.redisClient = createClient({ url: this.redisUrl });
     this.redisClient.on('error', (err) => {
-      this.logger.warn(`Redis idempotency disabled: ${String(err)}`);
+      this.logger.warn(`Redis idempotency client error: ${String(err)}`);
     });
-    void this.redisClient.connect().catch((err) => {
-      this.logger.warn(`Redis idempotency connect failed: ${String(err)}`);
-    });
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (!this.redisClient || !this.redisUrl) {
+      this.logger.warn(
+        'REDIS_URL not configured, chat idempotency/rate limits use in-memory store',
+      );
+      return;
+    }
+    try {
+      await this.redisClient.connect();
+      await this.redisClient.ping();
+      this.logger.log(
+        `Chat idempotency Redis connected (${this.maskRedisUrl(this.redisUrl)})`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Chat idempotency Redis connect failed, using in-memory store: ${String(err)}`,
+      );
+    }
+  }
+
+  private maskRedisUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      if (parsed.password) {
+        parsed.password = '***';
+      }
+      return parsed.toString();
+    } catch {
+      return '(invalid REDIS_URL)';
+    }
   }
 
   async reserve(key: string, ttlSeconds: number): Promise<boolean> {

@@ -25,10 +25,31 @@ export class RedisIoAdapter extends IoAdapter {
       );
       return;
     }
-    this.pubClient = createClient({ url: this.redisUrl });
-    this.subClient = this.pubClient.duplicate();
-    await Promise.all([this.pubClient.connect(), this.subClient.connect()]);
-    this.logger.log('Socket.IO Redis adapter connected');
+    try {
+      this.pubClient = createClient({ url: this.redisUrl });
+      this.subClient = this.pubClient.duplicate();
+      await Promise.all([this.pubClient.connect(), this.subClient.connect()]);
+      this.logger.log(
+        `Socket.IO Redis adapter connected (${this.maskRedisUrl(this.redisUrl)})`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Socket.IO Redis adapter failed (${this.maskRedisUrl(this.redisUrl)}): ${String(err)}`,
+      );
+      throw err;
+    }
+  }
+
+  private maskRedisUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      if (parsed.password) {
+        parsed.password = '***';
+      }
+      return parsed.toString();
+    } catch {
+      return '(invalid REDIS_URL)';
+    }
   }
 
   override createIOServer(port: number, options?: ServerOptions): Server {

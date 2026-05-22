@@ -9,9 +9,14 @@ import { RedisIoAdapter } from './infrastructure/realtime/redis-io.adapter.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
-  const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
-  app.useWebSocketAdapter(redisIoAdapter);
+  try {
+    const redisIoAdapter = new RedisIoAdapter(app);
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
+  } catch (err) {
+    logger.error(`Redis Socket.IO bootstrap failed: ${String(err)}`);
+    throw err;
+  }
 
   if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', 1);
@@ -64,4 +69,8 @@ async function bootstrap() {
   logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
-void bootstrap();
+bootstrap().catch((err) => {
+  const logger = new Logger('Bootstrap');
+  logger.error(`Application failed to start: ${String(err)}`);
+  process.exit(1);
+});
