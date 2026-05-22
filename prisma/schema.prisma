@@ -40,6 +40,11 @@ enum VerificationStatus {
   FAILED
 }
 
+enum OtpPurpose {
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+}
+
 // ── Listing ──────────────────────────────────────────────────────────────────
 
 enum ListingStatus {
@@ -384,6 +389,7 @@ model OtpVerification {
   id          String             @id @default(uuid())
   phone       String
   code        String
+  purpose     OtpPurpose         @default(PHONE_VERIFICATION)
   status      VerificationStatus @default(PENDING)
   expiresAt   DateTime           @map("expires_at")
   attempts    Int                @default(0)
@@ -392,6 +398,7 @@ model OtpVerification {
   createdAt   DateTime           @default(now()) @map("created_at")
 
   @@index([phone, status])
+  @@index([phone, status, purpose])
   @@index([expiresAt])
   @@map("otp_verifications")
 }

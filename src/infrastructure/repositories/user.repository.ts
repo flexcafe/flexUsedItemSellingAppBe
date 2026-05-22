@@ -20,10 +20,15 @@ import type {
 } from '../../domain/repositories/user.repository.interface.js';
 import { Gender } from '../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../domain/enums/marital-status.enum.js';
+import { OtpPurpose } from '../../domain/enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../../domain/enums/verification-status.enum.js';
 import { PusherService } from '../realtime/pusher.service.js';
 
-const { NotificationType, VerificationStatus: PrismaVerificationStatus } =
+const {
+  NotificationType,
+  OtpPurpose: PrismaOtpPurpose,
+  VerificationStatus: PrismaVerificationStatus,
+} =
   PrismaPkg;
 
 type UserWithAuthIncludes = Prisma.UserGetPayload<{
@@ -171,11 +176,18 @@ export class UserRepository implements IUserRepository {
     phone: string,
     code: string,
     expiresAt: Date,
+    purpose: OtpPurpose = OtpPurpose.PHONE_VERIFICATION,
   ): Promise<void> {
+    const prismaPurpose =
+      purpose === OtpPurpose.PASSWORD_RESET
+        ? PrismaOtpPurpose.PASSWORD_RESET
+        : PrismaOtpPurpose.PHONE_VERIFICATION;
+
     await this.prisma.$transaction([
       this.prisma.otpVerification.updateMany({
         where: {
           phone,
+          purpose: prismaPurpose,
           status: PrismaVerificationStatus.PENDING,
         },
         data: {
@@ -186,6 +198,7 @@ export class UserRepository implements IUserRepository {
         data: {
           phone,
           code,
+          purpose: prismaPurpose,
           expiresAt,
           status: PrismaVerificationStatus.PENDING,
         },
@@ -195,10 +208,17 @@ export class UserRepository implements IUserRepository {
 
   async findLatestActivePhoneOtp(
     phone: string,
+    purpose: OtpPurpose = OtpPurpose.PHONE_VERIFICATION,
   ): Promise<OtpVerificationData | null> {
+    const prismaPurpose =
+      purpose === OtpPurpose.PASSWORD_RESET
+        ? PrismaOtpPurpose.PASSWORD_RESET
+        : PrismaOtpPurpose.PHONE_VERIFICATION;
+
     const otp = await this.prisma.otpVerification.findFirst({
       where: {
         phone,
+        purpose: prismaPurpose,
         status: PrismaVerificationStatus.PENDING,
       },
       orderBy: {
@@ -214,6 +234,7 @@ export class UserRepository implements IUserRepository {
       id: otp.id,
       phone: otp.phone,
       code: otp.code,
+      purpose: otp.purpose as OtpPurpose,
       status: otp.status as VerificationStatus,
       expiresAt: otp.expiresAt,
       attempts: otp.attempts,

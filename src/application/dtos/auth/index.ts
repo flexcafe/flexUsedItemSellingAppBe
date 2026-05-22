@@ -11,3 +11,5 @@ export * from './pending-kbzpay-verification.dto.js';
 export * from './send-kbzpay-instruction.dto.js';
 export * from './admin-verify-kbzpay.dto.js';
 export * from './verification-action-result.dto.js';
+export * from './forgot-password.dto.js';
+export * from './reset-password.dto.js';

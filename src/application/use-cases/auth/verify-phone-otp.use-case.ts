@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { OtpPurpose } from '../../../domain/enums/otp-purpose.enum.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import {
@@ -13,6 +9,7 @@ import {
 import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import { VerifyPhoneOtpDto } from '../../dtos/auth/verify-phone-otp.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
+import { validatePendingPhoneOtp } from './_phone-otp-validation.helper.js';
 
 @Injectable()
 export class VerifyPhoneOtpUseCase {
@@ -24,39 +21,12 @@ export class VerifyPhoneOtpUseCase {
   ) {}
 
   async execute(dto: VerifyPhoneOtpDto): Promise<VerificationActionResultDto> {
-    const otp = await this.userRepository.findLatestActivePhoneOtp(dto.phone);
-
-    if (!otp) {
-      throw new BadRequestException(
-        'No pending OTP found for this phone number',
-      );
-    }
-
-    if (otp.expiresAt.getTime() < Date.now()) {
-      await this.userRepository.markPhoneOtpFailed(otp.id);
-      throw new UnauthorizedException('OTP has expired');
-    }
-
-    if (otp.attempts >= otp.maxAttempts) {
-      await this.userRepository.markPhoneOtpFailed(otp.id);
-      throw new UnauthorizedException(
-        'OTP verification failed due to too many attempts',
-      );
-    }
-
-    if (otp.code !== dto.code) {
-      await this.userRepository.incrementPhoneOtpAttempt(otp.id);
-
-      const nextAttemptCount = otp.attempts + 1;
-      if (nextAttemptCount >= otp.maxAttempts) {
-        await this.userRepository.markPhoneOtpFailed(otp.id);
-        throw new UnauthorizedException(
-          'OTP verification failed due to too many attempts',
-        );
-      }
-
-      throw new UnauthorizedException('Invalid OTP code');
-    }
+    const otp = await validatePendingPhoneOtp(
+      this.userRepository,
+      dto.phone,
+      dto.code,
+      OtpPurpose.PHONE_VERIFICATION,
+    );
 
     await this.userRepository.markPhoneOtpVerified(otp.id);
     await this.userRepository.markUserPhoneVerified(dto.phone);

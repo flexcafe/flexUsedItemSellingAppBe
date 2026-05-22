@@ -9,3 +9,5 @@ export * from './submit-kbzpay-transaction.use-case.js';
 export * from './send-kbzpay-instruction.use-case.js';
 export * from './admin-verify-kbzpay.use-case.js';
 export * from './get-current-user-profile.use-case.js';
+export * from './request-forgot-password.use-case.js';
+export * from './reset-password.use-case.js';

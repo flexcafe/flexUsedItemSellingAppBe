@@ -20,6 +20,8 @@ import { ListKbzPayMoneyCheckUseCase } from '../../../application/use-cases/auth
 import { ListKbzPayVerifiedUsersUseCase } from '../../../application/use-cases/auth/list-kbzpay-verified-users.use-case.js';
 import { ListKbzPayRegisteredAccountsUseCase } from '../../../application/use-cases/auth/list-kbzpay-registered-accounts.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
+import { RequestForgotPasswordUseCase } from '../../../application/use-cases/auth/request-forgot-password.use-case.js';
+import { ResetPasswordUseCase } from '../../../application/use-cases/auth/reset-password.use-case.js';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { PointsRepository } from '../../../infrastructure/repositories/points.repository.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
@@ -58,6 +60,8 @@ import { SMSPohRestSmsSender } from '../../../infrastructure/sms/smspoh-rest-sms
     ListKbzPayVerifiedUsersUseCase,
     ListKbzPayRegisteredAccountsUseCase,
     GetCurrentUserProfileUseCase,
+    RequestForgotPasswordUseCase,
+    ResetPasswordUseCase,
     JwtStrategy,
     {
       provide: EMAIL_SENDER,

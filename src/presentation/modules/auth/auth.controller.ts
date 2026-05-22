@@ -18,6 +18,8 @@ import { VerifyEmailVerificationUseCase } from '../../../application/use-cases/a
 import { RequestKbzPayVerificationUseCase } from '../../../application/use-cases/auth/request-kbzpay-verification.use-case.js';
 import { SubmitKbzPayTransactionUseCase } from '../../../application/use-cases/auth/submit-kbzpay-transaction.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
+import { RequestForgotPasswordUseCase } from '../../../application/use-cases/auth/request-forgot-password.use-case.js';
+import { ResetPasswordUseCase } from '../../../application/use-cases/auth/reset-password.use-case.js';
 import { RegisterDto } from '../../../application/dtos/auth/register.dto.js';
 import { ClientLoginDto } from '../../../application/dtos/auth/login.dto.js';
 import { SendPhoneOtpDto } from '../../../application/dtos/auth/send-phone-otp.dto.js';
@@ -26,6 +28,8 @@ import { SendEmailVerificationDto } from '../../../application/dtos/auth/send-em
 import { VerifyEmailVerificationDto } from '../../../application/dtos/auth/verify-email-verification.dto.js';
 import { RequestKbzPayVerificationDto } from '../../../application/dtos/auth/request-kbzpay-verification.dto.js';
 import { SubmitKbzPayTransactionDto } from '../../../application/dtos/auth/submit-kbzpay-transaction.dto.js';
+import { ForgotPasswordDto } from '../../../application/dtos/auth/forgot-password.dto.js';
+import { ResetPasswordDto } from '../../../application/dtos/auth/reset-password.dto.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import {
   AuthResponseDto,
@@ -60,6 +64,8 @@ export class AuthController {
     private readonly requestKbzPayVerificationUseCase: RequestKbzPayVerificationUseCase,
     private readonly submitKbzPayTransactionUseCase: SubmitKbzPayTransactionUseCase,
     private readonly getCurrentUserProfileUseCase: GetCurrentUserProfileUseCase,
+    private readonly requestForgotPasswordUseCase: RequestForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
   ) {}
 
   @Public()
@@ -137,6 +143,86 @@ export class AuthController {
   ): Promise<ApiResponseDto<AuthResponseDto>> {
     const result = await this.loginUseCase.loginClient(dto);
     return ApiResponseDto.success(result, 'Login successful');
+  }
+
+  @Public()
+  @Throttle({
+    'auth-ip': { limit: 10, ttl: 60_000 },
+    'auth-id': { limit: 4, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request password reset OTP (client phone)',
+    description:
+      'Sends a 6-digit SMS OTP for password reset. Separate from phone verification OTP. Admin accounts cannot use this flow.',
+  })
+  @ApiSuccessResponse(VerificationActionResultDto, {
+    status: HttpStatus.OK,
+    description: 'Password reset OTP sent',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Phone does not belong to a registered client',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Admin account (use admin dashboard)',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Account deactivated or banned',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or phone',
+  })
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+  ): Promise<ApiResponseDto<VerificationActionResultDto>> {
+    const result = await this.requestForgotPasswordUseCase.execute(dto);
+    return ApiResponseDto.success(result, 'Password reset OTP sent');
+  }
+
+  @Public()
+  @Throttle({
+    'auth-ip': { limit: 10, ttl: 60_000 },
+    'auth-id': { limit: 4, ttl: 60_000 },
+  })
+  @UseGuards(ThrottlerGuard)
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset password with SMS OTP',
+    description:
+      'Verifies the password-reset OTP from forgot-password and sets a new password. Does not change phone verification status.',
+  })
+  @ApiSuccessResponse(VerificationActionResultDto, {
+    status: HttpStatus.OK,
+    description: 'Password reset successful',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Password mismatch or no pending reset OTP',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Phone does not belong to a registered client',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or expired OTP, or inactive account',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded for this IP or phone',
+  })
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<ApiResponseDto<VerificationActionResultDto>> {
+    const result = await this.resetPasswordUseCase.execute(dto);
+    return ApiResponseDto.success(result, 'Password reset successful');
   }
 
   @Public()

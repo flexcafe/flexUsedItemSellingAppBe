@@ -16,6 +16,8 @@ import { RegisterUseCase } from './register.use-case.js';
 import { LoginUseCase } from './login.use-case.js';
 import { SendPhoneOtpUseCase } from './send-phone-otp.use-case.js';
 import { VerifyPhoneOtpUseCase } from './verify-phone-otp.use-case.js';
+import { RequestForgotPasswordUseCase } from './request-forgot-password.use-case.js';
+import { ResetPasswordUseCase } from './reset-password.use-case.js';
 import { SendEmailVerificationUseCase } from './send-email-verification.use-case.js';
 import { VerifyEmailVerificationUseCase } from './verify-email-verification.use-case.js';
 import { RequestKbzPayVerificationUseCase } from './request-kbzpay-verification.use-case.js';
@@ -40,6 +42,7 @@ import { RegistrationType } from '../../../domain/enums/registration-type.enum.j
 import { Gender } from '../../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
+import { OtpPurpose } from '../../../domain/enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { hash } from 'bcrypt';
 import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
@@ -676,6 +679,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         id: 'otp1',
         phone: '+959123456789',
         code: '123456',
+        purpose: OtpPurpose.PHONE_VERIFICATION,
         status: VerificationStatus.PENDING,
         expiresAt: new Date(Date.now() + 60_000),
         attempts: 0,
@@ -694,6 +698,72 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(
         pointsRepo.grantAccountLifetimeMilestoneBonus,
       ).toHaveBeenCalledWith('user-1', PointSourceType.PHONE_VERIFIED_BONUS);
+    });
+
+    it('RequestForgotPasswordUseCase sends PASSWORD_RESET OTP', async () => {
+      const repo = buildRepoMock();
+      const smsSender = buildSmsSenderMock();
+      repo.findByPhone.mockResolvedValue(buildUser());
+      const useCase = new RequestForgotPasswordUseCase(repo, smsSender);
+      const res = await useCase.execute({ phone: '+959123456789' });
+      expect(res.action).toBe('PASSWORD_RESET_OTP_SENT');
+      expect(repo.createPhoneOtp).toHaveBeenCalledWith(
+        '+959123456789',
+        expect.stringMatching(/^\d{6}$/),
+        expect.any(Date),
+        OtpPurpose.PASSWORD_RESET,
+      );
+      expect(smsSender.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringMatching(/password reset code is \d{6}/),
+          clientReference: 'password-reset:+959123456789',
+        }),
+      );
+    });
+
+    it('ResetPasswordUseCase updates password and does not verify phone', async () => {
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(buildUser({ id: 'user-1' }));
+      repo.findLatestActivePhoneOtp.mockResolvedValue({
+        id: 'otp-reset',
+        phone: '+959123456789',
+        code: '654321',
+        purpose: OtpPurpose.PASSWORD_RESET,
+        status: VerificationStatus.PENDING,
+        expiresAt: new Date(Date.now() + 60_000),
+        attempts: 0,
+        maxAttempts: 5,
+      });
+      const useCase = new ResetPasswordUseCase(repo);
+      const res = await useCase.execute({
+        phone: '+959123456789',
+        code: '654321',
+        newPassword: 'newpass123',
+        confirmNewPassword: 'newpass123',
+      });
+      expect(res.action).toBe('PASSWORD_RESET');
+      expect(repo.markPhoneOtpVerified).toHaveBeenCalledWith('otp-reset');
+      expect(repo.markUserPhoneVerified).not.toHaveBeenCalled();
+      expect(repo.update).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          password: expect.any(String),
+        }),
+      );
+    });
+
+    it('ResetPasswordUseCase rejects password mismatch', async () => {
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(buildUser());
+      const useCase = new ResetPasswordUseCase(repo);
+      await expect(
+        useCase.execute({
+          phone: '+959123456789',
+          code: '654321',
+          newPassword: 'newpass123',
+          confirmNewPassword: 'different',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('SendEmailVerificationUseCase calls createEmailVerification', async () => {

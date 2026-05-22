@@ -2,6 +2,7 @@ import { UserEntity } from '../entities/user.entity.js';
 import { Gender } from '../enums/gender.enum.js';
 import { MaritalStatus } from '../enums/marital-status.enum.js';
 import { RegistrationType } from '../enums/registration-type.enum.js';
+import { OtpPurpose } from '../enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../enums/verification-status.enum.js';
 
 export type JsonValue =
@@ -60,6 +61,7 @@ export interface OtpVerificationData {
   id: string;
   phone: string;
   code: string;
+  purpose: OtpPurpose;
   status: VerificationStatus;
   expiresAt: Date;
   attempts: number;
@@ -163,8 +165,16 @@ export interface IUserRepository {
   getProfileAvatarUrl(userId: string): Promise<string | null>;
   setProfileAvatar(userId: string, avatarUrl: string | null): Promise<void>;
 
-  createPhoneOtp(phone: string, code: string, expiresAt: Date): Promise<void>;
-  findLatestActivePhoneOtp(phone: string): Promise<OtpVerificationData | null>;
+  createPhoneOtp(
+    phone: string,
+    code: string,
+    expiresAt: Date,
+    purpose?: OtpPurpose,
+  ): Promise<void>;
+  findLatestActivePhoneOtp(
+    phone: string,
+    purpose?: OtpPurpose,
+  ): Promise<OtpVerificationData | null>;
   incrementPhoneOtpAttempt(id: string): Promise<void>;
   markPhoneOtpFailed(id: string): Promise<void>;
   markPhoneOtpVerified(id: string): Promise<void>;

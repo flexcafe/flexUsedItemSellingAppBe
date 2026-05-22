@@ -13,37 +13,48 @@ import { VerifyEmailVerificationUseCase } from '../../../application/use-cases/a
 import { RequestKbzPayVerificationUseCase } from '../../../application/use-cases/auth/request-kbzpay-verification.use-case.js';
 import { SubmitKbzPayTransactionUseCase } from '../../../application/use-cases/auth/submit-kbzpay-transaction.use-case.js';
 import { GetCurrentUserProfileUseCase } from '../../../application/use-cases/auth/get-current-user-profile.use-case.js';
+import { RequestForgotPasswordUseCase } from '../../../application/use-cases/auth/request-forgot-password.use-case.js';
+import { ResetPasswordUseCase } from '../../../application/use-cases/auth/reset-password.use-case.js';
+
+function authControllerProviders(
+  extra: { provide: unknown; useValue: unknown }[] = [],
+) {
+  return [
+    { provide: RegisterUseCase, useValue: { execute: jest.fn() } },
+    { provide: LoginUseCase, useValue: { loginClient: jest.fn() } },
+    { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
+    { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
+    {
+      provide: SendEmailVerificationUseCase,
+      useValue: { execute: jest.fn() },
+    },
+    {
+      provide: VerifyEmailVerificationUseCase,
+      useValue: { execute: jest.fn() },
+    },
+    {
+      provide: RequestKbzPayVerificationUseCase,
+      useValue: { execute: jest.fn() },
+    },
+    {
+      provide: SubmitKbzPayTransactionUseCase,
+      useValue: { execute: jest.fn() },
+    },
+    { provide: GetCurrentUserProfileUseCase, useValue: { execute: jest.fn() } },
+    {
+      provide: RequestForgotPasswordUseCase,
+      useValue: { execute: jest.fn() },
+    },
+    { provide: ResetPasswordUseCase, useValue: { execute: jest.fn() } },
+    ...extra,
+  ];
+}
 
 describe(AuthController.name, () => {
   it('POST /client/auth/register validates body (400)', async () => {
     const { app, close } = await createHttpTestApp({
       controllers: [AuthController],
-      providers: [
-        { provide: RegisterUseCase, useValue: { execute: jest.fn() } },
-        { provide: LoginUseCase, useValue: { loginClient: jest.fn() } },
-        { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: SendEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: VerifyEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: RequestKbzPayVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: SubmitKbzPayTransactionUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: GetCurrentUserProfileUseCase,
-          useValue: { execute: jest.fn() },
-        },
-      ],
+      providers: authControllerProviders(),
       overrideGuards: [
         { guard: ThrottlerGuard, canActivate: () => true },
         { guard: JwtAuthGuard, canActivate: () => true },
@@ -67,32 +78,9 @@ describe(AuthController.name, () => {
 
     const { app, close } = await createHttpTestApp({
       controllers: [AuthController],
-      providers: [
-        { provide: RegisterUseCase, useValue: { execute: jest.fn() } },
+      providers: authControllerProviders([
         { provide: LoginUseCase, useValue: loginUseCase },
-        { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: SendEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: VerifyEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: RequestKbzPayVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: SubmitKbzPayTransactionUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: GetCurrentUserProfileUseCase,
-          useValue: { execute: jest.fn() },
-        },
-      ],
+      ]),
       overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
     });
 
@@ -118,29 +106,9 @@ describe(AuthController.name, () => {
 
     const { app, close } = await createHttpTestApp({
       controllers: [AuthController],
-      providers: [
-        { provide: RegisterUseCase, useValue: { execute: jest.fn() } },
-        { provide: LoginUseCase, useValue: { loginClient: jest.fn() } },
-        { provide: SendPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        { provide: VerifyPhoneOtpUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: SendEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: VerifyEmailVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: RequestKbzPayVerificationUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: SubmitKbzPayTransactionUseCase,
-          useValue: { execute: jest.fn() },
-        },
+      providers: authControllerProviders([
         { provide: GetCurrentUserProfileUseCase, useValue: getMe },
-      ],
+      ]),
       overrideGuards: [
         { guard: ThrottlerGuard, canActivate: () => true },
         {
@@ -160,6 +128,38 @@ describe(AuthController.name, () => {
 
     expect(res.body.success).toBe(true);
     expect(getMe.execute).toHaveBeenCalledTimes(1);
+
+    await close();
+  });
+
+  it('POST /client/auth/forgot-password returns success envelope', async () => {
+    const forgot = {
+      execute: jest.fn().mockResolvedValue({
+        success: true,
+        action: 'PASSWORD_RESET_OTP_SENT',
+      }),
+    };
+
+    const { app, close } = await createHttpTestApp({
+      controllers: [AuthController],
+      providers: authControllerProviders([
+        { provide: RequestForgotPasswordUseCase, useValue: forgot },
+      ]),
+      overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/client/auth/forgot-password')
+      .send({ phone: '+959123456789' })
+      .expect(200);
+
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        message: 'Password reset OTP sent',
+      }),
+    );
+    expect(forgot.execute).toHaveBeenCalledTimes(1);
 
     await close();
   });
