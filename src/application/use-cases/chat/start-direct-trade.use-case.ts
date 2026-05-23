@@ -93,7 +93,12 @@ export class StartDirectTradeUseCase {
         listingId: listing.id,
         meetingDate: dto.meetingDate,
         meetingTime: dto.meetingTime,
-        listingLocations,
+        listingLocations: listingLocations.map((loc) => ({
+          label: loc.label,
+          address: loc.address,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+        })),
       },
     });
 

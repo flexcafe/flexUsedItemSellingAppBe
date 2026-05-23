@@ -647,7 +647,7 @@ export class ChatRepository implements IChatRepository {
       );
     }
 
-    const expectedAmount = Math.round(existing.amount);
+    const expectedAmount = Math.round(Number(existing.amount));
     const submittedAmount = Math.round(data.paymentAmount);
     if (submittedAmount !== expectedAmount) {
       throw new BadRequestException(
