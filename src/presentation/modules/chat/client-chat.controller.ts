@@ -360,7 +360,7 @@ export class ClientChatController {
   })
   @ApiBody({ type: RequestLocationChangeDto })
   @ApiParam({ name: 'chatRoomId' })
-  async requestLocationChange(
+  async requestLocationChangeHandler(
     @CurrentUser() user: JwtPayload,
     @Param('chatRoomId') chatRoomId: string,
     @Body() dto: RequestLocationChangeDto,
