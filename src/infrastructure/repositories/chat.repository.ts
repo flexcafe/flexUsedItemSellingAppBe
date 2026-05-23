@@ -17,6 +17,7 @@ import {
   type CreateChatMessageData,
   type CreateChatRoomData,
   type DirectTradeData,
+  type DirectTradeRecord,
   type IChatRepository,
   type LocationShareData,
   type AwaitingSafePaymentInstructionData,
@@ -27,11 +28,19 @@ import {
   type TransactionData,
 } from '../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../domain/enums/message-type.enum.js';
-import { TransactionStatus } from '../../domain/enums/transaction-status.enum.js';
+import {
+  TERMINAL_CHAT_TRANSACTION_STATUSES,
+  TransactionStatus,
+} from '../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../domain/enums/transaction-type.enum.js';
 import type { JsonValue } from '../../domain/repositories/user.repository.interface.js';
 
 const { TransactionStatus: PrismaTransactionStatus } = PrismaPkg;
+
+const TERMINAL_CHAT_TRANSACTION_PRISMA_STATUSES =
+  TERMINAL_CHAT_TRANSACTION_STATUSES.map(
+    (s) => s as PrismaPkg.TransactionStatus,
+  );
 
 type CursorToken = {
   createdAt: Date;
@@ -269,6 +278,7 @@ export class ChatRepository implements IChatRepository {
       where: {
         chatRoomId,
         type: type as unknown as PrismaPkg.TransactionType,
+        status: { notIn: TERMINAL_CHAT_TRANSACTION_PRISMA_STATUSES },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -304,6 +314,39 @@ export class ChatRepository implements IChatRepository {
     return row?.id ?? null;
   }
 
+  async findDirectTradeByTransactionId(
+    transactionId: string,
+  ): Promise<DirectTradeRecord | null> {
+    const row = await this.prisma.directTrade.findUnique({
+      where: { transactionId },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      transactionId: row.transactionId,
+      meetingDate: row.meetingDate,
+      meetingTime: row.meetingTime,
+      meetingLocation: row.meetingLocation,
+      meetingLatitude: row.meetingLatitude,
+      meetingLongitude: row.meetingLongitude,
+      acceptedLocationLabel: row.acceptedLocationLabel,
+      buyerRequestedLocation: row.buyerRequestedLocation,
+      buyerRequestedLatitude: row.buyerRequestedLatitude,
+      buyerRequestedLongitude: row.buyerRequestedLongitude,
+    };
+  }
+
+  async hasOpenDirectTradeForListing(listingId: string): Promise<boolean> {
+    const count = await this.prisma.transaction.count({
+      where: {
+        listingId,
+        type: PrismaPkg.TransactionType.DIRECT_TRADE,
+        status: { notIn: TERMINAL_CHAT_TRANSACTION_PRISMA_STATUSES },
+      },
+    });
+    return count > 0;
+  }
+
   async upsertDirectTrade(data: DirectTradeData): Promise<void> {
     await this.prisma.directTrade.upsert({
       where: { transactionId: data.transactionId },
@@ -313,6 +356,10 @@ export class ChatRepository implements IChatRepository {
         meetingLocation: data.meetingLocation ?? null,
         meetingLatitude: data.meetingLatitude ?? null,
         meetingLongitude: data.meetingLongitude ?? null,
+        acceptedLocationLabel: data.acceptedLocationLabel ?? null,
+        buyerRequestedLocation: data.buyerRequestedLocation ?? null,
+        buyerRequestedLatitude: data.buyerRequestedLatitude ?? null,
+        buyerRequestedLongitude: data.buyerRequestedLongitude ?? null,
       },
       create: {
         transactionId: data.transactionId,
@@ -321,6 +368,10 @@ export class ChatRepository implements IChatRepository {
         meetingLocation: data.meetingLocation ?? null,
         meetingLatitude: data.meetingLatitude ?? null,
         meetingLongitude: data.meetingLongitude ?? null,
+        acceptedLocationLabel: data.acceptedLocationLabel ?? null,
+        buyerRequestedLocation: data.buyerRequestedLocation ?? null,
+        buyerRequestedLatitude: data.buyerRequestedLatitude ?? null,
+        buyerRequestedLongitude: data.buyerRequestedLongitude ?? null,
       },
     });
   }
@@ -390,11 +441,12 @@ export class ChatRepository implements IChatRepository {
   async stopLocationShare(
     directTradeId: string,
     userId: string,
-  ): Promise<void> {
-    await this.prisma.locationShare.updateMany({
+  ): Promise<number> {
+    const result = await this.prisma.locationShare.updateMany({
       where: { directTradeId, userId, isActive: true },
       data: { isActive: false },
     });
+    return result.count;
   }
 
   async stopAllLocationSharesForChatRoom(chatRoomId: string): Promise<number> {
@@ -423,7 +475,9 @@ export class ChatRepository implements IChatRepository {
     listingId: string,
     buyerId: string,
     sellerId: string,
+    listingPrice: number,
   ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }> {
+    const expectedAmount = Math.round(listingPrice);
     const active = await this.findActiveSafePaymentTransaction(chatRoomId);
     const blockedAfterSubmit = new Set<string>([
       PrismaTransactionStatus.SAFE_PAYMENT_PENDING,
@@ -448,7 +502,7 @@ export class ChatRepository implements IChatRepository {
           sellerId,
           type: PrismaPkg.TransactionType.SAFE_PAYMENT,
           status: PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
-          amount: 0,
+          amount: expectedAmount,
         },
       });
       transaction = created;
@@ -457,6 +511,7 @@ export class ChatRepository implements IChatRepository {
         where: { id: transaction.id },
         data: {
           status: PrismaTransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+          amount: expectedAmount,
         },
       });
       transaction = updated;
@@ -592,11 +647,19 @@ export class ChatRepository implements IChatRepository {
       );
     }
 
+    const expectedAmount = Math.round(existing.amount);
+    const submittedAmount = Math.round(data.paymentAmount);
+    if (submittedAmount !== expectedAmount) {
+      throw new BadRequestException(
+        `Payment amount must be exactly ${expectedAmount} MMK (listing price)`,
+      );
+    }
+
     await this.prisma.transaction.update({
       where: { id: data.transactionId },
       data: {
         status: PrismaTransactionStatus.SAFE_PAYMENT_PENDING,
-        amount: data.paymentAmount,
+        amount: submittedAmount,
       },
     });
     const row = await this.prisma.safePayment.update({

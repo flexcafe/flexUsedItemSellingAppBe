@@ -15,13 +15,26 @@ import {
   CHAT_MESSAGE_PUBLISHER,
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
-import { assertTransactionCompletable } from './_helpers.js';
+import {
+  assertTransactionCompletable,
+  requireActiveChatUser,
+} from './_helpers.js';
+import {
+  hasUserMarkedTransactionComplete,
+  stopLiveLocationShareForCompletingUser,
+} from './_location-share.helper.js';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../../domain/repositories/user.repository.interface.js';
 
 @Injectable()
 export class CompleteChatTransactionUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly users: IUserRepository,
     @Inject(CHAT_MESSAGE_PUBLISHER)
     private readonly publisher: IChatMessagePublisher,
   ) {}
@@ -36,6 +49,10 @@ export class CompleteChatTransactionUseCase {
     }
     if (tx.buyerId !== userId && tx.sellerId !== userId) {
       throw new ForbiddenException('Not part of this transaction');
+    }
+    await requireActiveChatUser(this.users, userId);
+    if (hasUserMarkedTransactionComplete(tx, userId)) {
+      return tx;
     }
     await assertTransactionCompletable(this.chats, tx);
     const next = await this.chats.markTransactionCompletedByUser(
@@ -93,6 +110,13 @@ export class CompleteChatTransactionUseCase {
           'chat.location.stopped',
         );
       }
+    } else {
+      await stopLiveLocationShareForCompletingUser(
+        this.chats,
+        this.publisher,
+        next,
+        userId,
+      );
     }
     return next;
   }

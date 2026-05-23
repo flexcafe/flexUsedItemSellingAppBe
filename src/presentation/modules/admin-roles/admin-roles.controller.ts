@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
@@ -74,7 +82,8 @@ export class AdminRolesController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create admin role with selected permissions',
-    description: 'Accessible by ROOT_ADMIN only. ROOT_ADMIN role cannot be created or modified from this endpoint.',
+    description:
+      'Accessible by ROOT_ADMIN only. ROOT_ADMIN role cannot be created or modified from this endpoint.',
   })
   @ApiSuccessResponse(AdminRoleDto, {
     status: HttpStatus.CREATED,

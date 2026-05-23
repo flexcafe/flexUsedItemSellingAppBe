@@ -25,6 +25,10 @@ import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/lis
 import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
 import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
+import { AcceptDirectTradeLocationUseCase } from '../../../application/use-cases/chat/accept-direct-trade-location.use-case.js';
+import { RequestDirectTradeLocationChangeUseCase } from '../../../application/use-cases/chat/request-direct-trade-location-change.use-case.js';
+import { GetDirectTradeDetailsUseCase } from '../../../application/use-cases/chat/get-direct-trade-details.use-case.js';
+import { RespondDirectTradeLocationChangeUseCase } from '../../../application/use-cases/chat/respond-direct-trade-location-change.use-case.js';
 import { StartChatLocationShareUseCase } from '../../../application/use-cases/chat/start-chat-location-share.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
@@ -58,6 +62,10 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
     SendChatMessageUseCase,
     MarkChatRoomReadUseCase,
     StartDirectTradeUseCase,
+    AcceptDirectTradeLocationUseCase,
+    RequestDirectTradeLocationChangeUseCase,
+    GetDirectTradeDetailsUseCase,
+    RespondDirectTradeLocationChangeUseCase,
     StartChatLocationShareUseCase,
     UpdateChatLocationShareUseCase,
     StopChatLocationShareUseCase,

@@ -25,6 +25,7 @@ import {
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
+import { assertPaymentAmountMatchesExpected } from './_safe-payment.helper.js';
 
 @Injectable()
 export class SubmitChatSafePaymentUseCase {
@@ -44,7 +45,12 @@ export class SubmitChatSafePaymentUseCase {
     chatRoomId: string,
     dto: SubmitSafePaymentDto,
   ): Promise<TransactionData> {
-    const room = await requireRoomParticipant(this.chats, chatRoomId, userId);
+    const room = await requireRoomParticipant(
+      this.chats,
+      this.users,
+      chatRoomId,
+      userId,
+    );
     if (room.buyerId !== userId) {
       throw new ForbiddenException('Only buyer can submit safe payment');
     }
@@ -64,6 +70,11 @@ export class SubmitChatSafePaymentUseCase {
         'Admin must send KBZPay receiving instructions before you can submit payment',
       );
     }
+
+    assertPaymentAmountMatchesExpected(
+      status.transaction.amount,
+      dto.paymentAmount,
+    );
 
     await this.chats.submitSafePayment({
       transactionId: status.transaction.id,

@@ -13,12 +13,19 @@ import {
   type IChatRealtime,
 } from '../../../domain/services/chat-realtime.interface.js';
 import { requireDirectTradeContext } from './_helpers.js';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../../domain/repositories/user.repository.interface.js';
+import { assertUserCanStartOrUpdateLiveLocation } from './_location-share.helper.js';
 
 @Injectable()
 export class StartChatLocationShareUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly users: IUserRepository,
     @Inject(CHAT_REALTIME)
     private readonly realtime: IChatRealtime,
     @Inject(CHAT_MESSAGE_PUBLISHER)
@@ -33,7 +40,17 @@ export class StartChatLocationShareUseCase {
     expiresInSeconds: number,
   ): Promise<{ alreadyActive: boolean }> {
     const { room, transaction, directTradeId } =
-      await requireDirectTradeContext(this.chats, chatRoomId, userId);
+      await requireDirectTradeContext(
+        this.chats,
+        this.users,
+        chatRoomId,
+        userId,
+      );
+    await assertUserCanStartOrUpdateLiveLocation(
+      this.chats,
+      chatRoomId,
+      userId,
+    );
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
     const { alreadyActive } = await this.chats.startLocationShare({
       directTradeId,

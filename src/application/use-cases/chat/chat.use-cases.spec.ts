@@ -18,12 +18,19 @@ import { AdminMarkSafePaymentTransferredUseCase } from './admin-mark-safe-paymen
 import { AdminSendSafePaymentInstructionUseCase } from './admin-send-safe-payment-instruction.use-case.js';
 import { AdminMarkSafePaymentReceivedUseCase } from './admin-mark-safe-payment-received.use-case.js';
 import { StartDirectTradeUseCase } from './start-direct-trade.use-case.js';
+import { StartChatLocationShareUseCase } from './start-chat-location-share.use-case.js';
 import { SubmitChatReviewAfterCompletionUseCase } from './submit-chat-review-after-completion.use-case.js';
 import { CreateTransactionReviewUseCase } from '../points/create-transaction-review.use-case.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
+import { ListingEntity } from '../../../domain/entities/listing.entity.js';
+import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
+import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
+import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
+import { PreferredTradeLocationEntity } from '../../../domain/entities/preferred-trade-location.entity.js';
 import {
+  buildActiveUserMock,
   buildChatMessage,
   buildChatRepoMock,
   buildChatRoom,
@@ -39,6 +46,37 @@ import {
   SELLER_ID,
   TX_ID,
 } from './_chat-test-mocks.js';
+
+function buildOpenChatListing(
+  status: ListingStatus,
+  sellerId: string = SELLER_ID,
+): ListingEntity {
+  return new ListingEntity({
+    id: LISTING_ID,
+    title: 'Phone',
+    description: 'desc',
+    price: 100_000,
+    condition: ListingCondition.GOOD,
+    status,
+    paymentMethods: [PaymentMethod.CASH],
+    directTradeLocation: null,
+    directTradeLatitude: null,
+    directTradeLongitude: null,
+    mapScreenshotUrl: null,
+    nearbyLandmarks: null,
+    preferredTradeTime: null,
+    isDeliveryAvailable: false,
+    deliveryFeePayer: null,
+    images: [],
+    isDeleted: false,
+    viewCount: 0,
+    sellerId,
+    categoryId: 'cat-1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    preferredLocations: [],
+  });
+}
 
 describe(OpenChatRoomUseCase.name, () => {
   it('rejects when listing is missing', async () => {
@@ -60,10 +98,9 @@ describe(OpenChatRoomUseCase.name, () => {
 
   it('rejects when seller tries to open chat as buyer', async () => {
     const products = buildProductRepoMock();
-    products.findById.mockResolvedValue({
-      sellerId: SELLER_ID,
-      isDeleted: false,
-    } as never);
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
     const useCase = new OpenChatRoomUseCase(
       buildChatRepoMock(),
       products,
@@ -81,10 +118,12 @@ describe(OpenChatRoomUseCase.name, () => {
   it('rejects when requested seller does not own listing', async () => {
     const chats = buildChatRepoMock();
     const products = buildProductRepoMock();
-    products.findById.mockResolvedValue({
-      sellerId: '77777777-7777-7777-7777-777777777777',
-      isDeleted: false,
-    } as never);
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(
+        ListingStatus.ACTIVE,
+        '77777777-7777-7777-7777-777777777777',
+      ),
+    );
     const useCase = new OpenChatRoomUseCase(chats, products, buildUserRepoMock());
 
     await expect(
@@ -100,12 +139,11 @@ describe(OpenChatRoomUseCase.name, () => {
     const chats = buildChatRepoMock();
     const products = buildProductRepoMock();
     const users = buildUserRepoMock();
-    products.findById.mockResolvedValue({
-      sellerId: SELLER_ID,
-      isDeleted: false,
-    } as never);
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
     users.findById.mockImplementation(async (id: string) =>
-      id === BUYER_ID ? null : ({ id } as never),
+      id === BUYER_ID ? null : (buildActiveUserMock({ id }) as never),
     );
     const useCase = new OpenChatRoomUseCase(chats, products, users);
 
@@ -118,17 +156,60 @@ describe(OpenChatRoomUseCase.name, () => {
     expect(chats.getOrCreateRoom).not.toHaveBeenCalled();
   });
 
+  it('rejects when listing is not active', async () => {
+    const products = buildProductRepoMock();
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.SOLD),
+    );
+    const useCase = new OpenChatRoomUseCase(
+      buildChatRepoMock(),
+      products,
+      buildUserRepoMock(),
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, {
+        listingId: LISTING_ID,
+        sellerId: SELLER_ID,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects when buyer is banned', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const users = buildUserRepoMock();
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
+    users.findById.mockImplementation(async (id: string) =>
+      id === BUYER_ID
+        ? (buildActiveUserMock({ id, active: false }) as never)
+        : (buildActiveUserMock({ id }) as never),
+    );
+    const useCase = new OpenChatRoomUseCase(chats, products, users);
+
+    await expect(
+      useCase.execute(BUYER_ID, {
+        listingId: LISTING_ID,
+        sellerId: SELLER_ID,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(chats.getOrCreateRoom).not.toHaveBeenCalled();
+  });
+
   it('creates room for valid buyer', async () => {
     const chats = buildChatRepoMock();
     const products = buildProductRepoMock();
     const users = buildUserRepoMock();
     const room = buildChatRoom();
 
-    products.findById.mockResolvedValue({
-      sellerId: SELLER_ID,
-      isDeleted: false,
-    } as never);
-    users.findById.mockImplementation(async (id: string) => ({ id }) as never);
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
+    users.findById.mockImplementation(async (id: string) =>
+      buildActiveUserMock({ id }) as never,
+    );
     chats.getOrCreateRoom.mockResolvedValue(room);
 
     const useCase = new OpenChatRoomUseCase(chats, products, users);
@@ -155,7 +236,7 @@ describe(ListChatRoomsUseCase.name, () => {
     const page = { items: [], nextCursor: 'abc' };
     chats.listRoomsForUser.mockResolvedValue(page);
 
-    const useCase = new ListChatRoomsUseCase(chats);
+    const useCase = new ListChatRoomsUseCase(chats, buildUserRepoMock());
     const result = await useCase.execute(BUYER_ID, 'cursor-1', 20);
 
     expect(result).toBe(page);
@@ -172,7 +253,7 @@ describe(ListChatMessagesUseCase.name, () => {
     const chats = buildChatRepoMock();
     chats.findRoomById.mockResolvedValue(buildChatRoom());
 
-    const useCase = new ListChatMessagesUseCase(chats);
+    const useCase = new ListChatMessagesUseCase(chats, buildUserRepoMock());
     await expect(
       useCase.execute(
         '99999999-9999-9999-9999-999999999999',
@@ -197,6 +278,7 @@ describe(SendChatMessageUseCase.name, () => {
 
     const useCase = new SendChatMessageUseCase(
       chats,
+      buildUserRepoMock(),
       idempotency,
       publisher,
     );
@@ -221,6 +303,7 @@ describe(SendChatMessageUseCase.name, () => {
 
     const useCase = new SendChatMessageUseCase(
       chats,
+      buildUserRepoMock(),
       idempotency,
       publisher,
     );
@@ -231,7 +314,28 @@ describe(SendChatMessageUseCase.name, () => {
     expect(chats.createMessage).not.toHaveBeenCalled();
   });
 
-  it('reserves idempotency key and supports non-text message types', async () => {
+  it('rejects system message types from clients', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    const useCase = new SendChatMessageUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildIdempotencyMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(
+      useCase.execute(
+        BUYER_ID,
+        ROOM_ID,
+        'fake',
+        MessageType.SAFE_PAYMENT_VERIFIED,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.createMessage).not.toHaveBeenCalled();
+  });
+
+  it('reserves idempotency key and supports IMAGE messages', async () => {
     const chats = buildChatRepoMock();
     const idempotency = buildIdempotencyMock();
     const publisher = buildPublisherMock();
@@ -239,7 +343,12 @@ describe(SendChatMessageUseCase.name, () => {
     chats.createMessage.mockResolvedValue(
       buildChatMessage({ type: MessageType.IMAGE }),
     );
-    const useCase = new SendChatMessageUseCase(chats, idempotency, publisher);
+    const useCase = new SendChatMessageUseCase(
+      chats,
+      buildUserRepoMock(),
+      idempotency,
+      publisher,
+    );
 
     await useCase.execute(
       BUYER_ID,
@@ -265,6 +374,7 @@ describe(SendChatMessageUseCase.name, () => {
 describe(StartDirectTradeUseCase.name, () => {
   it('creates/updates direct trade and publishes system message', async () => {
     const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
     const publisher = buildPublisherMock();
     const room = buildChatRoom();
     const tx = buildTransaction({
@@ -274,17 +384,54 @@ describe(StartDirectTradeUseCase.name, () => {
     const message = buildChatMessage({
       type: MessageType.DIRECT_TRADE_REQUEST,
     });
+    const listing = new ListingEntity({
+      id: LISTING_ID,
+      title: 'Phone',
+      description: 'd',
+      price: 100_000,
+      condition: ListingCondition.GOOD,
+      status: ListingStatus.ACTIVE,
+      paymentMethods: [PaymentMethod.CASH],
+      directTradeLocation: 'Junction City',
+      directTradeLatitude: 16.784,
+      directTradeLongitude: 96.157,
+      mapScreenshotUrl: null,
+      nearbyLandmarks: null,
+      preferredTradeTime: null,
+      isDeliveryAvailable: false,
+      deliveryFeePayer: null,
+      images: [],
+      isDeleted: false,
+      viewCount: 0,
+      sellerId: SELLER_ID,
+      categoryId: 'cat-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      preferredLocations: [
+        new PreferredTradeLocationEntity({
+          id: 'loc-1',
+          label: 'Spot A',
+          address: 'Address A',
+          latitude: 16.78,
+          longitude: 96.15,
+          sortOrder: 0,
+        }),
+      ],
+    });
     chats.findRoomById.mockResolvedValue(room);
     chats.getOrCreateTransaction.mockResolvedValue(tx);
     chats.createMessage.mockResolvedValue(message);
-    const useCase = new StartDirectTradeUseCase(chats, publisher);
+    products.findById.mockResolvedValue(listing);
+    const useCase = new StartDirectTradeUseCase(
+      chats,
+      products,
+      buildUserRepoMock(),
+      publisher,
+    );
 
     const dto = {
       meetingDate: '2026-06-01',
       meetingTime: '18:30',
-      meetingLocation: 'Junction City',
-      meetingLatitude: 16.784,
-      meetingLongitude: 96.157,
     };
     const result = await useCase.execute(BUYER_ID, ROOM_ID, dto);
 
@@ -301,10 +448,26 @@ describe(StartDirectTradeUseCase.name, () => {
       transactionId: tx.id,
       meetingDate: new Date(dto.meetingDate),
       meetingTime: dto.meetingTime,
-      meetingLocation: dto.meetingLocation,
-      meetingLatitude: dto.meetingLatitude,
-      meetingLongitude: dto.meetingLongitude,
+      meetingLocation: null,
+      meetingLatitude: null,
+      meetingLongitude: null,
+      acceptedLocationLabel: null,
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
     });
+    expect(chats.createMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: MessageType.DIRECT_TRADE_REQUEST,
+        metadata: expect.objectContaining({
+          listingId: LISTING_ID,
+          listingLocations: expect.arrayContaining([
+            expect.objectContaining({ label: 'Primary' }),
+            expect.objectContaining({ label: 'Spot A' }),
+          ]),
+        }),
+      }),
+    );
     expect(publisher.publish).toHaveBeenCalledWith(
       ROOM_ID,
       BUYER_ID,
@@ -321,7 +484,7 @@ describe(MarkChatRoomReadUseCase.name, () => {
     chats.findRoomById.mockResolvedValue(buildChatRoom());
     chats.markRoomMessagesRead.mockResolvedValue(3);
 
-    const useCase = new MarkChatRoomReadUseCase(chats);
+    const useCase = new MarkChatRoomReadUseCase(chats, buildUserRepoMock());
     const count = await useCase.execute(BUYER_ID, ROOM_ID);
 
     expect(count).toBe(3);
@@ -367,11 +530,14 @@ describe(GetChatSafePaymentStatusUseCase.name, () => {
 describe(RequestChatSafePaymentUseCase.name, () => {
   it('rejects when seller requests safe payment', async () => {
     const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
     chats.findRoomById.mockResolvedValue(buildChatRoom());
+    products.findById.mockResolvedValue({ price: 100_000, isDeleted: false } as never);
 
     const useCase = new RequestChatSafePaymentUseCase(
       chats,
       buildUserRepoMock(),
+      products,
       buildPublisherMock(),
     );
 
@@ -383,13 +549,16 @@ describe(RequestChatSafePaymentUseCase.name, () => {
   it('notifies admins when buyer requests safe payment', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
+    const products = buildProductRepoMock();
     const publisher = buildPublisherMock();
     const room = buildChatRoom();
     const tx = buildTransaction({
       status: TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+      amount: 100_000,
     });
 
     chats.findRoomById.mockResolvedValue(room);
+    products.findById.mockResolvedValue({ price: 100_000, isDeleted: false } as never);
     chats.requestSafePayment.mockResolvedValue({
       transaction: tx,
       safePayment: {} as never,
@@ -401,11 +570,19 @@ describe(RequestChatSafePaymentUseCase.name, () => {
     const useCase = new RequestChatSafePaymentUseCase(
       chats,
       users,
+      products,
       publisher,
     );
     const result = await useCase.execute(BUYER_ID, ROOM_ID);
 
     expect(result).toBe(tx);
+    expect(chats.requestSafePayment).toHaveBeenCalledWith(
+      ROOM_ID,
+      LISTING_ID,
+      BUYER_ID,
+      SELLER_ID,
+      100_000,
+    );
     expect(users.createNotification).toHaveBeenCalledTimes(2);
     expect(publisher.publish).toHaveBeenCalled();
   });
@@ -413,11 +590,13 @@ describe(RequestChatSafePaymentUseCase.name, () => {
   it('returns existing transaction when request hits duplicate conflict', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
+    const products = buildProductRepoMock();
     const room = buildChatRoom();
     const existingTx = buildTransaction({
       status: TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
     });
     chats.findRoomById.mockResolvedValue(room);
+    products.findById.mockResolvedValue({ price: 50_000, isDeleted: false } as never);
     chats.requestSafePayment.mockRejectedValue(new ConflictException());
     chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
       transaction: existingTx,
@@ -427,6 +606,7 @@ describe(RequestChatSafePaymentUseCase.name, () => {
     const useCase = new RequestChatSafePaymentUseCase(
       chats,
       users,
+      products,
       buildPublisherMock(),
     );
 
@@ -464,7 +644,7 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
     const users = buildUserRepoMock();
     const publisher = buildPublisherMock();
     const room = buildChatRoom();
-    const tx = buildTransaction();
+    const tx = buildTransaction({ amount: 100_000 });
 
     chats.findRoomById.mockResolvedValue(room);
     chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
@@ -491,7 +671,7 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
     const result = await useCase.execute(BUYER_ID, ROOM_ID, {
       payerKbzName: 'Buyer',
       payerKbzPhone: '09123456789',
-      paymentAmount: 100,
+      paymentAmount: 100_000,
       kbzTransactionId: 'KBZ123',
     });
 
@@ -523,6 +703,32 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
         payerKbzPhone: '09111111111',
         paymentAmount: 500,
         kbzTransactionId: 'KBZX',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.submitSafePayment).not.toHaveBeenCalled();
+  });
+
+  it('rejects payment amount that does not match listing price on transaction', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
+      transaction: buildTransaction({ amount: 100_000 }),
+      safePayment: { instructionSentAt: new Date() } as never,
+      canSubmitPayment: true,
+    });
+    const useCase = new SubmitChatSafePaymentUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildIdempotencyMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, ROOM_ID, {
+        payerKbzName: 'Buyer',
+        payerKbzPhone: '09111111111',
+        paymentAmount: 99_000,
+        kbzTransactionId: 'KBZWRONG',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(chats.submitSafePayment).not.toHaveBeenCalled();
@@ -565,6 +771,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     );
     const useCase = new CompleteChatTransactionUseCase(
       chats,
+      buildUserRepoMock(),
       buildPublisherMock(),
     );
 
@@ -590,6 +797,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     );
     const useCase = new CompleteChatTransactionUseCase(
       chats,
+      buildUserRepoMock(),
       buildPublisherMock(),
     );
 
@@ -616,6 +824,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     );
     const useCase = new CompleteChatTransactionUseCase(
       chats,
+      buildUserRepoMock(),
       buildPublisherMock(),
     );
 
@@ -624,7 +833,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     );
   });
 
-  it('allows direct trade completion without safe payment received', async () => {
+  it('allows direct trade cash completion when meeting place is agreed', async () => {
     const chats = buildChatRepoMock();
     const publisher = buildPublisherMock();
     chats.findTransactionById.mockResolvedValue(
@@ -634,6 +843,26 @@ describe(CompleteChatTransactionUseCase.name, () => {
       }),
     );
     chats.findBlockingSafePaymentForChat.mockResolvedValue(null);
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        id: TX_ID,
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: TX_ID,
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: 'Junction City',
+      meetingLatitude: 16.78,
+      meetingLongitude: 96.15,
+      acceptedLocationLabel: 'Primary',
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
+    });
     const next = buildTransaction({
       type: TransactionType.DIRECT_TRADE,
       status: TransactionStatus.BUYER_COMPLETED,
@@ -642,7 +871,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     });
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(buildChatMessage());
-    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
 
     await useCase.execute(BUYER_ID, TX_ID);
 
@@ -650,11 +879,213 @@ describe(CompleteChatTransactionUseCase.name, () => {
     expect(chats.stopAllLocationSharesForChatRoom).not.toHaveBeenCalled();
   });
 
+  it('rejects direct trade cash completion without agreed meeting place', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findBlockingSafePaymentForChat.mockResolvedValue(null);
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        id: TX_ID,
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: TX_ID,
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: null,
+      meetingLatitude: null,
+      meetingLongitude: null,
+      acceptedLocationLabel: null,
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
+    });
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+  });
+
+  it('allows safe payment completion without meeting place when no direct trade (delivery)', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
+      }),
+    );
+    chats.findTransactionForChat.mockResolvedValue(null);
+    chats.markTransactionCompletedByUser.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
+    );
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(chats.findDirectTradeByTransactionId).not.toHaveBeenCalled();
+    expect(chats.markTransactionCompletedByUser).toHaveBeenCalled();
+  });
+
+  it('rejects completion when meeting location change is still pending', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
+      }),
+    );
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        id: 'direct-tx-id',
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: 'direct-tx-id',
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: null,
+      meetingLatitude: null,
+      meetingLongitude: null,
+      acceptedLocationLabel: null,
+      buyerRequestedLocation: 'Somewhere new',
+      buyerRequestedLatitude: 16.78,
+      buyerRequestedLongitude: 96.15,
+    });
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+  });
+
+  it('rejects safe payment completion when direct trade started but no meeting place', async () => {
+    const chats = buildChatRepoMock();
+    const directTxId = 'direct-tx-id';
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
+      }),
+    );
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        id: directTxId,
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: directTxId,
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: null,
+      meetingLatitude: null,
+      meetingLongitude: null,
+      acceptedLocationLabel: null,
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
+    });
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+  });
+
+  it('allows safe payment completion when direct trade has agreed meeting place', async () => {
+    const chats = buildChatRepoMock();
+    const directTxId = 'direct-tx-id';
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
+      }),
+    );
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        id: directTxId,
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: directTxId,
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: 'Junction City',
+      meetingLatitude: 16.78,
+      meetingLongitude: 96.15,
+      acceptedLocationLabel: 'Primary',
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
+    });
+    chats.markTransactionCompletedByUser.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
+    );
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(chats.markTransactionCompletedByUser).toHaveBeenCalled();
+  });
+
   it('rejects when transaction does not exist', async () => {
     const chats = buildChatRepoMock();
     chats.findTransactionById.mockResolvedValue(null);
     const useCase = new CompleteChatTransactionUseCase(
       chats,
+      buildUserRepoMock(),
       buildPublisherMock(),
     );
 
@@ -671,6 +1102,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
 
     const useCase = new CompleteChatTransactionUseCase(
       chats,
+      buildUserRepoMock(),
       buildPublisherMock(),
     );
 
@@ -697,7 +1129,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     });
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(msg);
-    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
 
     const result = await useCase.execute(BUYER_ID, TX_ID);
 
@@ -708,6 +1140,95 @@ describe(CompleteChatTransactionUseCase.name, () => {
       SELLER_ID,
       msg,
       'chat.transaction.completedByBuyer',
+    );
+  });
+
+  it('returns existing transaction without duplicate message when user already completed', async () => {
+    const chats = buildChatRepoMock();
+    const publisher = buildPublisherMock();
+    const alreadyDone = buildTransaction({
+      status: TransactionStatus.BUYER_COMPLETED,
+      buyerCompleted: true,
+      sellerCompleted: false,
+    });
+    chats.findTransactionById.mockResolvedValue(alreadyDone);
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      buildUserRepoMock(),
+      publisher,
+    );
+
+    const result = await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(result).toBe(alreadyDone);
+    expect(chats.markTransactionCompletedByUser).not.toHaveBeenCalled();
+    expect(chats.createMessage).not.toHaveBeenCalled();
+    expect(publisher.publish).not.toHaveBeenCalled();
+  });
+
+  it('stops completing user live location on first transaction complete', async () => {
+    const chats = buildChatRepoMock();
+    const publisher = buildPublisherMock();
+    const directTxId = 'direct-tx-id';
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
+      }),
+    );
+    chats.findTransactionForChat.mockImplementation(
+      async (_roomId, type) =>
+        type === TransactionType.DIRECT_TRADE
+          ? buildTransaction({
+              id: directTxId,
+              type: TransactionType.DIRECT_TRADE,
+              status: TransactionStatus.INITIATED,
+            })
+          : null,
+    );
+    chats.findDirectTradeByTransactionId.mockResolvedValue({
+      id: 'dt-1',
+      transactionId: directTxId,
+      meetingDate: new Date('2026-06-01'),
+      meetingTime: '15:00',
+      meetingLocation: 'Junction City',
+      meetingLatitude: 16.78,
+      meetingLongitude: 96.15,
+      acceptedLocationLabel: 'Primary',
+      buyerRequestedLocation: null,
+      buyerRequestedLatitude: null,
+      buyerRequestedLongitude: null,
+    });
+    chats.findDirectTradeIdByTransactionId.mockResolvedValue('dt-1');
+    const next = buildTransaction({
+      type: TransactionType.SAFE_PAYMENT,
+      status: TransactionStatus.BUYER_COMPLETED,
+      buyerCompleted: true,
+      sellerCompleted: false,
+    });
+    const completionMsg = buildChatMessage({
+      type: MessageType.TRANSACTION_COMPLETED,
+    });
+    const locationMsg = buildChatMessage({
+      type: MessageType.LOCATION_SHARING_STOPPED,
+    });
+    chats.markTransactionCompletedByUser.mockResolvedValue(next);
+    chats.createMessage
+      .mockResolvedValueOnce(completionMsg)
+      .mockResolvedValueOnce(locationMsg);
+    chats.stopLocationShare.mockResolvedValue(1);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+
+    await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(chats.stopLocationShare).toHaveBeenCalledWith('dt-1', BUYER_ID);
+    expect(chats.stopAllLocationSharesForChatRoom).not.toHaveBeenCalled();
+    expect(publisher.publish).toHaveBeenCalledWith(
+      ROOM_ID,
+      BUYER_ID,
+      SELLER_ID,
+      locationMsg,
+      'chat.location.stopped',
     );
   });
 
@@ -730,7 +1251,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(msg);
     chats.stopAllLocationSharesForChatRoom.mockResolvedValue(0);
-    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
 
     await useCase.execute(SELLER_ID, TX_ID);
 
@@ -768,7 +1289,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       .mockResolvedValueOnce(completionMsg)
       .mockResolvedValueOnce(locationMsg);
     chats.stopAllLocationSharesForChatRoom.mockResolvedValue(2);
-    const useCase = new CompleteChatTransactionUseCase(chats, publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
 
     await useCase.execute(SELLER_ID, TX_ID);
 
@@ -780,6 +1301,34 @@ describe(CompleteChatTransactionUseCase.name, () => {
       locationMsg,
       'chat.location.stopped',
     );
+  });
+});
+
+describe(StartChatLocationShareUseCase.name, () => {
+  it('rejects when user already marked transaction complete', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    chats.findTransactionForChat.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
+    );
+    chats.findBlockingSafePaymentForChat.mockResolvedValue(null);
+    chats.findDirectTradeIdByTransactionId.mockResolvedValue('dt-1');
+    const useCase = new StartChatLocationShareUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildRealtimeMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, ROOM_ID, 16.78, 96.15, 300),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.startLocationShare).not.toHaveBeenCalled();
   });
 });
 
@@ -919,6 +1468,7 @@ describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
 
     const useCase = new SubmitChatReviewAfterCompletionUseCase(
       chats,
+      buildUserRepoMock(),
       reviewUseCase,
     );
 
@@ -937,6 +1487,7 @@ describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
 
     const useCase = new SubmitChatReviewAfterCompletionUseCase(
       chats,
+      buildUserRepoMock(),
       { execute: jest.fn() } as unknown as CreateTransactionReviewUseCase,
     );
 

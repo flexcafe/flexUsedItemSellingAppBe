@@ -8,12 +8,19 @@ import {
   type IChatRealtime,
 } from '../../../domain/services/chat-realtime.interface.js';
 import { requireDirectTradeContext } from './_helpers.js';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../../domain/repositories/user.repository.interface.js';
+import { assertUserCanStartOrUpdateLiveLocation } from './_location-share.helper.js';
 
 @Injectable()
 export class UpdateChatLocationShareUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly users: IUserRepository,
     @Inject(CHAT_REALTIME)
     private readonly realtime: IChatRealtime,
   ) {}
@@ -26,6 +33,12 @@ export class UpdateChatLocationShareUseCase {
     expiresInSeconds: number,
   ): Promise<void> {
     const { room, directTradeId } = await requireDirectTradeContext(
+      this.chats,
+      this.users,
+      chatRoomId,
+      userId,
+    );
+    await assertUserCanStartOrUpdateLiveLocation(
       this.chats,
       chatRoomId,
       userId,

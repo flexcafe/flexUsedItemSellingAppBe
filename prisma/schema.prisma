@@ -770,6 +770,14 @@ model DirectTrade {
   meetingLatitude  Float?   @map("meeting_latitude")
   meetingLongitude Float?   @map("meeting_longitude")
 
+  /// Which preferred location the buyer accepted (null = not yet decided)
+  acceptedLocationLabel String? @map("accepted_location_label")
+
+  /// When buyer requests a brand-new location
+  buyerRequestedLocation  String? @map("buyer_requested_location")
+  buyerRequestedLatitude  Float?  @map("buyer_requested_latitude")
+  buyerRequestedLongitude Float?  @map("buyer_requested_longitude")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

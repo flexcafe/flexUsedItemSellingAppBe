@@ -87,9 +87,29 @@ export interface DirectTradeData {
   transactionId: string;
   meetingDate: Date;
   meetingTime: string;
-  meetingLocation?: string;
-  meetingLatitude?: number;
-  meetingLongitude?: number;
+  meetingLocation?: string | null;
+  meetingLatitude?: number | null;
+  meetingLongitude?: number | null;
+  /** Label from listing options the buyer chose (null until chosen) */
+  acceptedLocationLabel?: string | null;
+  /** When the buyer requests a new location */
+  buyerRequestedLocation?: string | null;
+  buyerRequestedLatitude?: number | null;
+  buyerRequestedLongitude?: number | null;
+}
+
+export interface DirectTradeRecord {
+  id: string;
+  transactionId: string;
+  meetingDate: Date;
+  meetingTime: string;
+  meetingLocation: string | null;
+  meetingLatitude: number | null;
+  meetingLongitude: number | null;
+  acceptedLocationLabel: string | null;
+  buyerRequestedLocation: string | null;
+  buyerRequestedLatitude: number | null;
+  buyerRequestedLongitude: number | null;
 }
 
 export interface LocationShareData {
@@ -200,6 +220,7 @@ export interface IChatRepository {
   createMessage(data: CreateChatMessageData): Promise<ChatMessageData>;
   markRoomMessagesRead(chatRoomId: string, userId: string): Promise<number>;
 
+  /** Reuses latest non-terminal row of this type, or creates INITIATED. */
   getOrCreateTransaction(
     chatRoomId: string,
     listingId: string,
@@ -209,6 +230,7 @@ export interface IChatRepository {
     amount?: number,
   ): Promise<TransactionData>;
   findTransactionById(transactionId: string): Promise<TransactionData | null>;
+  /** Latest non-terminal transaction of this type for the room (excludes COMPLETED/CANCELLED/REFUNDED). */
   findTransactionForChat(
     chatRoomId: string,
     type: TransactionType,
@@ -220,18 +242,24 @@ export interface IChatRepository {
   findDirectTradeIdByTransactionId(
     transactionId: string,
   ): Promise<string | null>;
+  findDirectTradeByTransactionId(
+    transactionId: string,
+  ): Promise<DirectTradeRecord | null>;
+  /** Any non-terminal DIRECT_TRADE transaction on this listing (any chat room). */
+  hasOpenDirectTradeForListing(listingId: string): Promise<boolean>;
   upsertDirectTrade(data: DirectTradeData): Promise<void>;
   startLocationShare(
     data: LocationShareData,
   ): Promise<{ alreadyActive: boolean }>;
   updateLocationShare(data: LocationShareData): Promise<void>;
-  stopLocationShare(directTradeId: string, userId: string): Promise<void>;
+  stopLocationShare(directTradeId: string, userId: string): Promise<number>;
   stopAllLocationSharesForChatRoom(chatRoomId: string): Promise<number>;
   requestSafePayment(
     chatRoomId: string,
     listingId: string,
     buyerId: string,
     sellerId: string,
+    listingPrice: number,
   ): Promise<{ transaction: TransactionData; safePayment: SafePaymentData }>;
   sendSafePaymentInstruction(
     transactionId: string,

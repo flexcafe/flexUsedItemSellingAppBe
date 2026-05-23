@@ -17,7 +17,9 @@ import { UpdateProductUseCase } from '../../../application/use-cases/product/upd
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
 import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
 import { PointsRepository } from '../../../infrastructure/repositories/points.repository.js';
+import { ChatRepository } from '../../../infrastructure/repositories/chat.repository.js';
 import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
+import { CHAT_REPOSITORY } from '../../../domain/repositories/chat.repository.interface.js';
 
 @Module({
   controllers: [ClientProductsController],
@@ -49,6 +51,10 @@ import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repositor
     {
       provide: POINTS_REPOSITORY,
       useClass: PointsRepository,
+    },
+    {
+      provide: CHAT_REPOSITORY,
+      useClass: ChatRepository,
     },
   ],
 })

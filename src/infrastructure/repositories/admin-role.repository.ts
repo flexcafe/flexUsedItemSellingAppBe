@@ -8,8 +8,6 @@ import type {
   IAdminRoleRepository,
 } from '../../domain/repositories/admin-role.repository.interface.js';
 
-const { AdminPermission: PrismaAdminPermission } = PrismaPkg;
-
 @Injectable()
 export class AdminRoleRepository implements IAdminRoleRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -75,8 +73,8 @@ export class AdminRoleRepository implements IAdminRoleRepository {
 
   private toPrismaPermission(
     permission: AdminPermission,
-  ): keyof typeof PrismaAdminPermission {
-    return permission as keyof typeof PrismaAdminPermission;
+  ): keyof typeof PrismaPkg.AdminPermission {
+    return permission as keyof typeof PrismaPkg.AdminPermission;
   }
 
   private toData(

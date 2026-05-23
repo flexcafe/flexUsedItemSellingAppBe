@@ -51,7 +51,8 @@ export class AdminFraudReportsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List fraud reports for admin review',
-    description: 'Also surfaced via FRAUD_REPORT_SUBMITTED_ADMIN notifications.',
+    description:
+      'Also surfaced via FRAUD_REPORT_SUBMITTED_ADMIN notifications.',
   })
   @ApiArraySuccessResponse(FraudReportDto, {
     status: HttpStatus.OK,

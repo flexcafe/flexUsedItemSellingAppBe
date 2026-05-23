@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
-  IsEnum,
+  IsIn,
   IsLatitude,
   IsLongitude,
   IsNotEmpty,
@@ -14,7 +14,11 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { MessageType } from '../../../domain/enums/message-type.enum.js';
+import {
+  CLIENT_SENDABLE_MESSAGE_TYPES,
+  type ClientSendableMessageType,
+  MessageType,
+} from '../../../domain/enums/message-type.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import type {
@@ -70,10 +74,14 @@ export class SendChatMessageDto {
   @Length(1, 5000)
   content: string;
 
-  @ApiPropertyOptional({ enum: MessageType, default: MessageType.TEXT })
+  @ApiPropertyOptional({
+    enum: CLIENT_SENDABLE_MESSAGE_TYPES,
+    default: MessageType.TEXT,
+    description: 'Only TEXT and IMAGE are allowed from clients',
+  })
   @IsOptional()
-  @IsEnum(MessageType)
-  type?: MessageType;
+  @IsIn(CLIENT_SENDABLE_MESSAGE_TYPES)
+  type?: ClientSendableMessageType;
 
   @ApiPropertyOptional({
     description: 'Client-provided idempotency key for retries',
@@ -96,24 +104,6 @@ export class StartDirectTradeDto {
   @IsString()
   @Length(1, 20)
   meetingTime: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @Length(1, 255)
-  meetingLocation?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsLatitude()
-  meetingLatitude?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsLongitude()
-  meetingLongitude?: number;
 }
 
 export class LocationShareCoordinatesDto {

@@ -39,6 +39,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 ### Update / ownership
 - **\`PATCH /client/products/:productId\`**: only the **seller** may update. Another user’s id → **403**. Unknown id or soft-deleted → **404**.
 - Body is **partial** (**UpdateProductDto**); omitted fields are left unchanged. **\`price\`** cannot be changed after create (omit it on **PATCH**). Optional **\`status\`** allows controlled transitions when you expose them (validate in use-case layer).
+- **Meetup locations locked during direct trade:** while any chat has an open **direct trade** on this listing, **\`directTradeLocation\`**, **\`preferredLocations\`**, coordinates, or **\`mapScreenshotUrl\`** cannot be changed (**400**). Finish or cancel the trade first.
 
 ### Delete
 - **Soft delete** (seller): JSON body must include **\`confirmTitle\`** matching the listing **title** (trimmed on both sides; case-sensitive). Wrong string → **400**. **Sold** listings cannot be seller-deleted → **409** (support/admin for edge cases). Otherwise marks deleted and archives. Concurrent deletes may yield **404** if already removed.

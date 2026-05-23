@@ -17,6 +17,7 @@ import {
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
 import type { OpenChatRoomDto } from '../../dtos/chat/chat.dto.js';
+import { requireActiveChatUser } from './_helpers.js';
 
 @Injectable()
 export class OpenChatRoomUseCase {
@@ -40,12 +41,14 @@ export class OpenChatRoomUseCase {
     if (listing.sellerId === userId) {
       throw new BadRequestException('Seller cannot open chat as buyer');
     }
-
-    const buyer = await this.users.findById(userId);
-    const seller = await this.users.findById(dto.sellerId);
-    if (!buyer || !seller) {
-      throw new NotFoundException('User not found');
+    if (!listing.canAcceptNewBuyerChat()) {
+      throw new BadRequestException(
+        'Chat is not available for this listing status',
+      );
     }
+
+    await requireActiveChatUser(this.users, userId);
+    await requireActiveChatUser(this.users, dto.sellerId);
 
     return this.chats.getOrCreateRoom(
       {

@@ -9,19 +9,30 @@ import {
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireDirectTradeContext } from './_helpers.js';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../../domain/repositories/user.repository.interface.js';
 
 @Injectable()
 export class StopChatLocationShareUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly users: IUserRepository,
     @Inject(CHAT_MESSAGE_PUBLISHER)
     private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(userId: string, chatRoomId: string): Promise<void> {
     const { room, transaction, directTradeId } =
-      await requireDirectTradeContext(this.chats, chatRoomId, userId);
+      await requireDirectTradeContext(
+        this.chats,
+        this.users,
+        chatRoomId,
+        userId,
+      );
     await this.chats.stopLocationShare(directTradeId, userId);
     const systemMessage = await this.chats.createMessage({
       chatRoomId: room.id,

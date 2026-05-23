@@ -118,6 +118,11 @@ export class ListingEntity {
     return this.status === ListingStatus.ACTIVE && !this.isDeleted;
   }
 
+  /** New buyer chat rooms — only while the listing is publicly active. */
+  canAcceptNewBuyerChat(): boolean {
+    return !this.isDeleted && this.status === ListingStatus.ACTIVE;
+  }
+
   canBeArchived(): boolean {
     return (
       (this.status === ListingStatus.ACTIVE ||

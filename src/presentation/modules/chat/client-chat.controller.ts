@@ -78,6 +78,12 @@ import {
   UpdateLocationShareDto,
 } from '../../../application/dtos/chat/chat.dto.js';
 import {
+  AcceptDirectTradeLocationDto,
+  AcceptLocationResponse,
+  RequestLocationChangeDto,
+  RespondLocationChangeDto,
+} from '../../../application/dtos/chat/direct-trade.dto.js';
+import {
   CreateReviewDto,
   ReviewResponseDto,
 } from '../../../application/dtos/points/review.dto.js';
@@ -87,6 +93,10 @@ import { ListChatMessagesUseCase } from '../../../application/use-cases/chat/lis
 import { SendChatMessageUseCase } from '../../../application/use-cases/chat/send-chat-message.use-case.js';
 import { MarkChatRoomReadUseCase } from '../../../application/use-cases/chat/mark-chat-room-read.use-case.js';
 import { StartDirectTradeUseCase } from '../../../application/use-cases/chat/start-direct-trade.use-case.js';
+import { AcceptDirectTradeLocationUseCase } from '../../../application/use-cases/chat/accept-direct-trade-location.use-case.js';
+import { RequestDirectTradeLocationChangeUseCase } from '../../../application/use-cases/chat/request-direct-trade-location-change.use-case.js';
+import { GetDirectTradeDetailsUseCase } from '../../../application/use-cases/chat/get-direct-trade-details.use-case.js';
+import { RespondDirectTradeLocationChangeUseCase } from '../../../application/use-cases/chat/respond-direct-trade-location-change.use-case.js';
 import { StartChatLocationShareUseCase } from '../../../application/use-cases/chat/start-chat-location-share.use-case.js';
 import { UpdateChatLocationShareUseCase } from '../../../application/use-cases/chat/update-chat-location-share.use-case.js';
 import { StopChatLocationShareUseCase } from '../../../application/use-cases/chat/stop-chat-location-share.use-case.js';
@@ -123,6 +133,10 @@ export class ClientChatController {
     private readonly sendChatMessage: SendChatMessageUseCase,
     private readonly markChatRoomRead: MarkChatRoomReadUseCase,
     private readonly startDirectTrade: StartDirectTradeUseCase,
+    private readonly acceptLocation: AcceptDirectTradeLocationUseCase,
+    private readonly requestLocationChange: RequestDirectTradeLocationChangeUseCase,
+    private readonly getDtDetails: GetDirectTradeDetailsUseCase,
+    private readonly respondLocationChange: RespondDirectTradeLocationChangeUseCase,
     private readonly startChatLocationShare: StartChatLocationShareUseCase,
     private readonly updateChatLocationShare: UpdateChatLocationShareUseCase,
     private readonly stopChatLocationShare: StopChatLocationShareUseCase,
@@ -289,6 +303,94 @@ export class ClientChatController {
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Direct trade updated',
+    );
+  }
+
+  @Get(':chatRoomId/direct-trade')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get direct trade details and listing meeting locations',
+    description:
+      'Returns meeting date/time, buyer selection state, pending change request, and `listingLocations` from the product (primary pin + preferred spots set at listing creation).',
+  })
+  @ApiParam({ name: 'chatRoomId' })
+  async getDirectTradeDetails(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+  ) {
+    const details = await this.getDtDetails.execute(user.sub, chatRoomId);
+    return ApiResponseDto.success(details, 'Direct trade details retrieved');
+  }
+
+  @Post(':chatRoomId/direct-trade/accept-location')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Buyer chooses a meeting location from the listing',
+    description:
+      'Pass `locationLabel` matching a label from `listingLocations` (product preferred spots or `Primary` for the main direct-trade pin). Buyer only.',
+  })
+  @ApiBody({ type: AcceptDirectTradeLocationDto })
+  @ApiParam({ name: 'chatRoomId' })
+  @ApiOkResponse({
+    type: ApiResponseDto,
+    description: 'Location accepted',
+  })
+  async acceptDirectTradeLocation(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+    @Body() dto: AcceptDirectTradeLocationDto,
+  ) {
+    const result = await this.acceptLocation.execute({
+      chatRoomId,
+      userId: user.sub,
+      locationLabel: dto.locationLabel,
+    });
+    return ApiResponseDto.success(
+      new AcceptLocationResponse(result.transactionId, result.label),
+      'Location accepted',
+    );
+  }
+
+  @Post(':chatRoomId/direct-trade/request-location-change')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Buyer proposes a location not on the listing',
+    description:
+      'Buyer only. Seller must accept or deny via `POST .../respond-location-change`. Posts DIRECT_TRADE_LOCATION_CHANGE_REQUESTED.',
+  })
+  @ApiBody({ type: RequestLocationChangeDto })
+  @ApiParam({ name: 'chatRoomId' })
+  async requestLocationChange(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+    @Body() dto: RequestLocationChangeDto,
+  ) {
+    await this.requestLocationChange.execute(user.sub, chatRoomId, dto);
+    return ApiResponseDto.success(null, 'Location change requested');
+  }
+
+  @Post(':chatRoomId/direct-trade/respond-location-change')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Seller accepts or denies buyer alternate location',
+    description:
+      'Seller only. Body `{ accepted: true }` applies the buyer request to the trade; `false` clears it and posts DIRECT_TRADE_LOCATION_CHANGE_DENIED.',
+  })
+  @ApiBody({ type: RespondLocationChangeDto })
+  @ApiParam({ name: 'chatRoomId' })
+  async respondLocationChangeHandler(
+    @CurrentUser() user: JwtPayload,
+    @Param('chatRoomId') chatRoomId: string,
+    @Body() dto: RespondLocationChangeDto,
+  ) {
+    await this.respondLocationChange.execute(
+      user.sub,
+      chatRoomId,
+      dto.accepted,
+    );
+    return ApiResponseDto.success(
+      null,
+      dto.accepted ? 'Location change accepted' : 'Location change denied',
     );
   }
 

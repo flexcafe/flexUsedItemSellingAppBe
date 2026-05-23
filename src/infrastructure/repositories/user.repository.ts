@@ -28,8 +28,7 @@ const {
   NotificationType,
   OtpPurpose: PrismaOtpPurpose,
   VerificationStatus: PrismaVerificationStatus,
-} =
-  PrismaPkg;
+} = PrismaPkg;
 
 type UserWithAuthIncludes = Prisma.UserGetPayload<{
   include: { profile: true; kbzPayAccount: true };

@@ -7,8 +7,6 @@ export async function assertRootAdmin(
 ): Promise<void> {
   const isRoot = await roles.isRootAdminUser(userId);
   if (!isRoot) {
-    throw new ForbiddenException(
-      'Only root admin can perform this action',
-    );
+    throw new ForbiddenException('Only root admin can perform this action');
   }
 }

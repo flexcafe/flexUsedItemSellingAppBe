@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { ICategoryRepository } from '../../../domain/repositories/category.repository.interface.js';
+import type { IChatRepository } from '../../../domain/repositories/chat.repository.interface.js';
 import { DeliveryFeePayer } from '../../../domain/enums/delivery-fee-payer.enum.js';
 import { PaymentMethod } from '../../../domain/enums/payment-method.enum.js';
 
@@ -117,5 +118,32 @@ export async function assertActiveCategory(
   const category = await categoryRepository.findById(categoryId);
   if (!category || !category.isActive) {
     throw new NotFoundException('Active category not found');
+  }
+}
+
+export function isUpdatingDirectTradeMeetingFields(dto: {
+  directTradeLocation?: unknown;
+  preferredLocations?: unknown;
+  directTradeLatitude?: unknown;
+  directTradeLongitude?: unknown;
+  mapScreenshotUrl?: unknown;
+}): boolean {
+  return (
+    dto.directTradeLocation !== undefined ||
+    dto.preferredLocations !== undefined ||
+    dto.directTradeLatitude !== undefined ||
+    dto.directTradeLongitude !== undefined ||
+    dto.mapScreenshotUrl !== undefined
+  );
+}
+
+export async function assertListingMeetingLocationsEditable(
+  chats: IChatRepository,
+  listingId: string,
+): Promise<void> {
+  if (await chats.hasOpenDirectTradeForListing(listingId)) {
+    throw new BadRequestException(
+      'Cannot change meetup locations while a direct trade is in progress for this listing',
+    );
   }
 }

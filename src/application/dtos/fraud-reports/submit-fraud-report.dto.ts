@@ -10,7 +10,10 @@ import {
 import { FraudType } from '../../../domain/enums/fraud-type.enum.js';
 
 export class SubmitFraudReportDto {
-  @ApiProperty({ example: 'Scammer Name', description: 'Name of the fraudulent user' })
+  @ApiProperty({
+    example: 'Scammer Name',
+    description: 'Name of the fraudulent user',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
@@ -29,7 +32,10 @@ export class SubmitFraudReportDto {
   @IsDateString()
   tradeDate: string;
 
-  @ApiPropertyOptional({ example: '14:30', description: 'Trade time (free text)' })
+  @ApiPropertyOptional({
+    example: '14:30',
+    description: 'Trade time (free text)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(32)

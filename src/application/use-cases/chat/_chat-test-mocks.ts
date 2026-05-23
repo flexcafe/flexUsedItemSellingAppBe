@@ -102,12 +102,14 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     findTransactionForChat: jest.fn(),
     findBlockingSafePaymentForChat: jest.fn(() => Promise.resolve(null)),
     findDirectTradeIdByTransactionId: jest.fn(),
+    findDirectTradeByTransactionId: jest.fn(),
+    hasOpenDirectTradeForListing: jest.fn(() => Promise.resolve(false)),
     upsertDirectTrade: jest.fn(),
     startLocationShare: jest.fn(() =>
       Promise.resolve({ alreadyActive: false }),
     ),
     updateLocationShare: jest.fn(),
-    stopLocationShare: jest.fn(),
+    stopLocationShare: jest.fn(() => Promise.resolve(0)),
     stopAllLocationSharesForChatRoom: jest.fn(() => Promise.resolve(0)),
     requestSafePayment: jest.fn(),
     sendSafePaymentInstruction: jest.fn(),
@@ -133,13 +135,25 @@ export function buildProductRepoMock(): jest.Mocked<IProductRepository> {
   };
 }
 
-export function buildUserRepoMock(): jest.Mocked<IUserRepository> {
+export function buildActiveUserMock(
+  overrides: { id?: string; active?: boolean } = {},
+): { id: string; isActiveUser: () => boolean; isAdmin: () => boolean } {
+  const active = overrides.active ?? true;
   return {
-    findById: jest.fn(),
+    id: overrides.id ?? BUYER_ID,
+    isActiveUser: () => active,
+    isAdmin: () => false,
+  };
+}
+
+export function buildUserRepoMock(): jest.Mocked<IUserRepository> {
+  const mock = {
+    findById: jest.fn(() => Promise.resolve(buildActiveUserMock() as never)),
     findAdminUserIds: jest.fn(),
     createNotification: jest.fn(),
     getAuthDataByUserId: jest.fn(),
-  } as unknown as jest.Mocked<IUserRepository>;
+  };
+  return mock as unknown as jest.Mocked<IUserRepository>;
 }
 
 export function buildIdempotencyMock(): jest.Mocked<IChatIdempotencyStore> {

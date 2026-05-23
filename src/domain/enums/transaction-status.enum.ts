@@ -11,3 +11,17 @@ export enum TransactionStatus {
   CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
 }
+
+/** Terminal — row is closed; do not attach new direct-trade / location actions. */
+export const TERMINAL_CHAT_TRANSACTION_STATUSES: readonly TransactionStatus[] =
+  [
+    TransactionStatus.COMPLETED,
+    TransactionStatus.CANCELLED,
+    TransactionStatus.REFUNDED,
+  ];
+
+export function isTerminalChatTransactionStatus(
+  status: TransactionStatus,
+): boolean {
+  return TERMINAL_CHAT_TRANSACTION_STATUSES.includes(status);
+}

@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import {
   FRAUD_REPORT_REPOSITORY,
   type IFraudReportRepository,

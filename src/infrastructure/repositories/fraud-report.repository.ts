@@ -14,8 +14,7 @@ import type {
   ReviewFraudReportData,
 } from '../../domain/repositories/fraud-report.repository.interface.js';
 
-const { FraudReportStatus: PrismaFraudReportStatus, FraudType: PrismaFraudType } =
-  PrismaPkg;
+const { FraudReportStatus: PrismaFraudReportStatus } = PrismaPkg;
 
 const USER_SELECT = {
   id: true,
@@ -68,9 +67,7 @@ export class FraudReportRepository implements IFraudReportRepository {
     return rows.map((row) => this.map(row));
   }
 
-  async listForAdmin(
-    status?: FraudReportStatus,
-  ): Promise<FraudReportData[]> {
+  async listForAdmin(status?: FraudReportStatus): Promise<FraudReportData[]> {
     const rows = await this.prisma.fraudReport.findMany({
       where: status
         ? { status: status as unknown as PrismaPkg.FraudReportStatus }
@@ -90,7 +87,9 @@ export class FraudReportRepository implements IFraudReportRepository {
         throw new NotFoundException('Fraud report not found');
       }
       if (report.status !== PrismaFraudReportStatus.PENDING) {
-        throw new ConflictException('Only pending fraud reports can be reviewed');
+        throw new ConflictException(
+          'Only pending fraud reports can be reviewed',
+        );
       }
 
       return tx.fraudReport.update({
@@ -110,7 +109,12 @@ export class FraudReportRepository implements IFraudReportRepository {
 
   private map(
     row: PrismaPkg.FraudReport & {
-      reporter: { id: string; nickname: string; phone: string; isBanned: boolean };
+      reporter: {
+        id: string;
+        nickname: string;
+        phone: string;
+        isBanned: boolean;
+      };
       reportedUser: {
         id: string;
         nickname: string;

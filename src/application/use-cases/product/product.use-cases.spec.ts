@@ -4,6 +4,7 @@ import { CreateProductUseCase } from './create-product.use-case.js';
 import { UpdateProductUseCase } from './update-product.use-case.js';
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface.js';
 import type { ICategoryRepository } from '../../../domain/repositories/category.repository.interface.js';
+import type { IChatRepository } from '../../../domain/repositories/chat.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { ListingCondition } from '../../../domain/enums/listing-condition.enum.js';
 import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
@@ -26,6 +27,14 @@ function buildCategoryRepoMock(): jest.Mocked<ICategoryRepository> {
   return {
     findById: jest.fn(),
   } as unknown as jest.Mocked<ICategoryRepository>;
+}
+
+function buildChatRepoMock(): jest.Mocked<
+  Pick<IChatRepository, 'hasOpenDirectTradeForListing'>
+> {
+  return {
+    hasOpenDirectTradeForListing: jest.fn(() => Promise.resolve(false)),
+  } as jest.Mocked<Pick<IChatRepository, 'hasOpenDirectTradeForListing'>>;
 }
 
 function buildUserRepoMock(): jest.Mocked<IUserRepository> {
@@ -372,7 +381,11 @@ describe(UpdateProductUseCase.name, () => {
     productRepo.findByIdForSeller.mockResolvedValue(
       buildExistingListingForUpdate(),
     );
-    const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
+    const useCase = new UpdateProductUseCase(
+      productRepo,
+      categoryRepo,
+      buildChatRepoMock() as IChatRepository,
+    );
 
     await expect(
       useCase.execute('u1', 'p1', {
@@ -387,13 +400,63 @@ describe(UpdateProductUseCase.name, () => {
     productRepo.findByIdForSeller.mockResolvedValue(
       buildExistingListingForUpdate(),
     );
-    const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
+    const useCase = new UpdateProductUseCase(
+      productRepo,
+      categoryRepo,
+      buildChatRepoMock() as IChatRepository,
+    );
 
     await expect(
       useCase.execute('u1', 'p1', {
         preferredLocations: [{ label: '  ', address: 'somewhere' }] as any,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects meetup location edits while open direct trade exists', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    const chats = buildChatRepoMock();
+    productRepo.findByIdForSeller.mockResolvedValue(
+      buildExistingListingForUpdate(),
+    );
+    chats.hasOpenDirectTradeForListing.mockResolvedValue(true);
+    const useCase = new UpdateProductUseCase(
+      productRepo,
+      categoryRepo,
+      chats as IChatRepository,
+    );
+
+    await expect(
+      useCase.execute('u1', 'p1', {
+        directTradeLocation: 'New spot',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(productRepo.updateBySeller).not.toHaveBeenCalled();
+  });
+
+  it('allows non-meetup fields while open direct trade exists', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    const chats = buildChatRepoMock();
+    productRepo.findByIdForSeller.mockResolvedValue(
+      buildExistingListingForUpdate(),
+    );
+    chats.hasOpenDirectTradeForListing.mockResolvedValue(true);
+    productRepo.updateBySeller.mockResolvedValue({
+      id: 'p1',
+      preferredLocations: [],
+    } as never);
+    const useCase = new UpdateProductUseCase(
+      productRepo,
+      categoryRepo,
+      chats as IChatRepository,
+    );
+
+    await useCase.execute('u1', 'p1', { title: 'Updated title' });
+
+    expect(chats.hasOpenDirectTradeForListing).not.toHaveBeenCalled();
+    expect(productRepo.updateBySeller).toHaveBeenCalled();
   });
 
   it('rejects enabling delivery without a fee payer when listing had none', async () => {
@@ -405,7 +468,11 @@ describe(UpdateProductUseCase.name, () => {
         deliveryFeePayer: null,
       }),
     );
-    const useCase = new UpdateProductUseCase(productRepo, categoryRepo);
+    const useCase = new UpdateProductUseCase(
+      productRepo,
+      categoryRepo,
+      buildChatRepoMock() as IChatRepository,
+    );
 
     await expect(
       useCase.execute('u1', 'p1', { isDeliveryAvailable: true }),

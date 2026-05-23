@@ -13,12 +13,18 @@ import {
   CATEGORY_REPOSITORY,
   type ICategoryRepository,
 } from '../../../domain/repositories/category.repository.interface.js';
+import {
+  CHAT_REPOSITORY,
+  type IChatRepository,
+} from '../../../domain/repositories/chat.repository.interface.js';
 import { UpdateProductDto } from '../../dtos/product/update-product.dto.js';
 import { ProductResponseDto } from '../../dtos/product/product-response.dto.js';
 import {
   assertActiveCategory,
+  assertListingMeetingLocationsEditable,
   assertNotBlank,
   assertProductInputRules,
+  isUpdatingDirectTradeMeetingFields,
   mergeListingDeliveryForUpdate,
 } from './_helpers.js';
 
@@ -29,6 +35,8 @@ export class UpdateProductUseCase {
     private readonly productRepository: IProductRepository,
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
+    @Inject(CHAT_REPOSITORY)
+    private readonly chats: IChatRepository,
   ) {}
 
   async execute(
@@ -42,6 +50,10 @@ export class UpdateProductUseCase {
     );
     if (!existing || existing.isDeleted) {
       throw new NotFoundException('Product not found');
+    }
+
+    if (isUpdatingDirectTradeMeetingFields(dto)) {
+      await assertListingMeetingLocationsEditable(this.chats, productId);
     }
 
     const title = dto.title ? assertNotBlank(dto.title, 'title') : undefined;

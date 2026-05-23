@@ -31,12 +31,17 @@ export const CHAT_TRANSACTION_FLOW_DOC = `## End-to-end trade flows
 5. Mark read: \`PATCH .../read\` or \`chat.message.read\`.
 
 ### B. Direct trade + location (button 1)
-1. Either party: \`POST .../direct-trade\` with \`meetingDate\`, \`meetingTime\`, optional \`meetingLocation\` / coordinates.
-   - Creates/updates \`DIRECT_TRADE\` transaction and \`DIRECT_TRADE_REQUEST\` chat message.
-2. Each party starts sharing: \`POST .../location/start\` with GPS (\`latitude\`, \`longitude\`, \`expiresInSeconds\`).
-   - Posts \`LOCATION_SHARING_STARTED\` in chat; emits \`chat.location.started\`.
-3. While sharing: \`POST .../location\` or \`chat.location.update\` (max ~1 update / 3s per user).
-4. Stop: \`POST .../location/stop\` or \`chat.location.stop\` → \`LOCATION_SHARING_STOPPED\` message.
+Meeting **places** come from the **listing** (product create/edit): primary \`directTradeLocation\` + up to 3 \`preferredLocations\`. Chat only sets **date/time** and records buyer/seller choices. Sellers cannot edit those listing fields while an open direct trade exists on the product.
+
+1. **Start trade:** \`POST .../direct-trade\` with \`meetingDate\`, \`meetingTime\` → \`DIRECT_TRADE_REQUEST\` (metadata includes \`listingLocations\` from the product). Restarts on the same active transaction **clear** any previous chosen or pending meeting place so the buyer must pick again. After a trade is \`COMPLETED\` / \`CANCELLED\` / \`REFUNDED\`, starting again creates a **new** transaction row.
+2. **Buyer views options:** \`GET .../direct-trade\` → active direct trade only (same non-terminal filter); returns 404 if none started.
+3. **Buyer picks a listing spot:** \`POST .../direct-trade/accept-location\` with \`{ locationLabel }\` (e.g. \`"Primary"\` or a preferred label) → \`DIRECT_TRADE_LOCATION_ACCEPTED\`.
+4. **Or buyer proposes another place (after step 3 or an agreed place exists):** \`POST .../direct-trade/request-location-change\` → \`DIRECT_TRADE_LOCATION_CHANGE_REQUESTED\`. Cannot skip step 3 and only request a custom place.
+5. **Seller responds:** \`POST .../direct-trade/respond-location-change\` with \`{ accepted: true | false }\` → \`DIRECT_TRADE_LOCATION_CHANGE_ACCEPTED\` or \`DENIED\`.
+6. **Location sharing (after place is agreed):**
+   - \`POST .../location/start\` with GPS (\`latitude\`, \`longitude\`, \`expiresInSeconds\`) → \`LOCATION_SHARING_STARTED\`.
+   - \`POST .../location\` or \`chat.location.update\` (max ~1 update / 3s per user).
+   - \`POST .../location/stop\` or \`chat.location.stop\` → \`LOCATION_SHARING_STOPPED\`.
 
 ### C. Safe payment escrow (button 2)
 | Step | Who | API | Transaction status |
@@ -48,7 +53,7 @@ export const CHAT_TRANSACTION_FLOW_DOC = `## End-to-end trade flows
 | 5 Complete (×2) | Buyer + seller | \`POST /client/chats/transactions/complete\` each | \`COMPLETED\` |
 | 6 Release | Admin | \`POST .../safe-payments/:id/transferred\` | (transfer flags on safe_payment) |
 
-**Buyer modal (step 3):** call \`GET .../safe-payment\` for \`buyerKbzAccountName\`, \`buyerKbzPhoneNumber\`, \`adminReceivingPhone\`, \`canSubmitPayment\`. Submit body: \`payerKbzName\`, \`payerKbzPhone\`, \`paymentAmount\`, \`kbzTransactionId\`.
+**Buyer modal (step 3):** call \`GET .../safe-payment\` for \`buyerKbzAccountName\`, \`buyerKbzPhoneNumber\`, \`adminReceivingPhone\`, \`canSubmitPayment\`, and \`transaction.amount\` (expected MMK = listing price at request time). Submit body: \`payerKbzName\`, \`payerKbzPhone\`, \`paymentAmount\` (must **exactly** match \`transaction.amount\`), \`kbzTransactionId\`.
 
 **Chat system messages:** \`SAFE_PAYMENT_REQUESTED\`, \`SAFE_PAYMENT_INSTRUCTION_SENT\`, \`SAFE_PAYMENT_INITIATED\`, \`SAFE_PAYMENT_VERIFIED\`, \`PAYMENT_TRANSFERRED\`.
 
@@ -162,7 +167,21 @@ Buyer and seller each call once with \`transactionId\`. Status progresses \`SAFE
 
 **Direct trade gate:** \`DIRECT_TRADE\` completion is rejected while a safe payment exists for the chat that is not cancelled/refunded (buyer must finish safe payment and complete that transaction instead).
 
-**Location sharing:** when the authoritative transaction reaches \`COMPLETED\` (safe payment or direct trade, per table above), all active location shares for the chat's direct trade are stopped for both parties automatically.
+**Meetup gate:** if direct trade was started in this chat (\`POST .../direct-trade\`), \`meetingLocation\` must be set before **either** party completes — whether they complete the \`DIRECT_TRADE\` (cash) or \`SAFE_PAYMENT\` (KBZ) transaction. Set via buyer \`accept-location\` or seller \`respond-location-change\` with \`accepted: true\`.
+
+**Three payment scenarios:**
+
+| Scenario | Complete using | Meeting place required? |
+|----------|----------------|-------------------------|
+| Meetup + cash | \`DIRECT_TRADE\` \`transactionId\` | Yes (direct trade started) |
+| Meetup + safe payment (KBZ) | \`SAFE_PAYMENT\` \`transactionId\` | Yes (direct trade started) |
+| Delivery + safe payment only | \`SAFE_PAYMENT\` \`transactionId\` | No (never start direct trade) |
+
+**Location sharing:**
+- **Stop location** button: either party can stop their own share anytime.
+- **Transaction Complete (first tap):** that user's live GPS is stopped automatically; the other party can keep sharing until they also complete.
+- **Transaction Complete (both done, \`COMPLETED\`):** all remaining shares for the chat are stopped.
+- After you have completed, you cannot start or update live GPS; the other side can until they complete too.
 
 After \`COMPLETED\`, admin may release funds (\`transferred\` endpoint).`;
 

@@ -23,7 +23,12 @@ export class GetChatSafePaymentStatusUseCase {
     userId: string,
     chatRoomId: string,
   ): Promise<SafePaymentStatusData> {
-    const room = await requireRoomParticipant(this.chats, chatRoomId, userId);
+    const room = await requireRoomParticipant(
+      this.chats,
+      this.users,
+      chatRoomId,
+      userId,
+    );
     const status = await this.chats.findSafePaymentStatusByChatRoom(room.id);
     if (!status) {
       throw new NotFoundException('No safe payment in progress for this chat');

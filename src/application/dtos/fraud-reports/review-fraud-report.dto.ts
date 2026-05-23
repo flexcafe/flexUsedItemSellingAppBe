@@ -42,7 +42,8 @@ export class ConfirmFraudReportDto {
 export class DismissFraudReportDto {
   @ApiProperty({
     description: 'Message sent to the reporter',
-    example: 'We reviewed your report and could not confirm fraud at this time.',
+    example:
+      'We reviewed your report and could not confirm fraud at this time.',
   })
   @IsString()
   @IsNotEmpty()

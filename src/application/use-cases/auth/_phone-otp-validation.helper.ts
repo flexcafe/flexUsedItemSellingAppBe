@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { OtpPurpose } from '../../../domain/enums/otp-purpose.enum.js';
 import type {
   IUserRepository,

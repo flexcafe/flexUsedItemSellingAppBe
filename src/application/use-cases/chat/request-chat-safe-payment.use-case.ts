@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   CHAT_REPOSITORY,
@@ -13,12 +14,17 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  PRODUCT_REPOSITORY,
+  type IProductRepository,
+} from '../../../domain/repositories/product.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import {
   CHAT_MESSAGE_PUBLISHER,
   type IChatMessagePublisher,
 } from '../../../domain/services/chat-message-publisher.interface.js';
 import { requireRoomParticipant } from './_helpers.js';
+import { assertListingPriceForSafePayment } from './_safe-payment.helper.js';
 
 @Injectable()
 export class RequestChatSafePaymentUseCase {
@@ -27,15 +33,28 @@ export class RequestChatSafePaymentUseCase {
     private readonly chats: IChatRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: IUserRepository,
+    @Inject(PRODUCT_REPOSITORY)
+    private readonly products: IProductRepository,
     @Inject(CHAT_MESSAGE_PUBLISHER)
     private readonly publisher: IChatMessagePublisher,
   ) {}
 
   async execute(userId: string, chatRoomId: string): Promise<TransactionData> {
-    const room = await requireRoomParticipant(this.chats, chatRoomId, userId);
+    const room = await requireRoomParticipant(
+      this.chats,
+      this.users,
+      chatRoomId,
+      userId,
+    );
     if (room.buyerId !== userId) {
       throw new ForbiddenException('Only buyer can request safe payment');
     }
+
+    const listing = await this.products.findById(room.listingId);
+    if (!listing || listing.isDeleted) {
+      throw new NotFoundException('Listing not found');
+    }
+    const listingPrice = assertListingPriceForSafePayment(listing.price);
 
     let result: { transaction: TransactionData };
     try {
@@ -44,6 +63,7 @@ export class RequestChatSafePaymentUseCase {
         room.listingId,
         room.buyerId,
         room.sellerId,
+        listingPrice,
       );
     } catch (err) {
       if (err instanceof ConflictException) {
