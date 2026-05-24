@@ -610,13 +610,15 @@ export class ClientChatController {
   @Post('transactions/:transactionId/reviews')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Submit review and trade satisfaction after completed transaction',
+    summary:
+      'Submit review after you have marked transaction complete (no need to wait other side)',
     description: CHAT_TRANSACTION_REVIEW_DOC,
   })
   @ApiBody({ type: CreateReviewDto })
   @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Transaction not COMPLETED or review already submitted',
+    description:
+      'You have not completed the transaction yet, or review already submitted',
   })
   @ApiCreatedResponse({
     type: ApiResponseChatReviewDto,

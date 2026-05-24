@@ -1426,14 +1426,18 @@ describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
 });
 
 describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
-  it('delegates to review use-case when transaction is completed', async () => {
+  it('allows buyer review after buyer has completed (no need to wait seller)', async () => {
     const chats = buildChatRepoMock();
     const reviewUseCase = {
       execute: jest.fn(async () => ({ id: 'review-1' })),
     } as unknown as CreateTransactionReviewUseCase;
 
     chats.findTransactionById.mockResolvedValue(
-      buildTransaction({ status: TransactionStatus.COMPLETED }),
+      buildTransaction({
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
     );
 
     const useCase = new SubmitChatReviewAfterCompletionUseCase(
@@ -1449,10 +1453,14 @@ describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
     expect(reviewUseCase.execute).toHaveBeenCalledWith(TX_ID, BUYER_ID, dto);
   });
 
-  it('rejects review before transaction completion', async () => {
+  it('rejects review if user has not completed yet', async () => {
     const chats = buildChatRepoMock();
     chats.findTransactionById.mockResolvedValue(
-      buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_PENDING }),
+      buildTransaction({
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
     );
 
     const useCase = new SubmitChatReviewAfterCompletionUseCase(
@@ -1462,7 +1470,7 @@ describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
     );
 
     await expect(
-      useCase.execute(BUYER_ID, TX_ID, { stars: 5 }),
+      useCase.execute(SELLER_ID, TX_ID, { stars: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

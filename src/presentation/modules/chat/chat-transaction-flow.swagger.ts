@@ -72,7 +72,7 @@ Direct trade (meetup/location) can run alongside safe payment, but **cannot** cl
 
 1. **Safe payment path:** after admin marks payment received, both call complete with the **safe payment** \`transactionId\`.
 2. **Cash path:** both call complete with the **direct trade** \`transactionId\` (only when no active safe payment exists).
-3. When status is \`COMPLETED\`, each party may call \`POST .../transactions/:transactionId/reviews\` once (use the same id you completed):
+3. After you have tapped **Transaction Complete** (your side), you may call \`POST .../transactions/:transactionId/reviews\` once (use the same id you completed). You do **not** need to wait for the other party.
    - \`stars\` (1–5, required)
    - \`comment\` (optional) — **trade satisfaction** long text; no separate field.
 
@@ -189,7 +189,7 @@ export const CHAT_TRANSACTION_REVIEW_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 
 **This endpoint — Flow D step 2.**
 
-Only when transaction status is \`COMPLETED\`. Each user reviews the other party once.
+Each user reviews the other party once, after they have personally marked the transaction complete (buyer after \`BUYER_COMPLETED\`, seller after \`SELLER_COMPLETED\`). You do **not** need to wait for the other party.
 
 - \`stars\`: 1–5 rating (required)
 - \`comment\`: optional **trade satisfaction** feedback (long text); stored as review comment — there is no separate \`tradeSatisfaction\` field.`;
@@ -233,3 +233,6 @@ export const CHAT_WS_EVENTS_DOC = `### WebSocket reference (namespace \`/chat\`,
 **Server → room**
 - \`chat.safePayment.*\`, \`chat.directTrade.requested\`, \`chat.location.*\`, \`chat.transaction.completed\`
 - Message payloads mirror HTTP \`ChatMessageResponseDto\` when published via message publisher`;
+
+
+
