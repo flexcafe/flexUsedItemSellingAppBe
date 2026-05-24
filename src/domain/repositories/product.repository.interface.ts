@@ -68,6 +68,7 @@ export interface ProductSearchResult {
 
 export interface SellerProductsQuery {
   sellerId: string;
+  status?: ListingStatus;
   skip: number;
   take: number;
 }
@@ -85,6 +86,7 @@ export interface IProductRepository {
     sellerId: string,
     data: UpdateProductData,
   ): Promise<ListingEntity>;
+  markAsSold(listingId: string): Promise<void>;
   softDeleteBySeller(listingId: string, sellerId: string): Promise<boolean>;
   search(query: ProductSearchQuery): Promise<ProductSearchResult>;
 }

@@ -769,11 +769,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
         status: TransactionStatus.SAFE_PAYMENT_PENDING,
       }),
     );
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -795,11 +791,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
         status: TransactionStatus.SAFE_PAYMENT_PENDING,
       }),
     );
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -822,11 +814,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
         status: TransactionStatus.COMPLETED,
       }),
     );
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -871,7 +859,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
     });
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(buildChatMessage());
-    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), publisher);
 
     await useCase.execute(BUYER_ID, TX_ID);
 
@@ -908,11 +896,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       buyerRequestedLatitude: null,
       buyerRequestedLongitude: null,
     });
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -938,11 +922,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       }),
     );
     chats.createMessage.mockResolvedValue(buildChatMessage());
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await useCase.execute(BUYER_ID, TX_ID);
 
@@ -978,11 +958,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       buyerRequestedLatitude: 16.78,
       buyerRequestedLongitude: 96.15,
     });
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -1019,11 +995,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       buyerRequestedLatitude: null,
       buyerRequestedLongitude: null,
     });
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       BadRequestException,
@@ -1069,11 +1041,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       }),
     );
     chats.createMessage.mockResolvedValue(buildChatMessage());
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await useCase.execute(BUYER_ID, TX_ID);
 
@@ -1083,11 +1051,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
   it('rejects when transaction does not exist', async () => {
     const chats = buildChatRepoMock();
     chats.findTransactionById.mockResolvedValue(null);
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
       NotFoundException,
@@ -1100,11 +1064,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
     );
 
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      buildPublisherMock(),
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), buildPublisherMock());
 
     await expect(
       useCase.execute('99999999-9999-9999-9999-999999999999', TX_ID),
@@ -1113,6 +1073,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
 
   it('publishes partial completion event when only one side completes', async () => {
     const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
     const publisher = buildPublisherMock();
     chats.findTransactionById.mockResolvedValue(
       buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
@@ -1129,7 +1090,12 @@ describe(CompleteChatTransactionUseCase.name, () => {
     });
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(msg);
-    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      products,
+      buildUserRepoMock(),
+      publisher,
+    );
 
     const result = await useCase.execute(BUYER_ID, TX_ID);
 
@@ -1141,6 +1107,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       msg,
       'chat.transaction.completedByBuyer',
     );
+    expect(products.markAsSold).not.toHaveBeenCalled();
   });
 
   it('returns existing transaction without duplicate message when user already completed', async () => {
@@ -1152,11 +1119,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       sellerCompleted: false,
     });
     chats.findTransactionById.mockResolvedValue(alreadyDone);
-    const useCase = new CompleteChatTransactionUseCase(
-      chats,
-      buildUserRepoMock(),
-      publisher,
-    );
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), publisher);
 
     const result = await useCase.execute(BUYER_ID, TX_ID);
 
@@ -1217,7 +1180,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       .mockResolvedValueOnce(completionMsg)
       .mockResolvedValueOnce(locationMsg);
     chats.stopLocationShare.mockResolvedValue(1);
-    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), publisher);
 
     await useCase.execute(BUYER_ID, TX_ID);
 
@@ -1234,6 +1197,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
 
   it('publishes final completion event when both sides completed', async () => {
     const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
     const publisher = buildPublisherMock();
     chats.findTransactionById.mockResolvedValue(
       buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
@@ -1251,7 +1215,12 @@ describe(CompleteChatTransactionUseCase.name, () => {
     chats.markTransactionCompletedByUser.mockResolvedValue(next);
     chats.createMessage.mockResolvedValue(msg);
     chats.stopAllLocationSharesForChatRoom.mockResolvedValue(0);
-    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+    const useCase = new CompleteChatTransactionUseCase(
+      chats,
+      products,
+      buildUserRepoMock(),
+      publisher,
+    );
 
     await useCase.execute(SELLER_ID, TX_ID);
 
@@ -1263,6 +1232,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       msg,
       'chat.transaction.completed',
     );
+    expect(products.markAsSold).toHaveBeenCalledWith(LISTING_ID);
   });
 
   it('stops location sharing for both parties when transaction becomes completed', async () => {
@@ -1289,7 +1259,7 @@ describe(CompleteChatTransactionUseCase.name, () => {
       .mockResolvedValueOnce(completionMsg)
       .mockResolvedValueOnce(locationMsg);
     chats.stopAllLocationSharesForChatRoom.mockResolvedValue(2);
-    const useCase = new CompleteChatTransactionUseCase(chats, buildUserRepoMock(), publisher);
+    const useCase = new CompleteChatTransactionUseCase(chats, buildProductRepoMock(), buildUserRepoMock(), publisher);
 
     await useCase.execute(SELLER_ID, TX_ID);
 
@@ -1496,3 +1466,5 @@ describe(SubmitChatReviewAfterCompletionUseCase.name, () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+

@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 
 export class MyProductsFilterDto {
   @ApiPropertyOptional({
@@ -26,4 +27,13 @@ export class MyProductsFilterDto {
   @Min(1)
   @Max(50)
   limit?: number = 20;
+
+  @ApiPropertyOptional({
+    enum: ListingStatus,
+    description:
+      'Optional seller-side status filter (e.g. SOLD to view sold listings only).',
+  })
+  @IsOptional()
+  @IsEnum(ListingStatus)
+  status?: ListingStatus;
 }

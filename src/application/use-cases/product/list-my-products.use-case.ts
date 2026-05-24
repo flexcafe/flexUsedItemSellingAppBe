@@ -23,6 +23,7 @@ export class ListMyProductsUseCase {
     const skip = (page - 1) * limit;
     const data = await this.productRepository.findBySeller({
       sellerId: userId,
+      status: filter.status,
       skip,
       take: limit,
     });

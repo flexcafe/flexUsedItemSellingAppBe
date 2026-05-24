@@ -30,7 +30,7 @@ Products are **second-hand listings** stored in the \`listings\` table. The clie
 
 ### Pagination
 - **Catalog** (\`GET /client/products\`): query **\`page\`** (≥1) and **\`limit\`** (1–50). Response **data** is **PaginatedResponseDto**: \`items\`, \`total\`, \`page\`, \`limit\`, \`totalPages\`, \`hasNextPage\`, \`hasPrevPage\`.
-- **My products** (\`GET /client/products/my\`): same pagination shape; only listings owned by the current user (**not deleted**).
+- **My products** (\`GET /client/products/my\`): same pagination shape; only listings owned by the current user (**not deleted**). Optional query \`status\` lets seller filter by listing status (for example \`SOLD\` only).
 - **My product detail** (\`GET /client/products/my/:productId\`, auth): one listing **owned by the current user**, including **soft-deleted** rows (for seller dashboard). Wrong user or unknown id → **404**.
 
 ### Create lifecycle
@@ -76,7 +76,7 @@ Search and browse the catalog.
 export const CLIENT_PRODUCT_LIST_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`GET /client/products/my\` (auth)
-Paginated list of the current user’s own products (non-deleted). Query: **MyProductsFilterDto** (\`page\`, \`limit\`).`;
+Paginated list of the current user’s own products (non-deleted). Query: **MyProductsFilterDto** (\`page\`, \`limit\`, optional \`status\`).`;
 
 export const CLIENT_PRODUCT_GET_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 

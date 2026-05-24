@@ -11,6 +11,7 @@ import {
 } from '../../../domain/repositories/chat.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
+import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import {
   CHAT_MESSAGE_PUBLISHER,
   type IChatMessagePublisher,
@@ -27,12 +28,18 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  PRODUCT_REPOSITORY,
+  type IProductRepository,
+} from '../../../domain/repositories/product.repository.interface.js';
 
 @Injectable()
 export class CompleteChatTransactionUseCase {
   constructor(
     @Inject(CHAT_REPOSITORY)
     private readonly chats: IChatRepository,
+    @Inject(PRODUCT_REPOSITORY)
+    private readonly products: IProductRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: IUserRepository,
     @Inject(CHAT_MESSAGE_PUBLISHER)
@@ -86,6 +93,12 @@ export class CompleteChatTransactionUseCase {
           : 'chat.transaction.completedBySeller',
     );
     if (next.status === TransactionStatus.COMPLETED) {
+      if (
+        next.type === TransactionType.SAFE_PAYMENT ||
+        next.type === TransactionType.DIRECT_TRADE
+      ) {
+        await this.products.markAsSold(next.listingId);
+      }
       const stoppedCount = await this.chats.stopAllLocationSharesForChatRoom(
         next.chatRoomId,
       );

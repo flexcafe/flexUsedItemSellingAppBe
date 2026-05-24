@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { ListMyProductsUseCase } from './list-my-products.use-case.js';
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface.js';
+import { ListingStatus } from '../../../domain/enums/listing-status.enum.js';
 
 function buildProductRepoMock(): jest.Mocked<IProductRepository> {
   return {
@@ -9,6 +10,7 @@ function buildProductRepoMock(): jest.Mocked<IProductRepository> {
     findByIdForSeller: jest.fn(),
     findBySeller: jest.fn(),
     updateBySeller: jest.fn(),
+    markAsSold: jest.fn(),
     softDeleteBySeller: jest.fn(),
     search: jest.fn(),
   };
@@ -25,6 +27,25 @@ describe(ListMyProductsUseCase.name, () => {
     expect(repo.findBySeller).toHaveBeenCalledWith({
       sellerId: 'u-1',
       skip: 40,
+      take: 20,
+    });
+  });
+
+  it('passes status filter for seller listings', async () => {
+    const repo = buildProductRepoMock();
+    repo.findBySeller.mockResolvedValue({ rows: [], total: 0 });
+    const useCase = new ListMyProductsUseCase(repo);
+
+    await useCase.execute('u-1', {
+      page: 1,
+      limit: 20,
+      status: ListingStatus.SOLD,
+    });
+
+    expect(repo.findBySeller).toHaveBeenCalledWith({
+      sellerId: 'u-1',
+      status: ListingStatus.SOLD,
+      skip: 0,
       take: 20,
     });
   });

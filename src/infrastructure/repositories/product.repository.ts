@@ -107,14 +107,15 @@ export class ProductRepository implements IProductRepository {
     return row ? ListingMapper.toDomain(row) : null;
   }
 
-  async findBySeller({ sellerId, skip, take }: SellerProductsQuery) {
+  async findBySeller({ sellerId, status, skip, take }: SellerProductsQuery) {
     const safeTake = Math.max(1, Math.min(take, 50));
     const safeSkip = Math.max(0, skip);
+    const statusFilter = status !== undefined ? { status } : {};
     const total = await this.prisma.listing.count({
-      where: { sellerId, isDeleted: false },
+      where: { sellerId, isDeleted: false, ...statusFilter },
     });
     const rows = await this.prisma.listing.findMany({
-      where: { sellerId, isDeleted: false },
+      where: { sellerId, isDeleted: false, ...statusFilter },
       include: { category: true, seller: true, images: true },
       orderBy: { createdAt: 'desc' },
       skip: safeSkip,
@@ -201,6 +202,17 @@ export class ProductRepository implements IProductRepository {
 
     const row = await this.findListingWithRelations(listingId);
     return ListingMapper.toDomain(row);
+  }
+
+  async markAsSold(listingId: string): Promise<void> {
+    await this.prisma.listing.updateMany({
+      where: {
+        id: listingId,
+        isDeleted: false,
+        status: { not: PrismaListingStatus.SOLD },
+      },
+      data: { status: PrismaListingStatus.SOLD },
+    });
   }
 
   async softDeleteBySeller(listingId: string, sellerId: string) {

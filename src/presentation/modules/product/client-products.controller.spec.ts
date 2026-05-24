@@ -169,7 +169,7 @@ describe(ClientProductsController.name, () => {
     });
 
     const res = await request(app.getHttpServer())
-      .get('/api/v1/client/products/my?page=2&limit=10')
+      .get('/api/v1/client/products/my?page=2&limit=10&status=SOLD')
       .expect(200);
 
     expect(res.body.success).toBe(true);
@@ -177,6 +177,7 @@ describe(ClientProductsController.name, () => {
     expect(listMine.execute).toHaveBeenCalledWith('u1', {
       page: 2,
       limit: 10,
+      status: 'SOLD',
     });
     await close();
   });
