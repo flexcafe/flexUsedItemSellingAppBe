@@ -394,6 +394,8 @@ export class PointsRepository implements IPointsRepository {
         status: true,
         buyerId: true,
         sellerId: true,
+        buyerCompleted: true,
+        sellerCompleted: true,
       },
     });
     if (!transaction) {
@@ -405,6 +407,8 @@ export class PointsRepository implements IPointsRepository {
       status: transaction.status as TransactionStatus,
       buyerId: transaction.buyerId,
       sellerId: transaction.sellerId,
+      buyerCompleted: transaction.buyerCompleted,
+      sellerCompleted: transaction.sellerCompleted,
     };
   }
 

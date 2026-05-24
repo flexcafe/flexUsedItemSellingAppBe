@@ -103,6 +103,8 @@ export interface TransactionReviewContextData {
   status: TransactionStatus;
   buyerId: string;
   sellerId: string;
+  buyerCompleted: boolean;
+  sellerCompleted: boolean;
 }
 
 export interface CreateReviewData {

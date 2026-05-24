@@ -34,18 +34,35 @@ export class CreateTransactionReviewUseCase {
       throw new NotFoundException('Transaction not found');
     }
 
-    if (transaction.status !== TransactionStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Reviews can only be submitted after transaction is completed',
-      );
-    }
-
     if (
       transaction.buyerId !== reviewerId &&
       transaction.sellerId !== reviewerId
     ) {
       throw new ForbiddenException(
         'Only buyer or seller can review this trade',
+      );
+    }
+
+    const allowedStatuses = new Set<TransactionStatus>([
+      TransactionStatus.BUYER_COMPLETED,
+      TransactionStatus.SELLER_COMPLETED,
+      TransactionStatus.COMPLETED,
+    ]);
+    if (!allowedStatuses.has(transaction.status)) {
+      throw new BadRequestException(
+        'Reviews can only be submitted after you have completed the transaction',
+      );
+    }
+
+    const isBuyer = transaction.buyerId === reviewerId;
+    if (isBuyer && !transaction.buyerCompleted) {
+      throw new BadRequestException(
+        'Reviews can only be submitted after you have completed the transaction',
+      );
+    }
+    if (!isBuyer && !transaction.sellerCompleted) {
+      throw new BadRequestException(
+        'Reviews can only be submitted after you have completed the transaction',
       );
     }
 
