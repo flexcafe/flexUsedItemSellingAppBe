@@ -76,7 +76,7 @@ Search and browse the catalog.
 export const CLIENT_PRODUCT_LIST_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`GET /client/products/my\` (auth)
-Paginated list of the current user’s own products (non-deleted). Query: **MyProductsFilterDto** (\`page\`, \`limit\`, optional \`status\`).`;
+Paginated list of the current user’s own products (non-deleted). By default, **SOLD** listings are excluded. Query: **MyProductsFilterDto** (\`page\`, \`limit\`, optional \`status\`).`;
 
 export const CLIENT_PRODUCT_GET_MINE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
@@ -101,3 +101,6 @@ export const CLIENT_PRODUCT_DELETE_DOC = `${CLIENT_PRODUCT_WORKFLOW}
 
 ### This endpoint: \`DELETE /client/products/:productId\` (auth)
 Soft-deletes the listing when the caller is the seller. **Body (JSON):** **DeleteProductDto** with **\`confirmTitle\`** equal to the listing title (trimmed). **Sold** listings → **409**.`;
+
+
+

@@ -550,6 +550,7 @@ model Listing {
   @@index([sellerId])
   @@index([categoryId])
   @@index([status, isDeleted])
+  @@index([sellerId, isDeleted, status, createdAt])
   @@index([directTradeLatitude, directTradeLongitude])
   @@index([createdAt])
   @@index([price])

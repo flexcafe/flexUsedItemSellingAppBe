@@ -110,7 +110,10 @@ export class ProductRepository implements IProductRepository {
   async findBySeller({ sellerId, status, skip, take }: SellerProductsQuery) {
     const safeTake = Math.max(1, Math.min(take, 50));
     const safeSkip = Math.max(0, skip);
-    const statusFilter = status !== undefined ? { status } : {};
+    const statusFilter =
+      status !== undefined
+        ? { status }
+        : { status: { not: PrismaListingStatus.SOLD } };
     const total = await this.prisma.listing.count({
       where: { sellerId, isDeleted: false, ...statusFilter },
     });
