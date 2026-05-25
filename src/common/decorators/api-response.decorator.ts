@@ -124,6 +124,17 @@ export function ApiNumberSuccessResponse(options: ResponseOptions) {
   );
 }
 
+export function ApiNullSuccessResponse(options: ResponseOptions) {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto),
+    ApiResponse({
+      status: options.status ?? HttpStatus.OK,
+      description: options.description,
+      schema: baseResponseSchema({ type: 'null', example: null }),
+    }),
+  );
+}
+
 /** Cursor page (`items` + `nextCursor`) with typed item schema in `data`. */
 export function ApiCursorPageSuccessResponse<TModel extends Type<unknown>>(
   model: TModel,

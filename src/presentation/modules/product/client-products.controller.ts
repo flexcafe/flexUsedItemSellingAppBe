@@ -43,6 +43,7 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator.j
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import {
   ApiErrorResponse,
+  ApiNullSuccessResponse,
   ApiPaginatedSuccessResponse,
   ApiSuccessResponse,
 } from '../../../common/decorators/api-response.decorator.js';
@@ -323,12 +324,28 @@ export class ClientProductsController {
     description:
       'Seller-controlled lock: only the selected chat room can start safe payment or direct trade actions for this listing. Send `chatRoomId` to set; omit/null to clear.',
   })
+  @ApiNullSuccessResponse({
+    status: HttpStatus.OK,
+    description: 'Active deal updated (null payload in `data`)',
+  })
   @ApiParam({
     name: 'productId',
     format: 'uuid',
     description: 'Listing id owned by the current seller.',
   })
-  @ApiBody({ type: SetActiveDealDto })
+  @ApiBody({
+    type: SetActiveDealDto,
+    examples: {
+      set: {
+        summary: 'Set active deal to a chat room',
+        value: { chatRoomId: '11111111-1111-1111-1111-111111111111' },
+      },
+      clear: {
+        summary: 'Clear active deal',
+        value: { chatRoomId: null },
+      },
+    },
+  })
   async setMyListingActiveDeal(
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseUUIDPipe) productId: string,
