@@ -55,6 +55,7 @@ import {
   ProductDeleteResponseDto,
   ProductFilterDto,
   ProductResponseDto,
+  SetActiveDealDto,
   ApiResponsePublicProductDetailDto,
   ApiResponsePublicProductListDto,
   PublicProductDetailResponseDto,
@@ -327,16 +328,11 @@ export class ClientProductsController {
     format: 'uuid',
     description: 'Listing id owned by the current seller.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { chatRoomId: { type: 'string', format: 'uuid' } },
-    },
-  })
+  @ApiBody({ type: SetActiveDealDto })
   async setMyListingActiveDeal(
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseUUIDPipe) productId: string,
-    @Body() dto: { chatRoomId?: string | null },
+    @Body() dto: SetActiveDealDto,
   ): Promise<ApiResponseDto<null>> {
     await this.setActiveDealUseCase.execute(
       user.sub,
