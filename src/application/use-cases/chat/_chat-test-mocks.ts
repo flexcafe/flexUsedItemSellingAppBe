@@ -3,6 +3,7 @@ import type {
   ChatMessageData,
   ChatRoomData,
   IChatRepository,
+  OpenChatRoomResult,
   TransactionData,
 } from '../../../domain/repositories/chat.repository.interface.js';
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface.js';
@@ -135,6 +136,18 @@ export function buildProductRepoMock(): jest.Mocked<IProductRepository> {
     markAsSold: jest.fn(),
     softDeleteBySeller: jest.fn(),
     search: jest.fn(),
+  };
+}
+
+export function buildOpenChatRoomResult(
+  overrides: Partial<OpenChatRoomResult> = {},
+): OpenChatRoomResult {
+  return {
+    room: buildChatRoom(),
+    wasCreated: false,
+    shouldNotifySellerUnacceptedInterestThreshold: false,
+    interestedBuyerCount: null,
+    ...overrides,
   };
 }
 

@@ -1,0 +1,3 @@
+ALTER TABLE "listings"
+ADD COLUMN IF NOT EXISTS "interested_buyer_count" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS "last_interest_reminder_count" INTEGER NOT NULL DEFAULT 0;

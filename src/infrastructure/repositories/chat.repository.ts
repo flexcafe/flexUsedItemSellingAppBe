@@ -20,6 +20,7 @@ import {
   type DirectTradeRecord,
   type IChatRepository,
   type LocationShareData,
+  type OpenChatRoomResult,
   type AwaitingSafePaymentInstructionData,
   type PendingSafePaymentData,
   type SafePaymentData,
@@ -54,29 +55,83 @@ export class ChatRepository implements IChatRepository {
   async getOrCreateRoom(
     data: CreateChatRoomData,
     viewerUserId: string,
-  ): Promise<ChatRoomData> {
-    const existing = await this.prisma.chatRoom.findUnique({
-      where: {
-        listingId_buyerId_sellerId: {
+  ): Promise<OpenChatRoomResult> {
+    const opened = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.chatRoom.findUnique({
+        where: {
+          listingId_buyerId_sellerId: {
+            listingId: data.listingId,
+            buyerId: data.buyerId,
+            sellerId: data.sellerId,
+          },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        return {
+          roomId: existing.id,
+          wasCreated: false,
+          shouldNotifySellerUnacceptedInterestThreshold: false,
+          interestedBuyerCount: null as number | null,
+        };
+      }
+
+      const row = await tx.chatRoom.create({
+        data: {
           listingId: data.listingId,
           buyerId: data.buyerId,
           sellerId: data.sellerId,
         },
-      },
-      select: { id: true },
+        select: { id: true },
+      });
+
+      const listing = await tx.listing.findUnique({
+        where: { id: data.listingId },
+        select: {
+          interestedBuyerCount: true,
+          lastInterestReminderCount: true,
+          activeDealChatRoomId: true,
+        },
+      });
+      if (!listing) {
+        throw new NotFoundException('Listing not found');
+      }
+
+      const nextInterestedBuyerCount = listing.interestedBuyerCount + 1;
+      let shouldNotify = false;
+      let nextReminderCount = listing.lastInterestReminderCount;
+      if (!listing.activeDealChatRoomId) {
+        const delta = nextInterestedBuyerCount - listing.lastInterestReminderCount;
+        if (delta >= 5) {
+          shouldNotify = true;
+          nextReminderCount = nextInterestedBuyerCount;
+        }
+      }
+
+      await tx.listing.update({
+        where: { id: data.listingId },
+        data: {
+          interestedBuyerCount: nextInterestedBuyerCount,
+          lastInterestReminderCount: nextReminderCount,
+        },
+      });
+
+      return {
+        roomId: row.id,
+        wasCreated: true,
+        shouldNotifySellerUnacceptedInterestThreshold: shouldNotify,
+        interestedBuyerCount: shouldNotify ? nextInterestedBuyerCount : null,
+      };
     });
-    if (existing) {
-      return this.loadRoomById(existing.id, viewerUserId);
-    }
-    const row = await this.prisma.chatRoom.create({
-      data: {
-        listingId: data.listingId,
-        buyerId: data.buyerId,
-        sellerId: data.sellerId,
-      },
-      select: { id: true },
-    });
-    return this.loadRoomById(row.id, viewerUserId);
+
+    const room = await this.loadRoomById(opened.roomId, viewerUserId);
+    return {
+      room,
+      wasCreated: opened.wasCreated,
+      shouldNotifySellerUnacceptedInterestThreshold:
+        opened.shouldNotifySellerUnacceptedInterestThreshold,
+      interestedBuyerCount: opened.interestedBuyerCount,
+    };
   }
 
   async findRoomById(

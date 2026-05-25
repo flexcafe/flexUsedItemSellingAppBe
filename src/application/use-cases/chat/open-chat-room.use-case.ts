@@ -50,7 +50,7 @@ export class OpenChatRoomUseCase {
     await requireActiveChatUser(this.users, userId);
     await requireActiveChatUser(this.users, dto.sellerId);
 
-    return this.chats.getOrCreateRoom(
+    const openResult = await this.chats.getOrCreateRoom(
       {
         listingId: dto.listingId,
         buyerId: userId,
@@ -58,5 +58,22 @@ export class OpenChatRoomUseCase {
       },
       userId,
     );
+    if (openResult.shouldNotifySellerUnacceptedInterestThreshold) {
+      const count = openResult.interestedBuyerCount ?? 0;
+      await this.users.createNotification({
+        userId: dto.sellerId,
+        type: 'CHAT',
+        title: 'Many buyers are interested',
+        message: `${count} buyers have started chats for your listing, but no buyer is accepted yet.`,
+        referenceId: dto.listingId,
+        eventKey: 'CHAT_LISTING_UNACCEPTED_INTEREST_THRESHOLD',
+        metadata: {
+          listingId: dto.listingId,
+          interestedBuyerCount: count,
+          thresholdStep: 5,
+        },
+      });
+    }
+    return openResult.room;
   }
 }

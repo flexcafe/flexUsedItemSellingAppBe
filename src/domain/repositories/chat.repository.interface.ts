@@ -38,6 +38,13 @@ export interface ChatRoomData {
   counterparty: ChatRoomCounterpartySnapshot;
 }
 
+export interface OpenChatRoomResult {
+  room: ChatRoomData;
+  wasCreated: boolean;
+  shouldNotifySellerUnacceptedInterestThreshold: boolean;
+  interestedBuyerCount: number | null;
+}
+
 export interface ChatRoomSummaryData {
   chatRoomId: string;
   listingId: string;
@@ -205,7 +212,7 @@ export interface IChatRepository {
   getOrCreateRoom(
     data: CreateChatRoomData,
     viewerUserId: string,
-  ): Promise<ChatRoomData>;
+  ): Promise<OpenChatRoomResult>;
   findRoomById(chatRoomId: string): Promise<ChatRoomParticipantData | null>;
   listRoomsForUser(
     userId: string,

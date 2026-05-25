@@ -38,6 +38,7 @@ import {
   buildChatRepoMock,
   buildChatRoom,
   buildIdempotencyMock,
+  buildOpenChatRoomResult,
   buildProductRepoMock,
   buildPublisherMock,
   buildRealtimeMock,
@@ -250,7 +251,9 @@ describe(OpenChatRoomUseCase.name, () => {
     users.findById.mockImplementation(async (id: string) =>
       buildActiveUserMock({ id }) as never,
     );
-    chats.getOrCreateRoom.mockResolvedValue(room);
+    chats.getOrCreateRoom.mockResolvedValue(
+      buildOpenChatRoomResult({ room, wasCreated: true }),
+    );
 
     const useCase = new OpenChatRoomUseCase(chats, products, users);
     const result = await useCase.execute(BUYER_ID, {
@@ -267,6 +270,70 @@ describe(OpenChatRoomUseCase.name, () => {
       },
       BUYER_ID,
     );
+  });
+
+  it('notifies seller when unaccepted interest hits threshold', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const users = buildUserRepoMock();
+
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
+    users.findById.mockImplementation(async (id: string) =>
+      buildActiveUserMock({ id }) as never,
+    );
+    chats.getOrCreateRoom.mockResolvedValue(
+      buildOpenChatRoomResult({
+        room: buildChatRoom(),
+        wasCreated: true,
+        shouldNotifySellerUnacceptedInterestThreshold: true,
+        interestedBuyerCount: 5,
+      }),
+    );
+
+    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    await useCase.execute(BUYER_ID, {
+      listingId: LISTING_ID,
+      sellerId: SELLER_ID,
+    });
+
+    expect(users.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: SELLER_ID,
+        eventKey: 'CHAT_LISTING_UNACCEPTED_INTEREST_THRESHOLD',
+        referenceId: LISTING_ID,
+        metadata: expect.objectContaining({ interestedBuyerCount: 5 }),
+      }),
+    );
+  });
+
+  it('does not notify seller when threshold is not reached', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const users = buildUserRepoMock();
+
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
+    users.findById.mockImplementation(async (id: string) =>
+      buildActiveUserMock({ id }) as never,
+    );
+    chats.getOrCreateRoom.mockResolvedValue(
+      buildOpenChatRoomResult({
+        room: buildChatRoom(),
+        wasCreated: true,
+        shouldNotifySellerUnacceptedInterestThreshold: false,
+      }),
+    );
+
+    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    await useCase.execute(BUYER_ID, {
+      listingId: LISTING_ID,
+      sellerId: SELLER_ID,
+    });
+
+    expect(users.createNotification).not.toHaveBeenCalled();
   });
 });
 

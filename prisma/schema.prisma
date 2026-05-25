@@ -550,6 +550,8 @@ model Listing {
   // Seller-controlled "active deal" lock: only the selected chat room can proceed to trade actions.
   activeDealChatRoomId String?   @map("active_deal_chat_room_id")
   activeDealChatRoom   ChatRoom? @relation("ListingActiveDealRoom", fields: [activeDealChatRoomId], references: [id], onDelete: SetNull)
+  interestedBuyerCount Int       @default(0) @map("interested_buyer_count")
+  lastInterestReminderCount Int  @default(0) @map("last_interest_reminder_count")
 
   @@index([sellerId])
   @@index([categoryId])
