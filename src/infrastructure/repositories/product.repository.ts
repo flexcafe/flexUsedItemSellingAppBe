@@ -107,6 +107,33 @@ export class ProductRepository implements IProductRepository {
     return row ? ListingMapper.toDomain(row) : null;
   }
 
+  async getActiveDealChatRoomId(listingId: string): Promise<string | null> {
+    const row = await this.prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { activeDealChatRoomId: true },
+    });
+    return row?.activeDealChatRoomId ?? null;
+  }
+
+  async setActiveDealChatRoomId(
+    listingId: string,
+    sellerId: string,
+    chatRoomId: string | null,
+  ): Promise<void> {
+    const result = await this.prisma.listing.updateMany({
+      where: {
+        id: listingId,
+        sellerId,
+        isDeleted: false,
+        status: { not: PrismaListingStatus.SOLD },
+      },
+      data: { activeDealChatRoomId: chatRoomId },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException('Product not found');
+    }
+  }
+
   async findBySeller({ sellerId, status, skip, take }: SellerProductsQuery) {
     const safeTake = Math.max(1, Math.min(take, 50));
     const safeSkip = Math.max(0, skip);
@@ -214,7 +241,7 @@ export class ProductRepository implements IProductRepository {
         isDeleted: false,
         status: { not: PrismaListingStatus.SOLD },
       },
-      data: { status: PrismaListingStatus.SOLD },
+      data: { status: PrismaListingStatus.SOLD, activeDealChatRoomId: null },
     });
   }
 

@@ -66,6 +66,7 @@ import { ListProductsUseCase } from '../../../application/use-cases/product/list
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
 import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
+import { SetActiveDealUseCase } from '../../../application/use-cases/product/set-active-deal.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
 import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
@@ -91,6 +92,7 @@ export class ClientProductsController {
     private readonly getProductDetailUseCase: GetProductDetailUseCase,
     private readonly getMyProductDetailUseCase: GetMyProductDetailUseCase,
     private readonly listMyProductsUseCase: ListMyProductsUseCase,
+    private readonly setActiveDealUseCase: SetActiveDealUseCase,
     private readonly updateProductUseCase: UpdateProductUseCase,
     private readonly deleteProductUseCase: DeleteProductUseCase,
     private readonly uploadProductMediaUseCase: UploadProductMediaUseCase,
@@ -311,6 +313,37 @@ export class ClientProductsController {
       productId,
     );
     return ApiResponseDto.success(row, 'My product detail retrieved');
+  }
+
+  @Post('my/:productId/active-deal')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Set active deal chat room for my listing',
+    description:
+      'Seller-controlled lock: only the selected chat room can start safe payment or direct trade actions for this listing. Send `chatRoomId` to set; omit/null to clear.',
+  })
+  @ApiParam({
+    name: 'productId',
+    format: 'uuid',
+    description: 'Listing id owned by the current seller.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { chatRoomId: { type: 'string', format: 'uuid' } },
+    },
+  })
+  async setMyListingActiveDeal(
+    @CurrentUser() user: JwtPayload,
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: { chatRoomId?: string | null },
+  ): Promise<ApiResponseDto<null>> {
+    await this.setActiveDealUseCase.execute(
+      user.sub,
+      productId,
+      dto.chatRoomId ?? null,
+    );
+    return ApiResponseDto.success(null, 'Active deal updated');
   }
 
   @Public()

@@ -13,6 +13,7 @@ import { ListProductsUseCase } from '../../../application/use-cases/product/list
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
 import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
+import { SetActiveDealUseCase } from '../../../application/use-cases/product/set-active-deal.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
 import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
@@ -29,6 +30,7 @@ import { CHAT_REPOSITORY } from '../../../domain/repositories/chat.repository.in
     GetProductDetailUseCase,
     GetMyProductDetailUseCase,
     ListMyProductsUseCase,
+    SetActiveDealUseCase,
     UpdateProductUseCase,
     DeleteProductUseCase,
     UploadProductMediaUseCase,

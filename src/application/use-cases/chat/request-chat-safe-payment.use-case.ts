@@ -50,6 +50,20 @@ export class RequestChatSafePaymentUseCase {
       throw new ForbiddenException('Only buyer can request safe payment');
     }
 
+    const activeDealChatRoomId = await this.products.getActiveDealChatRoomId(
+      room.listingId,
+    );
+    if (!activeDealChatRoomId) {
+      throw new ConflictException(
+        'Seller has not selected an active deal for this listing yet',
+      );
+    }
+    if (activeDealChatRoomId !== room.id) {
+      throw new ConflictException(
+        'Another buyer is currently selected for this listing',
+      );
+    }
+
     const listing = await this.products.findById(room.listingId);
     if (!listing || listing.isDeleted) {
       throw new NotFoundException('Listing not found');

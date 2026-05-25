@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
   CHAT_REPOSITORY,
   type IChatRepository,
@@ -54,6 +54,21 @@ export class StartDirectTradeUseCase {
       chatRoomId,
       userId,
     );
+
+    const activeDealChatRoomId = await this.products.getActiveDealChatRoomId(
+      room.listingId,
+    );
+    if (!activeDealChatRoomId) {
+      throw new BadRequestException(
+        'Seller has not selected an active deal for this listing yet',
+      );
+    }
+    if (activeDealChatRoomId !== room.id) {
+      throw new BadRequestException(
+        'This chat is not the active deal for this listing',
+      );
+    }
+
     const listing = await requireListingForChat(this.products, room.listingId);
     const listingLocations = buildListingMeetingLocations(listing);
     assertListingHasMeetingLocations(listingLocations);

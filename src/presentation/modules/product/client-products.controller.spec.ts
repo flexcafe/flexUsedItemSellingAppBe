@@ -10,6 +10,7 @@ import { ListProductsUseCase } from '../../../application/use-cases/product/list
 import { GetProductDetailUseCase } from '../../../application/use-cases/product/get-product-detail.use-case.js';
 import { GetMyProductDetailUseCase } from '../../../application/use-cases/product/get-my-product-detail.use-case.js';
 import { ListMyProductsUseCase } from '../../../application/use-cases/product/list-my-products.use-case.js';
+import { SetActiveDealUseCase } from '../../../application/use-cases/product/set-active-deal.use-case.js';
 import { UpdateProductUseCase } from '../../../application/use-cases/product/update-product.use-case.js';
 import { DeleteProductUseCase } from '../../../application/use-cases/product/delete-product.use-case.js';
 import { UploadProductMediaUseCase } from '../../../application/use-cases/product/upload-product-media.use-case.js';
@@ -59,6 +60,7 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn() },
         },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: SetActiveDealUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
         {
@@ -99,6 +101,7 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn() },
         },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: SetActiveDealUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
         {
@@ -148,6 +151,7 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn() },
         },
         { provide: ListMyProductsUseCase, useValue: listMine },
+        { provide: SetActiveDealUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
         {
@@ -222,6 +226,7 @@ describe(ClientProductsController.name, () => {
         { provide: GetProductDetailUseCase, useValue: { execute: jest.fn() } },
         { provide: GetMyProductDetailUseCase, useValue: getMine },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: SetActiveDealUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: { execute: jest.fn() } },
         {
@@ -269,6 +274,7 @@ describe(ClientProductsController.name, () => {
           useValue: { execute: jest.fn() },
         },
         { provide: ListMyProductsUseCase, useValue: { execute: jest.fn() } },
+        { provide: SetActiveDealUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateProductUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteProductUseCase, useValue: del },
         {
@@ -308,3 +314,4 @@ describe(ClientProductsController.name, () => {
     await close();
   });
 });
+

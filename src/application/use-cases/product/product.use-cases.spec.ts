@@ -16,6 +16,8 @@ function buildProductRepoMock(): jest.Mocked<IProductRepository> {
     create: jest.fn(),
     findById: jest.fn(),
     findByIdForSeller: jest.fn(),
+    getActiveDealChatRoomId: jest.fn(),
+    setActiveDealChatRoomId: jest.fn(),
     findBySeller: jest.fn(),
     updateBySeller: jest.fn(),
     markAsSold: jest.fn(),

@@ -80,6 +80,12 @@ export interface IProductRepository {
     listingId: string,
     sellerId: string,
   ): Promise<ListingEntity | null>;
+  getActiveDealChatRoomId(listingId: string): Promise<string | null>;
+  setActiveDealChatRoomId(
+    listingId: string,
+    sellerId: string,
+    chatRoomId: string | null,
+  ): Promise<void>;
   findBySeller(query: SellerProductsQuery): Promise<ProductSearchResult>;
   updateBySeller(
     listingId: string,

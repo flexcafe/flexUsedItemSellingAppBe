@@ -68,6 +68,14 @@ export async function loadDirectTradeFlow(
 ): Promise<DirectTradeFlowContext> {
   const room = await requireRoomParticipant(chats, users, chatRoomId, userId);
   const listing = await requireListingForChat(products, room.listingId);
+  const activeDealChatRoomId = await products.getActiveDealChatRoomId(
+    room.listingId,
+  );
+  if (!activeDealChatRoomId || activeDealChatRoomId !== room.id) {
+    throw new ForbiddenException(
+      'This chat is not the active deal for this listing',
+    );
+  }
   const listingLocations = buildListingMeetingLocations(listing);
 
   const transaction = await chats.findTransactionForChat(

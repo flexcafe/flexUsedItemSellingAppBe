@@ -547,10 +547,15 @@ model Listing {
   transactions       Transaction[]
   chatRooms          ChatRoom[]
 
+  // Seller-controlled "active deal" lock: only the selected chat room can proceed to trade actions.
+  activeDealChatRoomId String?   @map("active_deal_chat_room_id")
+  activeDealChatRoom   ChatRoom? @relation("ListingActiveDealRoom", fields: [activeDealChatRoomId], references: [id], onDelete: SetNull)
+
   @@index([sellerId])
   @@index([categoryId])
   @@index([status, isDeleted])
   @@index([sellerId, isDeleted, status, createdAt])
+  @@index([activeDealChatRoomId])
   @@index([directTradeLatitude, directTradeLongitude])
   @@index([createdAt])
   @@index([price])
@@ -639,6 +644,7 @@ model ChatRoom {
 
   messages     ChatMessage[]
   transactions Transaction[]
+  activeForListings Listing[] @relation("ListingActiveDealRoom")
 
   @@unique([listingId, buyerId, sellerId])
   @@index([buyerId])
