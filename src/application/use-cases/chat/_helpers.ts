@@ -20,6 +20,12 @@ const SAFE_PAYMENT_COMPLETABLE_STATUSES = new Set<TransactionStatus>([
   TransactionStatus.SELLER_COMPLETED,
   TransactionStatus.COMPLETED,
 ]);
+const NON_CANCELLABLE_STATUSES = new Set<TransactionStatus>([
+  TransactionStatus.BUYER_COMPLETED,
+  TransactionStatus.SELLER_COMPLETED,
+  TransactionStatus.COMPLETED,
+  TransactionStatus.REFUNDED,
+]);
 
 export async function requireActiveChatUser(
   users: IUserRepository,
@@ -115,6 +121,25 @@ export async function assertTransactionCompletable(
     throw new BadRequestException(
       'Safe payment was started for this chat. Finish the safe payment flow and use Transaction Complete on that payment before direct trade completion',
     );
+  }
+}
+
+export function assertTransactionCancellable(transaction: TransactionData): void {
+  if (NON_CANCELLABLE_STATUSES.has(transaction.status)) {
+    throw new BadRequestException(
+      'Completed or refunded transaction cannot be cancelled',
+    );
+  }
+  if (transaction.type === TransactionType.SAFE_PAYMENT) {
+    const allowedBeforeInitiated = new Set<TransactionStatus>([
+      TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+      TransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT,
+    ]);
+    if (!allowedBeforeInitiated.has(transaction.status)) {
+      throw new BadRequestException(
+        'Safe payment cannot be cancelled after payment submission',
+      );
+    }
   }
 }
 

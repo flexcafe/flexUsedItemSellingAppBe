@@ -801,6 +801,44 @@ export class PointsRepository implements IPointsRepository {
     return true;
   }
 
+  async deductPointsForTransactionCancellation(
+    userId: string,
+    transactionId: string,
+    amount: number,
+  ): Promise<{ deductedPoints: number; balanceAfter: number }> {
+    const safeAmount = Math.max(0, Math.floor(amount));
+    const rankConfigs = await this.getRankConfigs();
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { totalPoints: true },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const deductedPoints = safeAmount;
+      const balanceAfter = user.totalPoints - deductedPoints;
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          totalPoints: balanceAfter,
+          currentRank: this.findRankTierForPoints(rankConfigs, balanceAfter),
+        },
+      });
+      await tx.pointTransaction.create({
+        data: {
+          userId,
+          amount: -deductedPoints,
+          sourceType: PrismaPointSourceType.ADMIN_GRANT,
+          sourceId: transactionId,
+          description: 'Transaction cancellation penalty',
+          balanceAfter,
+        },
+      });
+      return { deductedPoints, balanceAfter };
+    });
+  }
+
   private milestoneBonusLedgerDescription(
     sourceType: MilestonePointSource,
   ): string {

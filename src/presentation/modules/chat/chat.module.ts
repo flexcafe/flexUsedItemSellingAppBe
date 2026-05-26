@@ -38,6 +38,7 @@ import { SubmitChatSafePaymentUseCase } from '../../../application/use-cases/cha
 import { ListAwaitingSafePaymentInstructionsUseCase } from '../../../application/use-cases/chat/list-awaiting-safe-payment-instructions.use-case.js';
 import { AdminSendSafePaymentInstructionUseCase } from '../../../application/use-cases/chat/admin-send-safe-payment-instruction.use-case.js';
 import { CompleteChatTransactionUseCase } from '../../../application/use-cases/chat/complete-chat-transaction.use-case.js';
+import { CancelChatTransactionUseCase } from '../../../application/use-cases/chat/cancel-chat-transaction.use-case.js';
 import { AdminMarkSafePaymentReceivedUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-received.use-case.js';
 import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-transferred.use-case.js';
 import { ListPendingSafePaymentsUseCase } from '../../../application/use-cases/chat/list-pending-safe-payments.use-case.js';
@@ -73,6 +74,7 @@ import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use
     GetChatSafePaymentStatusUseCase,
     SubmitChatSafePaymentUseCase,
     CompleteChatTransactionUseCase,
+    CancelChatTransactionUseCase,
     ListAwaitingSafePaymentInstructionsUseCase,
     AdminSendSafePaymentInstructionUseCase,
     AdminMarkSafePaymentReceivedUseCase,

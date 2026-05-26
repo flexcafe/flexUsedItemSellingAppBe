@@ -244,6 +244,15 @@ export class ConfirmTransactionCompleteDto {
   transactionId: string;
 }
 
+export class CancelTransactionDto {
+  @ApiProperty({
+    description:
+      'Safe-payment or direct-trade transaction id. Either buyer or seller can cancel while not completed/refunded.',
+  })
+  @IsUUID()
+  transactionId: string;
+}
+
 export class AdminMarkSafePaymentReceivedDto {
   @ApiPropertyOptional({
     example: '09xxxxxxxxx',

@@ -185,6 +185,11 @@ export interface IPointsRepository {
     userId: string,
     sourceType: PointSourceType,
   ): Promise<boolean>;
+  deductPointsForTransactionCancellation(
+    userId: string,
+    transactionId: string,
+    amount: number,
+  ): Promise<{ deductedPoints: number; balanceAfter: number }>;
 }
 
 export const POINTS_REPOSITORY = Symbol('POINTS_REPOSITORY');

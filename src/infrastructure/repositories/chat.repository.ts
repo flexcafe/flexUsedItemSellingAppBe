@@ -883,6 +883,43 @@ export class ChatRepository implements IChatRepository {
     return this.mapTransaction(row);
   }
 
+  async markTransactionCancelledByUser(
+    transactionId: string,
+    userId: string,
+  ): Promise<{ transaction: TransactionData; cancelledNow: boolean }> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id: transactionId },
+      });
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+      if (transaction.buyerId !== userId && transaction.sellerId !== userId) {
+        throw new ConflictException('User is not part of this transaction');
+      }
+      if (transaction.status === PrismaTransactionStatus.COMPLETED) {
+        throw new BadRequestException('Completed transaction cannot be cancelled');
+      }
+      if (transaction.status === PrismaTransactionStatus.REFUNDED) {
+        throw new BadRequestException('Refunded transaction cannot be cancelled');
+      }
+      if (transaction.status === PrismaTransactionStatus.CANCELLED) {
+        return { transaction, cancelledNow: false };
+      }
+
+      const updated = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: PrismaTransactionStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelReason: 'Cancelled by participant',
+        },
+      });
+      return { transaction: updated, cancelledNow: true };
+    });
+    return { transaction: this.mapTransaction(row.transaction), cancelledNow: row.cancelledNow };
+  }
+
   async listPendingSafePayments(
     cursor: string | null,
     take: number,

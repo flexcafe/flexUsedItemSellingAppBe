@@ -35,6 +35,7 @@ import {
   CHAT_SAFE_PAYMENT_SUBMIT_DOC,
   CHAT_SEND_MESSAGE_DOC,
   CHAT_TRANSACTION_COMPLETE_DOC,
+  CHAT_TRANSACTION_CANCEL_DOC,
   CHAT_TRANSACTION_REVIEW_DOC,
 } from './chat-transaction-flow.swagger.js';
 import { Throttle } from '@nestjs/throttler';
@@ -65,6 +66,7 @@ import {
   ChatRoomResponseDto,
   ChatRoomSummaryResponseDto,
   ConfirmTransactionCompleteDto,
+  CancelTransactionDto,
   CursorPageResponseDto,
   CursorQueryDto,
   OpenChatRoomDto,
@@ -104,6 +106,7 @@ import { RequestChatSafePaymentUseCase } from '../../../application/use-cases/ch
 import { GetChatSafePaymentStatusUseCase } from '../../../application/use-cases/chat/get-chat-safe-payment-status.use-case.js';
 import { SubmitChatSafePaymentUseCase } from '../../../application/use-cases/chat/submit-chat-safe-payment.use-case.js';
 import { CompleteChatTransactionUseCase } from '../../../application/use-cases/chat/complete-chat-transaction.use-case.js';
+import { CancelChatTransactionUseCase } from '../../../application/use-cases/chat/cancel-chat-transaction.use-case.js';
 import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use-cases/chat/submit-chat-review-after-completion.use-case.js';
 
 @ApiTags('Client Chat')
@@ -144,6 +147,7 @@ export class ClientChatController {
     private readonly getChatSafePaymentStatus: GetChatSafePaymentStatusUseCase,
     private readonly submitChatSafePayment: SubmitChatSafePaymentUseCase,
     private readonly completeChatTransaction: CompleteChatTransactionUseCase,
+    private readonly cancelChatTransaction: CancelChatTransactionUseCase,
     private readonly submitChatReviewAfterCompletion: SubmitChatReviewAfterCompletionUseCase,
   ) {}
 
@@ -604,6 +608,35 @@ export class ClientChatController {
     return ApiResponseDto.success(
       new TransactionResponseDto(tx),
       'Transaction completion updated',
+    );
+  }
+
+  @Post('transactions/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel transaction by buyer or seller',
+    description: CHAT_TRANSACTION_CANCEL_DOC,
+  })
+  @ApiBody({ type: CancelTransactionDto })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Completed/refunded transaction cannot be cancelled',
+  })
+  @ApiOkResponse({
+    type: ApiResponseChatTransactionDto,
+    description: 'Transaction cancelled',
+  })
+  async cancelTransaction(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CancelTransactionDto,
+  ): Promise<ApiResponseDto<TransactionResponseDto>> {
+    const tx = await this.cancelChatTransaction.execute(
+      user.sub,
+      dto.transactionId,
+    );
+    return ApiResponseDto.success(
+      new TransactionResponseDto(tx),
+      'Transaction cancelled',
     );
   }
 

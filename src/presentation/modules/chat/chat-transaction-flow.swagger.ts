@@ -185,6 +185,22 @@ Buyer and seller each call once with \`transactionId\`. Status progresses \`SAFE
 
 After \`COMPLETED\`, admin may release funds (\`transferred\` endpoint).`;
 
+export const CHAT_TRANSACTION_CANCEL_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
+
+**Cancel transaction (buyer or seller):**
+
+Either side can cancel a non-completed transaction for all three trading paths:
+1. delivery + safe payment
+2. direct trade + cash
+3. direct trade + safe payment
+
+Rules:
+- Completed/refunded transactions cannot be cancelled.
+- Safe payment cannot be cancelled after buyer submits payment (initiated).
+- Cancellation sets transaction status to \`CANCELLED\`.
+- Cancelling side gets a 20-point penalty.
+- If this chat was the listing active deal, active deal is cleared so seller can select another buyer.`;
+
 export const CHAT_TRANSACTION_REVIEW_DOC = `${CHAT_TRANSACTION_FLOW_DOC}
 
 **This endpoint — Flow D step 2.**

@@ -119,6 +119,7 @@ export function buildChatRepoMock(): jest.Mocked<IChatRepository> {
     markSafePaymentReceived: jest.fn(),
     markSafePaymentTransferred: jest.fn(),
     markTransactionCompletedByUser: jest.fn(),
+    markTransactionCancelledByUser: jest.fn(),
     listPendingSafePayments: jest.fn(),
     listAwaitingSafePaymentInstructions: jest.fn(),
   };

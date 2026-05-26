@@ -14,6 +14,7 @@ import { GetChatSafePaymentStatusUseCase } from './get-chat-safe-payment-status.
 import { RequestChatSafePaymentUseCase } from './request-chat-safe-payment.use-case.js';
 import { SubmitChatSafePaymentUseCase } from './submit-chat-safe-payment.use-case.js';
 import { CompleteChatTransactionUseCase } from './complete-chat-transaction.use-case.js';
+import { CancelChatTransactionUseCase } from './cancel-chat-transaction.use-case.js';
 import { AdminMarkSafePaymentTransferredUseCase } from './admin-mark-safe-payment-transferred.use-case.js';
 import { AdminSendSafePaymentInstructionUseCase } from './admin-send-safe-payment-instruction.use-case.js';
 import { AdminMarkSafePaymentReceivedUseCase } from './admin-mark-safe-payment-received.use-case.js';
@@ -24,6 +25,7 @@ import { AcceptDirectTradeLocationUseCase } from './accept-direct-trade-location
 import { RequestDirectTradeLocationChangeUseCase } from './request-direct-trade-location-change.use-case.js';
 import { RespondDirectTradeLocationChangeUseCase } from './respond-direct-trade-location-change.use-case.js';
 import { CreateTransactionReviewUseCase } from '../points/create-transaction-review.use-case.js';
+import type { IPointsRepository } from '../../../domain/repositories/points.repository.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
@@ -1275,6 +1277,38 @@ describe(SubmitChatSafePaymentUseCase.name, () => {
     expect(chats.submitSafePayment).not.toHaveBeenCalled();
   });
 
+  it('rejects submit after transaction was cancelled (even if instruction was sent before)', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    chats.findSafePaymentStatusByChatRoom.mockResolvedValue({
+      transaction: buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.CANCELLED,
+      }),
+      safePayment: {
+        instructionSentAt: new Date(),
+        adminReceivingPhone: '09111111111',
+      } as never,
+      canSubmitPayment: false,
+    });
+    const useCase = new SubmitChatSafePaymentUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildIdempotencyMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, ROOM_ID, {
+        payerKbzName: 'Buyer',
+        payerKbzPhone: '09111111111',
+        paymentAmount: 100_000,
+        kbzTransactionId: 'KBZ-CANCELLED-TRY',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.submitSafePayment).not.toHaveBeenCalled();
+  });
+
   it('blocks duplicate submit by idempotency key', async () => {
     const chats = buildChatRepoMock();
     const idempotency = buildIdempotencyMock();
@@ -1874,6 +1908,335 @@ describe(CompleteChatTransactionUseCase.name, () => {
   });
 });
 
+describe(CancelChatTransactionUseCase.name, () => {
+  function buildPointsRepoMock(): jest.Mocked<IPointsRepository> {
+    return {
+      getUserPointsSummary: jest.fn(),
+      getUserTransactionStats: jest.fn(),
+      getPublicUserProfile: jest.fn(),
+      getSellerReviews: jest.fn(),
+      getStarPointConfigs: jest.fn(),
+      upsertStarPointConfigs: jest.fn(),
+      getRankConfigs: jest.fn(),
+      upsertRankConfigs: jest.fn(),
+      findTransactionReviewContext: jest.fn(),
+      hasReview: jest.fn(),
+      createReviewAndAwardPoints: jest.fn(),
+      createWithdrawalRequest: jest.fn(),
+      findUserWithdrawalRequests: jest.fn(),
+      findWithdrawalRequests: jest.fn(),
+      approveWithdrawal: jest.fn(),
+      rejectWithdrawal: jest.fn(),
+      markWithdrawalPaid: jest.fn(),
+      grantAccountLifetimeMilestoneBonus: jest.fn(),
+      deductPointsForTransactionCancellation: jest.fn(),
+    } as unknown as jest.Mocked<IPointsRepository>;
+  }
+
+  it('allows buyer to cancel and deducts points once', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const points = buildPointsRepoMock();
+    const users = buildUserRepoMock();
+    const publisher = buildPublisherMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        status: TransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT,
+      }),
+    );
+    chats.markTransactionCancelledByUser.mockResolvedValue({
+      transaction: buildTransaction({ status: TransactionStatus.CANCELLED }),
+      cancelledNow: true,
+    });
+    points.deductPointsForTransactionCancellation.mockResolvedValue({
+      deductedPoints: 20,
+      balanceAfter: 80,
+    });
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    products.getActiveDealChatRoomId.mockResolvedValue(ROOM_ID);
+
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      products,
+      points,
+      users,
+      publisher,
+    );
+    const result = await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(result.status).toBe(TransactionStatus.CANCELLED);
+    expect(points.deductPointsForTransactionCancellation).toHaveBeenCalledWith(
+      BUYER_ID,
+      TX_ID,
+      20,
+    );
+    expect(products.setActiveDealChatRoomId).toHaveBeenCalledWith(
+      LISTING_ID,
+      SELLER_ID,
+      null,
+    );
+    expect(publisher.publish).toHaveBeenCalledWith(
+      ROOM_ID,
+      BUYER_ID,
+      SELLER_ID,
+      expect.anything(),
+      'chat.transaction.cancelled',
+    );
+    expect(users.createNotification).toHaveBeenCalledTimes(2);
+    expect(users.createNotification).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        userId: BUYER_ID,
+        eventKey: 'CHAT_TRANSACTION_CANCELLED_SELF_PENALTY',
+      }),
+    );
+    expect(users.createNotification).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        userId: SELLER_ID,
+        eventKey: 'CHAT_TRANSACTION_CANCELLED_COUNTERPARTY',
+      }),
+    );
+  });
+
+  it('rejects cancellation once safe payment is initiated (pending/received/etc)', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_PENDING,
+      }),
+    );
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCancelledByUser).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent for already cancelled transaction (no double penalty)', async () => {
+    const chats = buildChatRepoMock();
+    const points = buildPointsRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.CANCELLED }),
+    );
+    chats.markTransactionCancelledByUser.mockResolvedValue({
+      transaction: buildTransaction({ status: TransactionStatus.CANCELLED }),
+      cancelledNow: false,
+    });
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      points,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await useCase.execute(BUYER_ID, TX_ID);
+    expect(points.deductPointsForTransactionCancellation).not.toHaveBeenCalled();
+    expect(chats.createMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancellation by non-participant', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(buildTransaction());
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(
+      useCase.execute('99999999-9999-9999-9999-999999999999', TX_ID),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects completed transaction cancellation', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.COMPLETED }),
+    );
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('rejects cancellation when one side already completed (direct trade)', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.BUYER_COMPLETED,
+        buyerCompleted: true,
+        sellerCompleted: false,
+      }),
+    );
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(chats.markTransactionCancelledByUser).not.toHaveBeenCalled();
+  });
+
+  it('allows seller to cancel before safe-payment initiation', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const points = buildPointsRepoMock();
+    const users = buildUserRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.SAFE_PAYMENT_AWAITING_INSTRUCTION,
+      }),
+    );
+    chats.markTransactionCancelledByUser.mockResolvedValue({
+      transaction: buildTransaction({
+        type: TransactionType.SAFE_PAYMENT,
+        status: TransactionStatus.CANCELLED,
+      }),
+      cancelledNow: true,
+    });
+    points.deductPointsForTransactionCancellation.mockResolvedValue({
+      deductedPoints: 20,
+      balanceAfter: 5,
+    });
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    products.getActiveDealChatRoomId.mockResolvedValue(ROOM_ID);
+
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      products,
+      points,
+      users,
+      buildPublisherMock(),
+    );
+    const result = await useCase.execute(SELLER_ID, TX_ID);
+
+    expect(result.status).toBe(TransactionStatus.CANCELLED);
+    expect(points.deductPointsForTransactionCancellation).toHaveBeenCalledWith(
+      SELLER_ID,
+      TX_ID,
+      20,
+    );
+    expect(users.createNotification).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        userId: SELLER_ID,
+      }),
+    );
+    expect(users.createNotification).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        userId: BUYER_ID,
+      }),
+    );
+  });
+
+  it('does not clear active deal when cancelled chat is not selected deal', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const points = buildPointsRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    chats.markTransactionCancelledByUser.mockResolvedValue({
+      transaction: buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.CANCELLED,
+      }),
+      cancelledNow: true,
+    });
+    points.deductPointsForTransactionCancellation.mockResolvedValue({
+      deductedPoints: 20,
+      balanceAfter: 50,
+    });
+    chats.createMessage.mockResolvedValue(buildChatMessage());
+    products.getActiveDealChatRoomId.mockResolvedValue('another-room-id');
+
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      products,
+      points,
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+    await useCase.execute(BUYER_ID, TX_ID);
+
+    expect(products.setActiveDealChatRoomId).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancellation when transaction is missing', async () => {
+    const chats = buildChatRepoMock();
+    chats.findTransactionById.mockResolvedValue(null);
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      buildUserRepoMock(),
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(chats.markTransactionCancelledByUser).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancellation when user is deactivated', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({
+        type: TransactionType.DIRECT_TRADE,
+        status: TransactionStatus.INITIATED,
+      }),
+    );
+    users.findById.mockResolvedValue(
+      buildActiveUserMock({ id: BUYER_ID, active: false }) as never,
+    );
+    const useCase = new CancelChatTransactionUseCase(
+      chats,
+      buildProductRepoMock(),
+      buildPointsRepoMock(),
+      users,
+      buildPublisherMock(),
+    );
+
+    await expect(useCase.execute(BUYER_ID, TX_ID)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(chats.markTransactionCancelledByUser).not.toHaveBeenCalled();
+  });
+
+});
+
 describe(StartChatLocationShareUseCase.name, () => {
   it('rejects when user already marked transaction complete', async () => {
     const chats = buildChatRepoMock();
@@ -1972,6 +2335,27 @@ describe(AdminSendSafePaymentInstructionUseCase.name, () => {
     );
     expect(users.createNotification).toHaveBeenCalledTimes(2);
   });
+
+  it('rejects when transaction is already cancelled', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    chats.sendSafePaymentInstruction.mockRejectedValue(
+      new ConflictException('Safe payment transaction is cancelled'),
+    );
+    const useCase = new AdminSendSafePaymentInstructionUseCase(
+      chats,
+      users,
+      buildRealtimeMock(),
+    );
+
+    await expect(
+      useCase.execute('admin-1', TX_ID, {
+        adminReceivingPhone: '0911222333',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(users.createNotification).not.toHaveBeenCalled();
+  });
 });
 
 describe(AdminMarkSafePaymentReceivedUseCase.name, () => {
@@ -2019,6 +2403,27 @@ describe(AdminMarkSafePaymentReceivedUseCase.name, () => {
       }),
     );
   });
+
+  it('rejects when transaction is already cancelled', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    chats.markSafePaymentReceived.mockRejectedValue(
+      new ConflictException('Safe payment transaction is cancelled'),
+    );
+    const useCase = new AdminMarkSafePaymentReceivedUseCase(
+      chats,
+      users,
+      buildRealtimeMock(),
+    );
+
+    await expect(
+      useCase.execute('admin-1', TX_ID, {
+        adminReceivingPhone: '099888777',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(users.createNotification).not.toHaveBeenCalled();
+  });
 });
 
 describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
@@ -2055,6 +2460,25 @@ describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
     await expect(
       useCase.execute('admin-1', TX_ID, { transferRef: 'REF1' }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects transfer when transaction is cancelled', async () => {
+    const chats = buildChatRepoMock();
+    const users = buildUserRepoMock();
+    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    chats.findTransactionById.mockResolvedValue(
+      buildTransaction({ status: TransactionStatus.CANCELLED }),
+    );
+    const useCase = new AdminMarkSafePaymentTransferredUseCase(
+      chats,
+      users,
+      buildRealtimeMock(),
+    );
+
+    await expect(
+      useCase.execute('admin-1', TX_ID, { transferRef: 'REF-CANCELLED' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.markSafePaymentTransferred).not.toHaveBeenCalled();
   });
 });
 

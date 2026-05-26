@@ -294,6 +294,10 @@ export interface IChatRepository {
     transactionId: string,
     userId: string,
   ): Promise<TransactionData>;
+  markTransactionCancelledByUser(
+    transactionId: string,
+    userId: string,
+  ): Promise<{ transaction: TransactionData; cancelledNow: boolean }>;
   listPendingSafePayments(
     cursor: string | null,
     take: number,

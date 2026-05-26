@@ -163,6 +163,7 @@ function buildPointsRepoMock(): jest.Mocked<IPointsRepository> {
     rejectWithdrawal: jest.fn(),
     markWithdrawalPaid: jest.fn(),
     grantAccountLifetimeMilestoneBonus: jest.fn().mockResolvedValue(true),
+    deductPointsForTransactionCancellation: jest.fn(),
   };
 }
 

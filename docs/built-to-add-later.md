@@ -91,3 +91,92 @@ Do not rely on comparing `sellerId` in the client only; use server flags.
 4. Update `ProductResponseDto` / `PublicProductDetailResponseDto` + public Swagger DTOs.
 5. Tests: seller not in catalog when authed; seller detail flags; guest unchanged; chat still blocked.
 6. Product swagger doc: describe optional auth and flags.
+
+## Refund logic (Safe payment escrow) — implement later
+
+### Goal
+
+Support **admin-driven refunds** for `SAFE_PAYMENT` transactions after the buyer has paid and/or admin has verified receipt, while keeping the system consistent with:
+
+- Two-sided completion (`buyerCompleted` / `sellerCompleted`)
+- “Authoritative transaction per chat” rule
+- Listing lifecycle (`ACTIVE` → `SOLD` only on `COMPLETED`)
+- Active-deal lock behavior
+
+### When refund is allowed (recommended)
+
+- Only for `TransactionType.SAFE_PAYMENT`
+- Only when transaction is **not** `COMPLETED`
+- Only when safe payment has reached at least:
+  - `SAFE_PAYMENT_PENDING` (buyer submitted KBZ txn id), or
+  - `SAFE_PAYMENT_RECEIVED` (admin verified)
+- Reject refund if:
+  - `status` is already `REFUNDED` / `CANCELLED` / `COMPLETED`
+  - Either party already completed (optional stricter rule):
+    - if `buyerCompleted === true` OR `sellerCompleted === true`, require a higher admin permission or reject
+
+### State transition
+
+- `SAFE_PAYMENT_*` → `REFUNDED`
+- Also set:
+  - `refundedAt` (new column suggested)
+  - `refundReason` (optional text)
+  - `refundedByAdminId` (audit)
+- Listing must remain **not SOLD** (keep `ACTIVE` if it was still active; do not mark sold).
+
+### DB changes (suggested)
+
+Add to `transactions` table:
+
+- `refunded_at TIMESTAMP NULL`
+- `refund_reason TEXT NULL`
+- `refunded_by_id TEXT NULL` (FK users)
+
+Add to `safe_payments` table (optional but useful):
+
+- `refund_transfer_ref TEXT NULL` (admin’s external KBZ reversal / internal note)
+
+### New admin endpoints (suggested)
+
+1. `POST /api/v1/admin/dashboard/chats/safe-payments/:transactionId/refund`
+   - Body:
+     - `reason?: string`
+     - `refundTransferRef?: string`
+   - Response: the updated transaction status (`REFUNDED`)
+
+2. `GET /api/v1/admin/dashboard/chats/safe-payments/:transactionId/refund-preview`
+   - Returns whether refund is allowed and why (for admin UI guardrails)
+
+### Notifications and chat messages
+
+On refund:
+
+- Create a **chat system message** in the room:
+  - `MessageType.SYSTEM`
+  - metadata includes `transactionId`, `status: REFUNDED`, `reason`, `adminId`, `refundedAt`
+- Create notifications:
+  - Buyer: `CHAT_SAFE_PAYMENT_REFUNDED_CLIENT` (metadata: transactionId, listingId, chatRoomId, reason)
+  - Seller: `CHAT_SAFE_PAYMENT_REFUNDED_CLIENT` (metadata: same + role)
+  - Acting admin: `CHAT_SAFE_PAYMENT_REFUNDED_ADMIN` (metadata: transactionId, refundTransferRef)
+
+### Active deal + retries
+
+- If refunded transaction’s chat room is currently the listing’s `activeDealChatRoomId`, auto-clear it (unlock listing).
+- Endpoint should be idempotent:
+  - If already `REFUNDED`, return success without duplicating messages/notifications.
+
+### Interaction rules after refund (client UX)
+
+- Client should show trade as ended:
+  - disable “Complete”
+  - disable “Review”
+  - disable “Submit safe payment” (obviously)
+- Seller may select a new active deal and proceed with another buyer if listing is still `ACTIVE`.
+
+### Tests to add later
+
+- Refund allowed only for SAFE_PAYMENT and correct statuses
+- Refund rejected for COMPLETED / CANCELLED / REFUNDED
+- Idempotent behavior (no duplicate system message, no duplicate notifications)
+- Active deal cleared on refund
+- Listing is not marked SOLD by refund path

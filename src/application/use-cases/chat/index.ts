@@ -13,6 +13,7 @@ export * from './update-chat-location-share.use-case.js';
 export * from './stop-chat-location-share.use-case.js';
 export * from './submit-chat-safe-payment.use-case.js';
 export * from './complete-chat-transaction.use-case.js';
+export * from './cancel-chat-transaction.use-case.js';
 export * from './admin-mark-safe-payment-received.use-case.js';
 export * from './admin-mark-safe-payment-transferred.use-case.js';
 export * from './list-pending-safe-payments.use-case.js';
