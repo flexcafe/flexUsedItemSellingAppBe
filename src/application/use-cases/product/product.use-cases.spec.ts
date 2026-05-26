@@ -122,6 +122,7 @@ describe(CreateProductUseCase.name, () => {
       viewCount: 0,
       sellerId: 'u1',
       categoryId: 'c1',
+      preferredLocations: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any);
@@ -347,6 +348,7 @@ describe(CreateProductUseCase.name, () => {
       viewCount: 0,
       sellerId: 'u1',
       categoryId: 'c1',
+      preferredLocations: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any);

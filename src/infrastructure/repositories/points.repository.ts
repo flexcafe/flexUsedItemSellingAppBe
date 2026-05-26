@@ -39,6 +39,7 @@ const {
 } = PrismaPkg;
 
 const ACCOUNT_MILESTONE_BONUS_POINTS = 100;
+const CANCELLATION_AUTO_BLOCK_THRESHOLD = -500;
 
 const ACCOUNT_MILESTONE_SOURCES = new Set<MilestonePointSource>([
   MilestonePointSource.REGISTRATION_BONUS,
@@ -808,21 +809,33 @@ export class PointsRepository implements IPointsRepository {
   ): Promise<{ deductedPoints: number; balanceAfter: number }> {
     const safeAmount = Math.max(0, Math.floor(amount));
     const rankConfigs = await this.getRankConfigs();
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
-        select: { totalPoints: true },
+        select: { totalPoints: true, isBanned: true, isActive: true },
       });
       if (!user) {
         throw new NotFoundException('User not found');
       }
       const deductedPoints = safeAmount;
       const balanceAfter = user.totalPoints - deductedPoints;
+      const shouldAutoBlock =
+        balanceAfter <= CANCELLATION_AUTO_BLOCK_THRESHOLD &&
+        (!user.isBanned || user.isActive);
       await tx.user.update({
         where: { id: userId },
         data: {
           totalPoints: balanceAfter,
           currentRank: this.findRankTierForPoints(rankConfigs, balanceAfter),
+          ...(shouldAutoBlock
+            ? {
+                isBanned: true,
+                isActive: false,
+                banReason:
+                  'Auto-blocked: cancellation penalty balance reached -500 or lower',
+                bannedAt: new Date(),
+              }
+            : {}),
         },
       });
       await tx.pointTransaction.create({
@@ -835,8 +848,29 @@ export class PointsRepository implements IPointsRepository {
           balanceAfter,
         },
       });
-      return { deductedPoints, balanceAfter };
+      return { deductedPoints, balanceAfter, shouldAutoBlock };
     });
+
+    if (result.shouldAutoBlock) {
+      await this.userRepository.createNotification({
+        userId,
+        eventKey: 'POINTS_AUTO_BLOCKED_CANCELLATION',
+        title: 'Account blocked',
+        message:
+          'Your account was blocked because your points reached -500 due to repeated cancellation penalties.',
+        referenceId: transactionId,
+        metadata: {
+          transactionId,
+          balanceAfter: result.balanceAfter,
+          threshold: CANCELLATION_AUTO_BLOCK_THRESHOLD,
+        },
+      });
+    }
+
+    return {
+      deductedPoints: result.deductedPoints,
+      balanceAfter: result.balanceAfter,
+    };
   }
 
   private milestoneBonusLedgerDescription(

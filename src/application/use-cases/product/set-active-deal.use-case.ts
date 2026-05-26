@@ -62,7 +62,54 @@ export class SetActiveDealUseCase {
       throw new ForbiddenException('You can only set deals for your own listing');
     }
 
+    const previousActiveDealChatRoomId =
+      await this.products.getActiveDealChatRoomId(listingId);
     await this.products.setActiveDealChatRoomId(listingId, sellerId, chatRoomId);
+
+    if (previousActiveDealChatRoomId === chatRoomId) {
+      return;
+    }
+
+    await this.users.createNotification({
+      userId: room.buyerId,
+      eventKey: 'CHAT_ACTIVE_DEAL_SELECTED_BUYER',
+      title: 'Seller selected your deal',
+      message:
+        'The seller selected your chat as the active deal. You can continue with trade steps now.',
+      referenceId: listingId,
+      metadata: {
+        listingId,
+        chatRoomId,
+        sellerId,
+      },
+    });
+
+    if (!previousActiveDealChatRoomId) {
+      return;
+    }
+
+    const previousRoom = await this.chats.findRoomById(previousActiveDealChatRoomId);
+    if (
+      !previousRoom ||
+      previousRoom.listingId !== listingId ||
+      previousRoom.sellerId !== sellerId
+    ) {
+      return;
+    }
+
+    await this.users.createNotification({
+      userId: previousRoom.buyerId,
+      eventKey: 'CHAT_ACTIVE_DEAL_REPLACED_BUYER',
+      title: 'Seller selected another buyer',
+      message:
+        'The seller selected another chat as active deal for this listing.',
+      referenceId: listingId,
+      metadata: {
+        listingId,
+        previousChatRoomId: previousActiveDealChatRoomId,
+        replacementChatRoomId: chatRoomId,
+        sellerId,
+      },
+    });
   }
 }
-
