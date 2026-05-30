@@ -191,7 +191,9 @@ export interface AwaitingSafePaymentInstructionData {
   chatRoomId: string;
   listingId: string;
   buyerId: string;
+  buyerName: string;
   sellerId: string;
+  sellerName: string;
   createdAt: Date;
 }
 

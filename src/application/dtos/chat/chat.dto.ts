@@ -173,7 +173,13 @@ export class AwaitingSafePaymentInstructionResponseDto {
   buyerId: string;
 
   @ApiProperty()
+  buyerName: string;
+
+  @ApiProperty()
   sellerId: string;
+
+  @ApiProperty()
+  sellerName: string;
 
   @ApiProperty()
   createdAt: Date;
@@ -183,14 +189,18 @@ export class AwaitingSafePaymentInstructionResponseDto {
     chatRoomId: string;
     listingId: string;
     buyerId: string;
+    buyerName: string;
     sellerId: string;
+    sellerName: string;
     createdAt: Date;
   }) {
     this.transactionId = data.transactionId;
     this.chatRoomId = data.chatRoomId;
     this.listingId = data.listingId;
     this.buyerId = data.buyerId;
+    this.buyerName = data.buyerName;
     this.sellerId = data.sellerId;
+    this.sellerName = data.sellerName;
     this.createdAt = data.createdAt;
   }
 }

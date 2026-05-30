@@ -985,6 +985,18 @@ export class ChatRepository implements IChatRepository {
             }
           : {}),
       },
+      include: {
+        buyer: {
+          select: {
+            nickname: true,
+          },
+        },
+        seller: {
+          select: {
+            nickname: true,
+          },
+        },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: pageSize + 1,
     });
@@ -995,7 +1007,9 @@ export class ChatRepository implements IChatRepository {
       chatRoomId: r.chatRoomId,
       listingId: r.listingId,
       buyerId: r.buyerId,
+      buyerName: r.buyer.nickname,
       sellerId: r.sellerId,
+      sellerName: r.seller.nickname,
       createdAt: r.createdAt,
     }));
     const last = slice.at(-1);
