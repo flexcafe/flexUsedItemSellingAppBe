@@ -180,3 +180,57 @@ On refund:
 - Idempotent behavior (no duplicate system message, no duplicate notifications)
 - Active deal cleared on refund
 - Listing is not marked SOLD by refund path
+
+## Listing-level fixed transaction method (seller-authoritative) — implement later
+
+### Goal
+
+Use a **seller-authoritative transaction method** so each listing has a fixed method (or fixed allowed combo), and buyer can only accept/proceed.
+
+This reduces logic branching in chat/direct-trade/safe-payment flows and lowers business-rule bugs.
+
+### Core policy
+
+- Seller decides method policy at listing creation.
+- Buyer cannot introduce a new method not defined by seller.
+- Transaction method is locked for that deal once initiated.
+
+Recommended minimal version (safest):
+
+- One fixed method per listing:
+  - `DIRECT_TRADE_CASH`, or
+  - `DIRECT_TRADE_SAFE_PAYMENT`, or
+  - `DELIVERY_SAFE_PAYMENT`
+
+Optional version (more conversion, more complexity):
+
+- Seller sets a fixed allowed combo (e.g., meetup + safe pay only), and buyer chooses only inside that allowed set.
+
+### Safe payment logic impact
+
+If listing method is fixed to a safe-payment path:
+
+- `SAFE_PAYMENT_AWAITING_INSTRUCTION` → `SAFE_PAYMENT_INSTRUCTION_SENT` → `SAFE_PAYMENT_PENDING` → `SAFE_PAYMENT_RECEIVED` → `BUYER_COMPLETED/SELLER_COMPLETED` → `COMPLETED` (then transfer step per current admin flow).
+
+What gets simpler:
+
+- No buyer-side method switch after initiation.
+- No direct-trade/safe-payment conversion mid-flow.
+- Fewer cancellation/dispute branches caused by method mismatch.
+
+### Validation rules
+
+- Any endpoint starting a transaction must validate against listing method policy.
+- Reject actions that do not match listing method with a clear `400` message.
+- Keep enforcement in backend use-cases/repository ports (not FE-only).
+
+### Frontend behavior (when implemented)
+
+- Listing detail shows fixed method badge clearly before buyer proceeds.
+- Remove/hide method selector when listing is single-method.
+- Transaction modal shows locked method and only relevant actions for that method.
+
+### Tradeoff
+
+- Benefit: least bugs, least maintenance, clearer disputes/support.
+- Cost: lower flexibility and possible conversion drop for buyers preferring another method.
