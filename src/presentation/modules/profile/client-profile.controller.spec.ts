@@ -134,4 +134,51 @@ describe(ClientProfileController.name, () => {
     expect(submit.execute).toHaveBeenCalledTimes(1);
     await close();
   });
+
+  it('GET /client/profile/facebook/follow-submissions/latest returns latest row', async () => {
+    const latest = {
+      execute: jest.fn().mockResolvedValue({
+        id: 'sub-1',
+        userId: 'user-1',
+        userNickname: 'Nick',
+        userPhone: '+959123456789',
+        facebookName: 'John',
+        facebookProfileUrl: 'https://facebook.com/p',
+        facebookPageUrl: 'https://facebook.com/page',
+        screenshotUrl: 'https://cdn/s.png',
+        status: 'PENDING',
+        adminNote: null,
+        reviewedById: null,
+        reviewedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const { app, close } = await createHttpTestApp({
+      controllers: [ClientProfileController],
+      providers: [
+        { provide: ChangePasswordUseCase, useValue: { execute: jest.fn() } },
+        { provide: UploadAvatarUseCase, useValue: { execute: jest.fn() } },
+        { provide: LinkFacebookUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: SubmitFacebookFollowUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetMyFacebookFollowSubmissionUseCase,
+          useValue: latest,
+        },
+      ],
+      overrideGuards: [authGuard],
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/client/profile/facebook/follow-submissions/latest')
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(latest.execute).toHaveBeenCalledTimes(1);
+    await close();
+  });
 });

@@ -81,4 +81,48 @@ describe(AdminFacebookFollowController.name, () => {
     expect(review.approve).toHaveBeenCalledTimes(1);
     await close();
   });
+
+  it('POST /admin/dashboard/facebook-follow/submissions/:id/reject calls use-case', async () => {
+    const list = { execute: jest.fn() };
+    const review = {
+      approve: jest.fn(),
+      reject: jest.fn().mockResolvedValue({
+        id: 'sub-1',
+        userId: 'user-1',
+        userNickname: 'Nick',
+        userPhone: '+9591',
+        facebookName: 'John',
+        facebookProfileUrl: 'https://facebook.com/p',
+        facebookPageUrl: 'https://facebook.com/page',
+        screenshotUrl: 'https://cdn/s.png',
+        status: 'REJECTED',
+        adminNote: 'invalid proof',
+        reviewedById: 'admin-1',
+        reviewedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const { app, close } = await createHttpTestApp({
+      controllers: [AdminFacebookFollowController],
+      providers: [
+        { provide: ListFacebookFollowSubmissionsUseCase, useValue: list },
+        { provide: ReviewFacebookFollowSubmissionUseCase, useValue: review },
+      ],
+      overrideGuards: [authGuard],
+    });
+
+    const submissionId = '59c148e3-5dc3-42dd-987e-c6b559f0a071';
+    const res = await request(app.getHttpServer())
+      .post(
+        `/api/v1/admin/dashboard/facebook-follow/submissions/${submissionId}/reject`,
+      )
+      .send({ adminNote: 'invalid proof' })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(review.reject).toHaveBeenCalledTimes(1);
+    await close();
+  });
 });
