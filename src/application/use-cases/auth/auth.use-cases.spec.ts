@@ -44,6 +44,7 @@ import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
 import { OtpPurpose } from '../../../domain/enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 import { hash } from 'bcrypt';
 import type { IEmailSender } from '../../../domain/services/email-sender.interface.js';
 import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
@@ -139,6 +140,12 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findKbzPayVerifiedUsers: jest.fn(),
     findKbzPayRegisteredAccounts: jest.fn(),
     getAuthDataByUserId: jest.fn(),
+    getAdminRoleByUserId: jest.fn().mockResolvedValue({
+      id: 'role-1',
+      name: 'USER_ADMIN',
+      isSystem: false,
+      permissions: [AdminPermission.MANAGE_USERS],
+    }),
     getProfileAvatarUrl: jest.fn().mockResolvedValue(null),
     setProfileAvatar: jest.fn(),
   };

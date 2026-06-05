@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -16,6 +15,8 @@ import {
 import { FraudReportStatus } from '../../../domain/enums/fraud-report-status.enum.js';
 import type { DismissFraudReportDto } from '../../dtos/fraud-reports/review-fraud-report.dto.js';
 import { FraudReportDto } from '../../dtos/fraud-reports/fraud-report.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class DismissFraudReportUseCase {
@@ -31,7 +32,11 @@ export class DismissFraudReportUseCase {
     reportId: string,
     dto: DismissFraudReportDto,
   ): Promise<FraudReportDto> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_REPORTS,
+    );
 
     const existing = await this.fraudReports.findById(reportId);
     if (!existing) {
@@ -58,12 +63,5 @@ export class DismissFraudReportUseCase {
     });
 
     return new FraudReportDto(row);
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

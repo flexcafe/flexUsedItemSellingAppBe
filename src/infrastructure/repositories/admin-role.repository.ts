@@ -16,6 +16,8 @@ export class AdminRoleRepository implements IAdminRoleRepository {
     const row = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
+        isActive: true,
+        isBanned: true,
         adminRole: {
           select: {
             name: true,
@@ -25,7 +27,38 @@ export class AdminRoleRepository implements IAdminRoleRepository {
       },
     });
     return (
+      row?.isActive === true &&
+      row.isBanned === false &&
       row?.adminRole?.isSystem === true && row.adminRole.name === 'ROOT_ADMIN'
+    );
+  }
+
+  async findById(id: string): Promise<AdminRoleData | null> {
+    const row = await this.prisma.adminRole.findUnique({
+      where: { id },
+      include: {
+        permissions: true,
+      },
+    });
+    return row ? this.toData(row) : null;
+  }
+
+  async findByUserId(userId: string): Promise<AdminRoleData | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        adminRole: {
+          include: {
+            permissions: true,
+          },
+        },
+      },
+    });
+    if (!user?.adminRole) return null;
+    return this.toData(
+      user.adminRole as Awaited<
+        ReturnType<PrismaService['adminRole']['findUnique']>
+      > & { permissions: { permission: string }[] },
     );
   }
 

@@ -62,7 +62,6 @@ export class OpenChatRoomUseCase {
       const count = openResult.interestedBuyerCount ?? 0;
       await this.users.createNotification({
         userId: dto.sellerId,
-        type: 'CHAT',
         title: 'Many buyers are interested',
         message: `${count} buyers have started chats for your listing, but no buyer is accepted yet.`,
         referenceId: dto.listingId,

@@ -9,6 +9,8 @@ import {
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
 import type { BanUserDto } from '../../dtos/fraud-reports/review-fraud-report.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class BanUserAdminUseCase {
@@ -22,7 +24,11 @@ export class BanUserAdminUseCase {
     userId: string,
     dto: BanUserDto,
   ): Promise<{ userId: string; isBanned: boolean }> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_USERS,
+    );
 
     const target = await this.users.findById(userId);
     if (!target) {
@@ -46,12 +52,5 @@ export class BanUserAdminUseCase {
     });
 
     return { userId, isBanned: true };
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

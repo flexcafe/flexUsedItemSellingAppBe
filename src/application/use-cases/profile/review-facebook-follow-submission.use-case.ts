@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -16,6 +15,8 @@ import {
 } from '../../../domain/repositories/user.repository.interface.js';
 import { FacebookFollowSubmissionDto } from '../../dtos/profile/facebook-follow-submission.dto.js';
 import { ReviewFacebookFollowDto } from '../../dtos/profile/review-facebook-follow.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 const FACEBOOK_FOLLOW_REWARD_POINTS = 500;
 
@@ -105,10 +106,11 @@ export class ReviewFacebookFollowSubmissionUseCase {
   }
 
   private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.userRepository.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
+    await requireAdminPermission(
+      this.userRepository,
+      adminId,
+      AdminPermission.MANAGE_USERS,
+    );
   }
 
   private async requirePendingSubmission(submissionId: string): Promise<{

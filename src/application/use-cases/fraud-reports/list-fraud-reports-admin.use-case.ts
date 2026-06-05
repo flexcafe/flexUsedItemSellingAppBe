@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   FRAUD_REPORT_REPOSITORY,
   type IFraudReportRepository,
@@ -9,6 +9,8 @@ import {
 } from '../../../domain/repositories/user.repository.interface.js';
 import { FraudReportStatus } from '../../../domain/enums/fraud-report-status.enum.js';
 import { FraudReportDto } from '../../dtos/fraud-reports/fraud-report.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class ListFraudReportsAdminUseCase {
@@ -23,15 +25,12 @@ export class ListFraudReportsAdminUseCase {
     adminId: string,
     status?: FraudReportStatus,
   ): Promise<FraudReportDto[]> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_REPORTS,
+    );
     const rows = await this.fraudReports.listForAdmin(status);
     return rows.map((row) => new FraudReportDto(row));
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

@@ -1,13 +1,10 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SLIDER_AD_REPOSITORY } from '../../../domain/repositories/slider-ad.repository.interface.js';
 import type { ISliderAdRepository } from '../../../domain/repositories/slider-ad.repository.interface.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class DeleteSliderAdUseCase {
@@ -19,13 +16,11 @@ export class DeleteSliderAdUseCase {
   ) {}
 
   async execute(adminUserId: string, adId: string): Promise<boolean> {
-    const admin = await this.users.findById(adminUserId);
-    if (!admin) {
-      throw new NotFoundException('Admin user not found');
-    }
-    if (!admin.isAdmin()) {
-      throw new ForbiddenException('Only admins can manage slider ads');
-    }
+    await requireAdminPermission(
+      this.users,
+      adminUserId,
+      AdminPermission.MANAGE_SLIDER_ADS,
+    );
 
     const existing = await this.sliderAds.findById(adId);
     if (!existing) {

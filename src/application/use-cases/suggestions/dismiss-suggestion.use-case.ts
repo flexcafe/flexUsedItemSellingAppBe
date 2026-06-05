@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   SUGGESTION_REPOSITORY,
   type ISuggestionRepository,
@@ -9,6 +9,8 @@ import {
 } from '../../../domain/repositories/user.repository.interface.js';
 import type { DismissSuggestionDto } from '../../dtos/suggestions/dismiss-suggestion.dto.js';
 import { SuggestionDto } from '../../dtos/suggestions/suggestion.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class DismissSuggestionUseCase {
@@ -24,7 +26,11 @@ export class DismissSuggestionUseCase {
     suggestionId: string,
     dto: DismissSuggestionDto,
   ): Promise<SuggestionDto> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_SUGGESTIONS,
+    );
 
     const row = await this.suggestions.dismiss({
       suggestionId,
@@ -47,12 +53,5 @@ export class DismissSuggestionUseCase {
     });
 
     return new SuggestionDto(row);
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

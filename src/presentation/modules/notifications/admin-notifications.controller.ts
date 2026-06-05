@@ -17,7 +17,8 @@ import { NotificationDto } from '../../../application/dtos/notifications/notific
 import { ListMyNotificationsUseCase } from '../../../application/use-cases/notifications/list-my-notifications.use-case.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
-import { Inject, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { requireActiveAdmin } from '../../../application/use-cases/_helpers/admin-authorization.helper.js';
 
 @ApiTags('Admin Dashboard Notifications')
 @Controller(`${ROUTE_PREFIX.adminDashboard}/notifications`)
@@ -41,13 +42,7 @@ export class AdminNotificationsController {
     @CurrentUser() user: JwtPayload,
     @Query('limit') limit?: string,
   ): Promise<ApiResponseDto<NotificationDto[]>> {
-    const admin = await this.userRepository.findById(user.sub);
-    if (!admin) {
-      throw new NotFoundException('Admin user not found');
-    }
-    if (!admin.isAdmin()) {
-      throw new ForbiddenException('Only admins can access this resource');
-    }
+    await requireActiveAdmin(this.userRepository, user.sub);
     const rows = await this.listMyNotificationsUseCase.execute(
       user.sub,
       limit ? Number(limit) : 20,

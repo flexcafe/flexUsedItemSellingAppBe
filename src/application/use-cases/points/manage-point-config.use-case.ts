@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   USER_REPOSITORY,
   type IUserRepository,
@@ -13,6 +13,8 @@ import {
   UpdateRankConfigsDto,
   UpdateStarPointConfigsDto,
 } from '../../dtos/points/point-config.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class ManagePointConfigUseCase {
@@ -24,7 +26,7 @@ export class ManagePointConfigUseCase {
   ) {}
 
   async listStarConfigs(adminId: string): Promise<StarPointConfigDto[]> {
-    await this.assertAdmin(adminId);
+    await this.assertAdmin(adminId, AdminPermission.MANAGE_POINT_CONFIG);
     const configs = await this.pointsRepository.getStarPointConfigs();
     return configs.map((config) => new StarPointConfigDto(config));
   }
@@ -33,7 +35,7 @@ export class ManagePointConfigUseCase {
     adminId: string,
     dto: UpdateStarPointConfigsDto,
   ): Promise<StarPointConfigDto[]> {
-    await this.assertAdmin(adminId);
+    await this.assertAdmin(adminId, AdminPermission.MANAGE_POINT_CONFIG);
     const configs = await this.pointsRepository.upsertStarPointConfigs(
       dto.configs.map((config) => ({
         starCount: config.starCount,
@@ -45,7 +47,7 @@ export class ManagePointConfigUseCase {
   }
 
   async listRankConfigs(adminId: string): Promise<RankConfigResponseDto[]> {
-    await this.assertAdmin(adminId);
+    await this.assertAdmin(adminId, AdminPermission.MANAGE_RANK_CONFIG);
     const configs = await this.pointsRepository.getRankConfigs();
     return configs.map((config) => new RankConfigResponseDto(config));
   }
@@ -54,7 +56,7 @@ export class ManagePointConfigUseCase {
     adminId: string,
     dto: UpdateRankConfigsDto,
   ): Promise<RankConfigResponseDto[]> {
-    await this.assertAdmin(adminId);
+    await this.assertAdmin(adminId, AdminPermission.MANAGE_RANK_CONFIG);
     const configs = await this.pointsRepository.upsertRankConfigs(
       dto.configs.map((config) => ({
         tier: config.tier,
@@ -69,10 +71,10 @@ export class ManagePointConfigUseCase {
     return configs.map((config) => new RankConfigResponseDto(config));
   }
 
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.userRepository.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admin users can perform this action');
-    }
+  private async assertAdmin(
+    adminId: string,
+    permission: AdminPermission,
+  ): Promise<void> {
+    await requireAdminPermission(this.userRepository, adminId, permission);
   }
 }

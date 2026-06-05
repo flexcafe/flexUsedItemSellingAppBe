@@ -1,17 +1,16 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 export async function assertAdmin(
   userRepository: IUserRepository,
   userId: string,
 ): Promise<void> {
-  const user = await userRepository.findById(userId);
-  if (!user) {
-    throw new NotFoundException('Admin user not found');
-  }
-  if (!user.isAdmin()) {
-    throw new ForbiddenException('Only admin users can perform this action');
-  }
+  await requireAdminPermission(
+    userRepository,
+    userId,
+    AdminPermission.MANAGE_CATEGORIES,
+  );
 }
 
 export function toSlug(input: string): string {

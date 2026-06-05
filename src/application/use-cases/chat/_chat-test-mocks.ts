@@ -12,6 +12,7 @@ import type { IChatIdempotencyStore } from '../../../domain/services/chat-idempo
 import type { IChatMessagePublisher } from '../../../domain/services/chat-message-publisher.interface.js';
 import type { IChatRealtime } from '../../../domain/services/chat-realtime.interface.js';
 import { MessageType } from '../../../domain/enums/message-type.enum.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 
@@ -166,6 +167,14 @@ export function buildActiveUserMock(
 export function buildUserRepoMock(): jest.Mocked<IUserRepository> {
   const mock = {
     findById: jest.fn(() => Promise.resolve(buildActiveUserMock() as never)),
+    getAdminRoleByUserId: jest.fn(() =>
+      Promise.resolve({
+        id: 'role-1',
+        name: 'SAFE_PAYMENT_ADMIN',
+        isSystem: false,
+        permissions: [AdminPermission.MANAGE_SAFE_PAYMENTS],
+      }),
+    ),
     findAdminUserIds: jest.fn(),
     createNotification: jest.fn(),
     getAuthDataByUserId: jest.fn(),

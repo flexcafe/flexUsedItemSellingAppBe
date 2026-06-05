@@ -35,6 +35,7 @@ import {
 } from '../../../common/decorators/api-response.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
+import { AUTH_SYSTEM_OVERVIEW } from './auth-system.swagger.js';
 import {
   KBZPAY_ADMIN_VERIFY_DOC,
   KBZPAY_SEND_INSTRUCTION_DOC,
@@ -64,7 +65,7 @@ export class AdminDashboardAuthController {
   @ApiOperation({
     summary: 'Admin dashboard login (email + password)',
     description:
-      'Root and staff admins sign in with email and password. Client accounts must use client phone login.',
+      `## Admin dashboard login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /admin/dashboard/auth/login\`\nRoot and staff admins sign in with email and password. Client accounts must use client phone login.`,
   })
   @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.OK,

@@ -12,6 +12,7 @@ import { SliderAdStatus } from '../../../domain/enums/slider-ad-status.enum.js';
 import { UserEntity } from '../../../domain/entities/user.entity.js';
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
 import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 
 function buildAdmin(isAdmin = true) {
   return new UserEntity({
@@ -102,6 +103,12 @@ function buildUserRepoMock(): jest.Mocked<IUserRepository> {
     listNotificationsByUserId: jest.fn(),
     markNotificationRead: jest.fn(),
     getAuthDataByUserId: jest.fn(),
+    getAdminRoleByUserId: jest.fn().mockResolvedValue({
+      id: 'role-1',
+      name: 'SLIDER_ADMIN',
+      isSystem: false,
+      permissions: [AdminPermission.MANAGE_SLIDER_ADS],
+    }),
     findKbzPayVerificationRequested: jest.fn(),
     findKbzPayMoneyCheckList: jest.fn(),
     findKbzPayVerifiedUsers: jest.fn(),

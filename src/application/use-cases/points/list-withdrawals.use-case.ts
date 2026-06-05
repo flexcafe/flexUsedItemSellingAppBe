@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   USER_REPOSITORY,
   type IUserRepository,
@@ -9,6 +9,8 @@ import {
 } from '../../../domain/repositories/points.repository.interface.js';
 import { WithdrawalStatus } from '../../../domain/enums/withdrawal-status.enum.js';
 import { WithdrawalRequestDto } from '../../dtos/points/withdrawal.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class ListWithdrawalsUseCase {
@@ -23,10 +25,11 @@ export class ListWithdrawalsUseCase {
     adminId: string,
     status?: WithdrawalStatus,
   ): Promise<WithdrawalRequestDto[]> {
-    const admin = await this.userRepository.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admin users can perform this action');
-    }
+    await requireAdminPermission(
+      this.userRepository,
+      adminId,
+      AdminPermission.MANAGE_WITHDRAWALS,
+    );
 
     const rows = await this.pointsRepository.findWithdrawalRequests(status);
     return rows.map((row) => new WithdrawalRequestDto(row));

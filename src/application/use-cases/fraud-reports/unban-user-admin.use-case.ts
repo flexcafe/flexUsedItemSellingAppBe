@@ -1,13 +1,10 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class UnbanUserAdminUseCase {
@@ -20,7 +17,11 @@ export class UnbanUserAdminUseCase {
     adminId: string,
     userId: string,
   ): Promise<{ userId: string; isBanned: boolean }> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_USERS,
+    );
 
     const target = await this.users.findById(userId);
     if (!target) {
@@ -40,12 +41,5 @@ export class UnbanUserAdminUseCase {
     });
 
     return { userId, isBanned: false };
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

@@ -1,4 +1,5 @@
 import { UserEntity } from '../entities/user.entity.js';
+import { AdminPermission } from '../enums/admin-permission.enum.js';
 import { Gender } from '../enums/gender.enum.js';
 import { MaritalStatus } from '../enums/marital-status.enum.js';
 import { RegistrationType } from '../enums/registration-type.enum.js';
@@ -55,6 +56,7 @@ export interface UpdateUserData {
   emailVerifiedAt?: Date | null;
   phoneVerifiedAt?: Date | null;
   lastLoginAt?: Date | null;
+  adminRoleId?: string | null;
 }
 
 export interface OtpVerificationData {
@@ -123,6 +125,13 @@ export interface UserAuthData {
   user: UserEntity;
   profile: UserProfileData | null;
   kbzPayAccount: KbzPayAccountData | null;
+}
+
+export interface UserAdminRoleData {
+  id: string;
+  name: string;
+  isSystem: boolean;
+  permissions: AdminPermission[];
 }
 
 export interface CreateNotificationData {
@@ -210,6 +219,7 @@ export interface IUserRepository {
   ): Promise<void>;
 
   findAdminUserIds(): Promise<string[]>;
+  listAdminUsers(): Promise<UserEntity[]>;
 
   createNotification(data: CreateNotificationData): Promise<void>;
   listNotificationsByUserId(
@@ -218,6 +228,7 @@ export interface IUserRepository {
   ): Promise<NotificationData[]>;
   markNotificationRead(notificationId: string, userId: string): Promise<void>;
   getAuthDataByUserId(userId: string): Promise<UserAuthData | null>;
+  getAdminRoleByUserId(userId: string): Promise<UserAdminRoleData | null>;
   findKbzPayVerificationRequested(): Promise<PendingKbzPayVerificationData[]>;
   findKbzPayMoneyCheckList(): Promise<PendingKbzPayVerificationData[]>;
   findKbzPayVerifiedUsers(): Promise<PendingKbzPayVerificationData[]>;

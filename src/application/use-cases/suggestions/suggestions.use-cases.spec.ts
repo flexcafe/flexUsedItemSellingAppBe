@@ -14,6 +14,7 @@ import type {
   SuggestionData,
 } from '../../../domain/repositories/suggestion.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 
 const USER_ID = '22222222-2222-2222-2222-222222222222';
 const ADMIN_ID = '33333333-3333-3333-3333-333333333333';
@@ -55,11 +56,22 @@ function buildSuggestionRepoMock(): jest.Mocked<ISuggestionRepository> {
 function buildUserRepoMock(): jest.Mocked<
   Pick<
     IUserRepository,
-    'findById' | 'createNotification' | 'findAdminUserIds'
+    | 'findById'
+    | 'getAdminRoleByUserId'
+    | 'createNotification'
+    | 'findAdminUserIds'
   >
 > {
   return {
     findById: jest.fn(),
+    getAdminRoleByUserId: jest.fn(() =>
+      Promise.resolve({
+        id: 'role-1',
+        name: 'SUGGESTION_ADMIN',
+        isSystem: false,
+        permissions: [AdminPermission.MANAGE_SUGGESTIONS],
+      }),
+    ),
     createNotification: jest.fn(),
     findAdminUserIds: jest.fn(() => Promise.resolve([ADMIN_ID])),
   };
@@ -106,7 +118,10 @@ describe(RewardSuggestionUseCase.name, () => {
   it('rewards points and notifies the submitter', async () => {
     const suggestions = buildSuggestionRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     suggestions.rewardWithPoints.mockResolvedValue(
       buildSuggestion({
         status: SuggestionStatus.REWARDED,
@@ -132,7 +147,10 @@ describe(RewardSuggestionUseCase.name, () => {
   it('rejects non-admin', async () => {
     const suggestions = buildSuggestionRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => false } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => false,
+    } as never);
 
     const useCase = new RewardSuggestionUseCase(suggestions, users as never);
 
@@ -146,7 +164,10 @@ describe(DismissSuggestionUseCase.name, () => {
   it('dismisses and notifies the submitter', async () => {
     const suggestions = buildSuggestionRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     suggestions.dismiss.mockResolvedValue(
       buildSuggestion({ status: SuggestionStatus.DISMISSED }),
     );
@@ -167,7 +188,10 @@ describe(ListSuggestionsAdminUseCase.name, () => {
   it('lists pending suggestions for admin', async () => {
     const suggestions = buildSuggestionRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     suggestions.listForAdmin.mockResolvedValue([buildSuggestion()]);
 
     const useCase = new ListSuggestionsAdminUseCase(suggestions, users as never);

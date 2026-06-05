@@ -2303,7 +2303,10 @@ describe(AdminSendSafePaymentInstructionUseCase.name, () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
     const realtime = buildRealtimeMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     const tx = buildTransaction({
       status: TransactionStatus.SAFE_PAYMENT_INSTRUCTION_SENT,
     });
@@ -2339,7 +2342,10 @@ describe(AdminSendSafePaymentInstructionUseCase.name, () => {
   it('rejects when transaction is already cancelled', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     chats.sendSafePaymentInstruction.mockRejectedValue(
       new ConflictException('Safe payment transaction is cancelled'),
     );
@@ -2363,7 +2369,10 @@ describe(AdminMarkSafePaymentReceivedUseCase.name, () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
     const realtime = buildRealtimeMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     const next = buildTransaction({
       status: TransactionStatus.SAFE_PAYMENT_RECEIVED,
     });
@@ -2407,7 +2416,10 @@ describe(AdminMarkSafePaymentReceivedUseCase.name, () => {
   it('rejects when transaction is already cancelled', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     chats.markSafePaymentReceived.mockRejectedValue(
       new ConflictException('Safe payment transaction is cancelled'),
     );
@@ -2430,7 +2442,10 @@ describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
   it('requires transaction completed by both parties', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     chats.findTransactionById.mockResolvedValue(
       buildTransaction({ status: TransactionStatus.SAFE_PAYMENT_RECEIVED }),
     );
@@ -2449,7 +2464,10 @@ describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
   it('rejects when transaction id is unknown', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     chats.findTransactionById.mockResolvedValue(null);
     const useCase = new AdminMarkSafePaymentTransferredUseCase(
       chats,
@@ -2465,7 +2483,10 @@ describe(AdminMarkSafePaymentTransferredUseCase.name, () => {
   it('rejects transfer when transaction is cancelled', async () => {
     const chats = buildChatRepoMock();
     const users = buildUserRepoMock();
-    users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+    users.findById.mockResolvedValue({
+      isActiveUser: () => true,
+      isAdmin: () => true,
+    } as never);
     chats.findTransactionById.mockResolvedValue(
       buildTransaction({ status: TransactionStatus.CANCELLED }),
     );

@@ -16,6 +16,8 @@ import {
 import { FraudReportStatus } from '../../../domain/enums/fraud-report-status.enum.js';
 import type { ConfirmFraudReportDto } from '../../dtos/fraud-reports/review-fraud-report.dto.js';
 import { FraudReportDto } from '../../dtos/fraud-reports/fraud-report.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class ConfirmFraudReportUseCase {
@@ -31,7 +33,11 @@ export class ConfirmFraudReportUseCase {
     reportId: string,
     dto: ConfirmFraudReportDto,
   ): Promise<FraudReportDto> {
-    await this.assertAdmin(adminId);
+    await requireAdminPermission(
+      this.users,
+      adminId,
+      AdminPermission.MANAGE_REPORTS,
+    );
 
     const existing = await this.fraudReports.findById(reportId);
     if (!existing) {
@@ -104,12 +110,5 @@ export class ConfirmFraudReportUseCase {
 
     const refreshed = await this.fraudReports.findById(reportId);
     return new FraudReportDto(refreshed ?? row);
-  }
-
-  private async assertAdmin(adminId: string): Promise<void> {
-    const admin = await this.users.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
   }
 }

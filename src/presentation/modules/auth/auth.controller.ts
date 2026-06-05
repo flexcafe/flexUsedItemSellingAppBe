@@ -46,6 +46,9 @@ import {
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import {
+  AUTH_SYSTEM_OVERVIEW,
+} from './auth-system.swagger.js';
+import {
   KBZPAY_PROFILE_STATUS_DOC,
   KBZPAY_REQUEST_VERIFICATION_DOC,
   KBZPAY_SUBMIT_TRANSACTION_DOC,
@@ -120,7 +123,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Client login (phone + password)',
     description:
-      'Clients sign in with phone and password. Admin users must use POST /admin/dashboard/auth/login with email.',
+      `## Client login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /client/auth/login\`\nClients sign in with phone and password. Admin users must use POST /admin/dashboard/auth/login with email.`,
   })
   @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.OK,

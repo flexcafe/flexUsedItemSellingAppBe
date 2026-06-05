@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   FACEBOOK_REPOSITORY,
   type IFacebookRepository,
@@ -9,6 +9,8 @@ import {
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
 import { FacebookFollowSubmissionDto } from '../../dtos/profile/facebook-follow-submission.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class ListFacebookFollowSubmissionsUseCase {
@@ -23,10 +25,11 @@ export class ListFacebookFollowSubmissionsUseCase {
     adminId: string,
     status?: FacebookFollowSubmissionStatus,
   ): Promise<FacebookFollowSubmissionDto[]> {
-    const admin = await this.userRepository.findById(adminId);
-    if (!admin?.isAdmin()) {
-      throw new ForbiddenException('Only admins can perform this action');
-    }
+    await requireAdminPermission(
+      this.userRepository,
+      adminId,
+      AdminPermission.MANAGE_USERS,
+    );
 
     const rows =
       await this.facebookRepository.listFacebookFollowSubmissions(status);

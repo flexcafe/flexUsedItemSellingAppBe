@@ -14,7 +14,8 @@ import { PusherService } from '../../../infrastructure/realtime/pusher.service.j
 import { PusherChannelAuthDto } from '../../../application/dtos/realtime/pusher-channel-auth.dto.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { requireActiveAdmin } from '../../../application/use-cases/_helpers/admin-authorization.helper.js';
 
 @ApiTags('Realtime (Pusher)')
 @Controller()
@@ -50,13 +51,7 @@ export class RealtimeController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: PusherChannelAuthDto,
   ) {
-    const admin = await this.userRepository.findById(user.sub);
-    if (!admin) {
-      throw new NotFoundException('Admin user not found');
-    }
-    if (!admin.isAdmin()) {
-      throw new ForbiddenException('Only admins can authorize this');
-    }
+    await requireActiveAdmin(this.userRepository, user.sub);
     const expected = `private-user-${user.sub}`;
     if (dto.channel_name !== expected) {
       throw new ForbiddenException('Forbidden channel');

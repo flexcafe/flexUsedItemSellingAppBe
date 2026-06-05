@@ -10,9 +10,11 @@ import type {
 } from '../../../domain/repositories/chat.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import type { UserEntity } from '../../../domain/entities/user.entity.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 import { TransactionType } from '../../../domain/enums/transaction-type.enum.js';
 import { assertMeetupLocationAgreedForCompletion } from './_direct-trade-flow.helper.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 const SAFE_PAYMENT_COMPLETABLE_STATUSES = new Set<TransactionStatus>([
   TransactionStatus.SAFE_PAYMENT_RECEIVED,
@@ -147,11 +149,10 @@ export async function requireAdmin(
   users: IUserRepository,
   userId: string,
 ): Promise<void> {
-  const user = await users.findById(userId);
-  if (!user) {
-    throw new NotFoundException('Admin not found');
-  }
-  if (!user.isAdmin()) {
-    throw new ForbiddenException('Only admins can perform this action');
-  }
+  await requireAdminPermission(
+    users,
+    userId,
+    AdminPermission.MANAGE_SAFE_PAYMENTS,
+    'Admin not found',
+  );
 }

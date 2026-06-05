@@ -1,5 +1,10 @@
 import { jest } from '@jest/globals';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 import { requireAdmin, requireRoomParticipant } from './_helpers.js';
 import {
   buildActiveUserMock,
@@ -69,16 +74,58 @@ describe('chat _helpers', () => {
   describe(requireAdmin.name, () => {
     it('passes when user is admin', async () => {
       const users = buildUserRepoMock();
-      users.findById.mockResolvedValue({ isAdmin: () => true } as never);
+      users.findById.mockResolvedValue({
+        isActiveUser: () => true,
+        isAdmin: () => true,
+      } as never);
+      users.getAdminRoleByUserId.mockResolvedValue({
+        id: 'role-1',
+        name: 'SAFE_PAYMENT_ADMIN',
+        isSystem: false,
+        permissions: [AdminPermission.MANAGE_SAFE_PAYMENTS],
+      });
 
       await expect(requireAdmin(users, 'admin-1')).resolves.toBeUndefined();
     });
 
     it('throws when user is not admin', async () => {
       const users = buildUserRepoMock();
-      users.findById.mockResolvedValue({ isAdmin: () => false } as never);
+      users.findById.mockResolvedValue({
+        isActiveUser: () => true,
+        isAdmin: () => false,
+      } as never);
 
       await expect(requireAdmin(users, 'u1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('throws when admin is inactive', async () => {
+      const users = buildUserRepoMock();
+      users.findById.mockResolvedValue({
+        isActiveUser: () => false,
+        isAdmin: () => true,
+      } as never);
+
+      await expect(requireAdmin(users, 'admin-1')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    });
+
+    it('throws when admin lacks safe payment permission', async () => {
+      const users = buildUserRepoMock();
+      users.findById.mockResolvedValue({
+        isActiveUser: () => true,
+        isAdmin: () => true,
+      } as never);
+      users.getAdminRoleByUserId.mockResolvedValue({
+        id: 'role-1',
+        name: 'REPORT_ADMIN',
+        isSystem: false,
+        permissions: [AdminPermission.MANAGE_REPORTS],
+      });
+
+      await expect(requireAdmin(users, 'admin-1')).rejects.toBeInstanceOf(
         ForbiddenException,
       );
     });

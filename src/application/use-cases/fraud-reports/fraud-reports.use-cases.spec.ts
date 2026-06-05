@@ -11,6 +11,7 @@ import type { IFraudReportRepository } from '../../../domain/repositories/fraud-
 import { UserEntity } from '../../../domain/entities/user.entity.js';
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
 import { RankTier } from '../../../domain/enums/rank-tier.enum.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 
 function buildUser(id: string, admin = false) {
   return new UserEntity({
@@ -190,6 +191,12 @@ describe(ConfirmFraudReportUseCase.name, () => {
         }
         return buildUser('bad-user');
       }),
+      getAdminRoleByUserId: jest.fn(async () => ({
+        id: 'role-1',
+        name: 'REPORT_ADMIN',
+        isSystem: false,
+        permissions: [AdminPermission.MANAGE_REPORTS],
+      })),
       setUserBanned: jest.fn(),
       createNotification: jest.fn(),
     };
@@ -211,6 +218,7 @@ describe(ConfirmFraudReportUseCase.name, () => {
     const fraudReports = {} as unknown as jest.Mocked<IFraudReportRepository>;
     const users = {
       findById: jest.fn(async () => buildUser('user')),
+      getAdminRoleByUserId: jest.fn(),
     };
     const useCase = new ConfirmFraudReportUseCase(fraudReports, users as never);
 

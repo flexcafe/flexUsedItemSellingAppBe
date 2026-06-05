@@ -15,6 +15,7 @@ import type {
   OtpVerificationData,
   PendingKbzPayVerificationData,
   UpdateUserData,
+  UserAdminRoleData,
   UserAuthData,
   UserProfileData,
 } from '../../domain/repositories/user.repository.interface.js';
@@ -22,6 +23,7 @@ import { Gender } from '../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../domain/enums/marital-status.enum.js';
 import { OtpPurpose } from '../../domain/enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../../domain/enums/verification-status.enum.js';
+import { AdminPermission } from '../../domain/enums/admin-permission.enum.js';
 import { PusherService } from '../realtime/pusher.service.js';
 
 const {
@@ -452,6 +454,14 @@ export class UserRepository implements IUserRepository {
     );
   }
 
+  async listAdminUsers(): Promise<UserEntity[]> {
+    const users = await this.prisma.user.findMany({
+      where: { adminRoleId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return users.map((u) => UserMapper.toDomain(u));
+  }
+
   async findAdminUserIds(): Promise<string[]> {
     const rows = await this.prisma.user.findMany({
       where: { adminRoleId: { not: null }, isActive: true },
@@ -548,6 +558,34 @@ export class UserRepository implements IUserRepository {
       user: UserMapper.toDomain(user),
       profile,
       kbzPayAccount,
+    };
+  }
+
+  async getAdminRoleByUserId(
+    userId: string,
+  ): Promise<UserAdminRoleData | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        adminRole: {
+          include: {
+            permissions: true,
+          },
+        },
+      },
+    });
+
+    if (!user?.adminRole) {
+      return null;
+    }
+
+    return {
+      id: user.adminRole.id,
+      name: user.adminRole.name,
+      isSystem: user.adminRole.isSystem,
+      permissions: user.adminRole.permissions.map(
+        (row) => row.permission as AdminPermission,
+      ),
     };
   }
 

@@ -1,13 +1,10 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { SendKbzPayInstructionDto } from '../../dtos/auth/send-kbzpay-instruction.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import { requireAdminPermission } from '../_helpers/admin-authorization.helper.js';
 
 @Injectable()
 export class SendKbzPayInstructionUseCase {
@@ -21,14 +18,11 @@ export class SendKbzPayInstructionUseCase {
     targetUserId: string,
     dto: SendKbzPayInstructionDto,
   ): Promise<VerificationActionResultDto> {
-    const adminUser = await this.userRepository.findById(adminUserId);
-    if (!adminUser) {
-      throw new NotFoundException('Admin user not found');
-    }
-
-    if (!adminUser.isAdmin()) {
-      throw new ForbiddenException('Only admins can send KBZPay instructions');
-    }
+    await requireAdminPermission(
+      this.userRepository,
+      adminUserId,
+      AdminPermission.MANAGE_USERS,
+    );
 
     const targetUser = await this.userRepository.findById(targetUserId);
     if (!targetUser) {
