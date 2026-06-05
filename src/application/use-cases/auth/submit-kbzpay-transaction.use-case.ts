@@ -10,6 +10,7 @@ import type { IUserRepository } from '../../../domain/repositories/user.reposito
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { SubmitKbzPayTransactionDto } from '../../dtos/auth/submit-kbzpay-transaction.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
+import { requireActiveAuthUser } from './_auth-user.helper.js';
 
 @Injectable()
 export class SubmitKbzPayTransactionUseCase {
@@ -26,6 +27,7 @@ export class SubmitKbzPayTransactionUseCase {
     if (!authData) {
       throw new NotFoundException('User not found');
     }
+    requireActiveAuthUser(authData.user);
 
     const kbz = authData.kbzPayAccount;
     if (!kbz) {

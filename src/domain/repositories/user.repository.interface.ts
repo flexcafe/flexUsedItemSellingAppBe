@@ -57,6 +57,7 @@ export interface UpdateUserData {
   phoneVerifiedAt?: Date | null;
   lastLoginAt?: Date | null;
   adminRoleId?: string | null;
+  authTokenVersion?: number;
 }
 
 export interface OtpVerificationData {

@@ -1,0 +1,2 @@
+ALTER TABLE "users"
+ADD COLUMN IF NOT EXISTS "auth_token_version" INTEGER NOT NULL DEFAULT 0;

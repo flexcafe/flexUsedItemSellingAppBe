@@ -24,6 +24,7 @@ export class UserMapper {
       referralCode: prismaUser.referralCode,
       referredById: prismaUser.referredById,
       adminRoleId: prismaUser.adminRoleId,
+      authTokenVersion: prismaUser.authTokenVersion,
       createdAt: prismaUser.createdAt,
       updatedAt: prismaUser.updatedAt,
     });
@@ -40,6 +41,8 @@ export class UserMapper {
       data.phoneVerifiedAt = entity.phoneVerifiedAt;
     if (entity.emailVerifiedAt !== undefined)
       data.emailVerifiedAt = entity.emailVerifiedAt;
+    if (entity.authTokenVersion !== undefined)
+      data.authTokenVersion = entity.authTokenVersion;
     return data;
   }
 }

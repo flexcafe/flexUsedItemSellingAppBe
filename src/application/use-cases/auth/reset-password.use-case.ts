@@ -53,7 +53,10 @@ export class ResetPasswordUseCase {
     await this.userRepository.markPhoneOtpVerified(otp.id);
 
     const newHash = await hash(dto.newPassword, 12);
-    await this.userRepository.update(user.id, { password: newHash });
+    await this.userRepository.update(user.id, {
+      password: newHash,
+      authTokenVersion: user.authTokenVersion + 1,
+    });
 
     return new VerificationActionResultDto('PASSWORD_RESET');
   }

@@ -6,6 +6,8 @@ import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
 import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
 import { SendPhoneOtpDto } from '../../dtos/auth/send-phone-otp.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
+import { requireActiveAuthUser } from './_auth-user.helper.js';
+import { ConflictException } from '@nestjs/common';
 
 @Injectable()
 export class SendPhoneOtpUseCase {
@@ -22,6 +24,10 @@ export class SendPhoneOtpUseCase {
     const user = await this.userRepository.findByPhone(dto.phone);
     if (!user) {
       throw new NotFoundException('User with this phone number not found');
+    }
+    requireActiveAuthUser(user);
+    if (user.isPhoneVerified) {
+      throw new ConflictException('Phone number is already verified');
     }
 
     const code = randomInt(100000, 1000000).toString();

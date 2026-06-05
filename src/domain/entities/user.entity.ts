@@ -20,6 +20,7 @@ export interface UserEntityProps {
   referralCode: string;
   referredById: string | null;
   adminRoleId: string | null;
+  authTokenVersion?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,7 @@ export class UserEntity {
   readonly referralCode: string;
   readonly referredById: string | null;
   readonly adminRoleId: string | null;
+  readonly authTokenVersion: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
@@ -65,6 +67,7 @@ export class UserEntity {
     this.referralCode = props.referralCode;
     this.referredById = props.referredById;
     this.adminRoleId = props.adminRoleId;
+    this.authTokenVersion = props.authTokenVersion ?? 0;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }

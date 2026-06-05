@@ -83,6 +83,7 @@ export class LoginUseCase {
     const accessToken = this.jwtService.sign({
       sub: user.id,
       phone: user.phone,
+      authTokenVersion: user.authTokenVersion,
     });
 
     const authData = await this.userRepository.getAuthDataByUserId(user.id);

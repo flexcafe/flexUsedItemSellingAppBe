@@ -269,6 +269,7 @@ model User {
   referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
   referrals    User[]  @relation("UserReferral")
 
+  authTokenVersion Int       @default(0) @map("auth_token_version")
   lastLoginAt DateTime? @map("last_login_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

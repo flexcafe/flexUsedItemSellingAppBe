@@ -51,6 +51,7 @@ export class DemoteAdminUserUseCase {
     // Demote by setting adminRoleId to null
     const updatedUser = await this.userRepository.update(targetUserId, {
       adminRoleId: null,
+      authTokenVersion: targetUser.authTokenVersion + 1,
     });
 
     this.logger.log(`Admin user ${targetUserId} demoted to client`);

@@ -130,6 +130,10 @@ export class UserRepository implements IUserRepository {
     banned: boolean,
     banReason?: string | null,
   ): Promise<UserEntity> {
+    const current = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { authTokenVersion: true },
+    });
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: banned
@@ -137,11 +141,13 @@ export class UserRepository implements IUserRepository {
             isBanned: true,
             banReason: banReason ?? null,
             bannedAt: new Date(),
+            authTokenVersion: (current?.authTokenVersion ?? 0) + 1,
           }
         : {
             isBanned: false,
             banReason: null,
             bannedAt: null,
+            authTokenVersion: (current?.authTokenVersion ?? 0) + 1,
           },
     });
     return UserMapper.toDomain(user);

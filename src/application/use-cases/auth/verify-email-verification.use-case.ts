@@ -13,6 +13,7 @@ import {
 import { PointSourceType } from '../../../domain/enums/point-source-type.enum.js';
 import { VerifyEmailVerificationDto } from '../../dtos/auth/verify-email-verification.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
+import { requireActiveAuthUser } from './_auth-user.helper.js';
 
 @Injectable()
 export class VerifyEmailVerificationUseCase {
@@ -26,6 +27,14 @@ export class VerifyEmailVerificationUseCase {
   async execute(
     dto: VerifyEmailVerificationDto,
   ): Promise<VerificationActionResultDto> {
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (!user) {
+      throw new BadRequestException(
+        'Invalid or inactive email verification token',
+      );
+    }
+    requireActiveAuthUser(user);
+
     const verification = await this.userRepository.findActiveEmailVerification(
       dto.email,
       dto.token,
@@ -45,13 +54,10 @@ export class VerifyEmailVerificationUseCase {
     await this.userRepository.markEmailVerificationVerified(verification.id);
     await this.userRepository.markUserEmailVerified(dto.email);
 
-    const user = await this.userRepository.findByEmail(dto.email);
-    if (user) {
-      await this.pointsRepository.grantAccountLifetimeMilestoneBonus(
-        user.id,
-        PointSourceType.EMAIL_VERIFIED_BONUS,
-      );
-    }
+    await this.pointsRepository.grantAccountLifetimeMilestoneBonus(
+      user.id,
+      PointSourceType.EMAIL_VERIFIED_BONUS,
+    );
 
     return new VerificationActionResultDto('EMAIL_VERIFIED');
   }

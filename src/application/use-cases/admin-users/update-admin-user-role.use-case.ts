@@ -60,6 +60,7 @@ export class UpdateAdminUserRoleUseCase {
     // Update admin role
     const updatedUser = await this.userRepository.update(targetUserId, {
       adminRoleId: newRole.id,
+      authTokenVersion: targetUser.authTokenVersion + 1,
     });
 
     this.logger.log(

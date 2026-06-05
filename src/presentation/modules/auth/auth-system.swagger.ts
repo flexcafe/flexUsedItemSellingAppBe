@@ -166,8 +166,8 @@ Staff admins have limited access based on the role assigned to them by the root 
 ## Common JWT behavior
 
 - **Token type:** Bearer token in \`Authorization\` header.
-- **Refresh:** Use the refresh token from login response to get new access tokens (endpoint varies by client).
-- **Expiry:** Access tokens expire after a configured duration; refresh tokens have a longer lifespan.
+- **Refresh:** This codebase does not issue refresh tokens yet.
+- **Expiry:** Access tokens expire after a configured duration (\`JWT_EXPIRATION\`, default \`2h\`).
 - **Throttling:** Auth endpoints have rate limits per IP and per identifier (phone/email) to prevent brute-force attacks.
   - Login: 30 req/min per IP, 15 req/min per identifier.
   - Register: 15 req/min per IP, 6 req/min per identifier.

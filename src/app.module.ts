@@ -30,6 +30,7 @@ import { FraudReportsModule } from './presentation/modules/fraud-reports/fraud-r
 import { AdminRolesModule } from './presentation/modules/admin-roles/admin-roles.module.js';
 import { AdminUsersModule } from './presentation/modules/admin-users/admin-users.module.js';
 import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
+import { RootAdminIntegrityService } from './infrastructure/bootstrap/root-admin-integrity.service.js';
 
 @Module({
   imports: [
@@ -122,6 +123,7 @@ import { VpnRestrictionGuard } from './common/guards/vpn-restriction.guard.js';
   controllers: [AppController],
   providers: [
     AppService,
+    RootAdminIntegrityService,
     {
       provide: APP_GUARD,
       useClass: VpnRestrictionGuard,

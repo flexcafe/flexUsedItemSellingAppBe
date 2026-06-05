@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { UserProfileDto } from '../../dtos/auth/auth-response.dto.js';
+import { requireActiveAuthUser } from './_auth-user.helper.js';
 
 @Injectable()
 export class GetCurrentUserProfileUseCase {
@@ -15,6 +16,7 @@ export class GetCurrentUserProfileUseCase {
     if (!authData) {
       throw new NotFoundException('User not found');
     }
+    requireActiveAuthUser(authData.user);
 
     return new UserProfileDto(authData);
   }
