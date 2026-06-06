@@ -126,6 +126,7 @@ export interface UserAuthData {
   user: UserEntity;
   profile: UserProfileData | null;
   kbzPayAccount: KbzPayAccountData | null;
+  adminRole: UserAdminRoleData | null;
 }
 
 export interface UserAdminRoleData {

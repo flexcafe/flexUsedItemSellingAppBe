@@ -59,8 +59,10 @@ Clients sign in with **phone + password**:
 - On success, returns \`accessToken\` only; this codebase does **not** issue a refresh token yet.
 - The JWT contains:
   - \`sub\` = user UUID
-  - \`role\` = "admin" if \`adminRoleId !== null\`, "client" otherwise
+  - \`phone\` = user phone
+  - \`authTokenVersion\` = token revocation version
   - Standard \`iat\` / \`exp\` timestamps
+- Client login returns \`user.adminRole: null\`.
 
 ### 5. KBZPay verification flow
 
@@ -102,7 +104,10 @@ Returns the authenticated user's profile including verification states, KBZPay a
 Admins sign in with **email + password**:
 - Rejects **client accounts** (\`adminRoleId === null\`) with **403**.
 - Rejects **inactive/banned** accounts.
-- Returns the same JWT structure as client login but with \`role: "admin"\`.
+- Returns the same JWT structure as client login.
+- The response body includes \`user.adminRole\` with:
+  - \`id\`, \`name\`, \`isSystem\`
+  - \`permissions\`: the exact permission keys the frontend should use to show/hide admin menus and actions.
 
 ### 2. Admin user management (ROOT_ADMIN only)
 
@@ -159,7 +164,8 @@ Staff admins have limited access based on the role assigned to them by the root 
 ### Frontend notes
 - A valid admin JWT is required for every admin dashboard route except \`/admin/dashboard/auth/login\`.
 - Root-admin endpoints should be hidden from staff-admin menus.
-- Staff-admin menus should be built from the assigned role permissions, not from the \`isAdmin\` flag alone.
+- Staff-admin menus should be built from \`user.adminRole.permissions\`, not from the \`isAdmin\` flag alone.
+- After page refresh, the frontend can call \`GET /client/auth/me\` with the admin JWT to reload the same \`user.adminRole.permissions\` contract.
 
 --- 
 

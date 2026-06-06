@@ -77,7 +77,10 @@ function buildUser(
   });
 }
 
-function buildAuthData(user: UserEntity): UserAuthData {
+function buildAuthData(
+  user: UserEntity,
+  adminRole: UserAuthData['adminRole'] = null,
+): UserAuthData {
   return {
     user,
     profile: {
@@ -102,6 +105,7 @@ function buildAuthData(user: UserEntity): UserAuthData {
       verifiedAt: null,
       adminNote: null,
     },
+    adminRole,
   };
 }
 
@@ -461,6 +465,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(res.tokens.accessToken).toBe('access-token');
       expect(res.user.isPhoneVerified).toBe(false);
       expect(res.user.isEmailVerified).toBe(false);
+      expect(res.user.adminRole).toBeNull();
       expect(res.user.verificationTags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -510,6 +515,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(res.tokens.accessToken).toBe('access-token');
       expect(res.user.id).toBe('user-99');
       expect(res.user.phone).toBe(user.phone);
+      expect(res.user.adminRole).toBeNull();
       expect(res.user.verificationTags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -550,7 +556,17 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       });
       repo.findByEmail.mockResolvedValue(user);
       repo.update.mockResolvedValue(user);
-      repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
+      repo.getAuthDataByUserId.mockResolvedValue(
+        buildAuthData(user, {
+          id: 'role-root',
+          name: 'ROOT_ADMIN',
+          isSystem: true,
+          permissions: [
+            AdminPermission.MANAGE_USERS,
+            AdminPermission.MANAGE_CATEGORIES,
+          ],
+        }),
+      );
 
       const jwt = {
         sign: jest.fn().mockReturnValue('access-token'),
@@ -568,6 +584,15 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       );
       expect(res.tokens.accessToken).toBe('access-token');
       expect(res.user.email).toBe('admin@example.com');
+      expect(res.user.adminRole).toEqual({
+        id: 'role-root',
+        name: 'ROOT_ADMIN',
+        isSystem: true,
+        permissions: [
+          AdminPermission.MANAGE_USERS,
+          AdminPermission.MANAGE_CATEGORIES,
+        ],
+      });
     });
 
     it('rejects admin login when phone/email are unverified', async () => {
@@ -601,6 +626,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       const user = buildUser();
       const dto = new UserProfileDto(buildAuthData(user));
 
+      expect(dto.adminRole).toBeNull();
       expect(dto.verificationTags).toEqual([
         expect.objectContaining({
           type: ProfileVerificationTagType.PHONE,

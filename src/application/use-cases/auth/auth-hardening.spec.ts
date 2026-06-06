@@ -72,6 +72,7 @@ function buildAuthData(user: UserEntity): UserAuthData {
       verifiedAt: null,
       adminNote: null,
     },
+    adminRole: null,
   };
 }
 

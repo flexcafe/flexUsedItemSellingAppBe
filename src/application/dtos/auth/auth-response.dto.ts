@@ -3,7 +3,11 @@ import { RegistrationType } from '../../../domain/enums/registration-type.enum.j
 import { Gender } from '../../../domain/enums/gender.enum.js';
 import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
-import type { UserAuthData } from '../../../domain/repositories/user.repository.interface.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import type {
+  UserAdminRoleData,
+  UserAuthData,
+} from '../../../domain/repositories/user.repository.interface.js';
 
 export enum ProfileVerificationTagType {
   PHONE = 'PHONE',
@@ -164,6 +168,27 @@ export class ProfileVerificationTagDto {
   }
 }
 
+export class AdminAuthRoleDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  isSystem: boolean;
+
+  @ApiProperty({ enum: AdminPermission, isArray: true })
+  permissions: AdminPermission[];
+
+  constructor(role: UserAdminRoleData) {
+    this.id = role.id;
+    this.name = role.name;
+    this.isSystem = role.isSystem;
+    this.permissions = role.permissions;
+  }
+}
+
 export class UserProfileDto {
   @ApiProperty()
   id: string;
@@ -213,11 +238,14 @@ export class UserProfileDto {
   @ApiProperty({ type: KbzPayDetailsDto })
   kbzPay: KbzPayDetailsDto;
 
+  @ApiProperty({ type: AdminAuthRoleDto, nullable: true })
+  adminRole: AdminAuthRoleDto | null;
+
   @ApiProperty({ type: ProfileVerificationTagDto, isArray: true })
   verificationTags: ProfileVerificationTagDto[];
 
   constructor(authData: UserAuthData) {
-    const { user, profile, kbzPayAccount } = authData;
+    const { user, profile, kbzPayAccount, adminRole } = authData;
     this.id = user.id;
     this.registrationType = user.registrationType;
     this.nickname = user.nickname;
@@ -234,6 +262,7 @@ export class UserProfileDto {
     this.referredById = user.referredById;
     this.profile = new ProfileDetailsDto(profile);
     this.kbzPay = new KbzPayDetailsDto(kbzPayAccount);
+    this.adminRole = adminRole ? new AdminAuthRoleDto(adminRole) : null;
     this.verificationTags = [
       new ProfileVerificationTagDto({
         type: ProfileVerificationTagType.PHONE,

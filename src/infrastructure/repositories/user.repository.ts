@@ -33,7 +33,11 @@ const {
 } = PrismaPkg;
 
 type UserWithAuthIncludes = Prisma.UserGetPayload<{
-  include: { profile: true; kbzPayAccount: true };
+  include: {
+    profile: true;
+    kbzPayAccount: true;
+    adminRole: { include: { permissions: true } };
+  };
 }>;
 
 type PendingKbzPayVerificationRow = Prisma.KbzPayAccountGetPayload<{
@@ -517,6 +521,11 @@ export class UserRepository implements IUserRepository {
       include: {
         profile: true,
         kbzPayAccount: true,
+        adminRole: {
+          include: {
+            permissions: true,
+          },
+        },
       },
     })) as UserWithAuthIncludes | null;
 
@@ -557,6 +566,17 @@ export class UserRepository implements IUserRepository {
           adminInstructionSentAt: kbzRow.adminInstructionSentAt,
           verifiedAt: kbzRow.verifiedAt,
           adminNote: kbzRow.adminNote,
+      }
+      : null;
+
+    const adminRole: UserAdminRoleData | null = user.adminRole
+      ? {
+          id: user.adminRole.id,
+          name: user.adminRole.name,
+          isSystem: user.adminRole.isSystem,
+          permissions: user.adminRole.permissions.map(
+            (row) => row.permission as AdminPermission,
+          ),
         }
       : null;
 
@@ -564,6 +584,7 @@ export class UserRepository implements IUserRepository {
       user: UserMapper.toDomain(user),
       profile,
       kbzPayAccount,
+      adminRole,
     };
   }
 
