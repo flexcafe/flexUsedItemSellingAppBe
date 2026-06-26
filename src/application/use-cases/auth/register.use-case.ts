@@ -21,6 +21,7 @@ import type { IEmailSender } from '../../../domain/services/email-sender.interfa
 import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
 import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
+import { normalizeEmail } from '../../../common/utils/normalize-email.js';
 // Registration no longer issues auth tokens. Tokens are only issued after
 // phone + email are verified and the user logs in.
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
@@ -42,13 +43,14 @@ export class RegisterUseCase {
   ) {}
 
   async execute(dto: RegisterDto): Promise<VerificationActionResultDto> {
+    const email = normalizeEmail(dto.email);
     this.logger.log(`Registering user: ${dto.phone}`);
 
     this.validateRegistrationRules(dto);
 
     const [existingPhone, existingEmail] = await Promise.all([
       this.userRepository.findByPhone(dto.phone),
-      this.userRepository.findByEmail(dto.email),
+      this.userRepository.findByEmail(email),
     ]);
 
     if (existingPhone) {
@@ -69,7 +71,7 @@ export class RegisterUseCase {
     const createdUser = await this.userRepository.create({
       registrationType: RegistrationType.PHONE_ONLY,
       phone: dto.phone,
-      email: dto.email,
+      email,
       password: hashedPassword,
       nickname: dto.nickname,
       referralCode,
@@ -123,12 +125,12 @@ export class RegisterUseCase {
     const emailToken = randomBytes(16).toString('hex');
     const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.userRepository.createEmailVerification(
-      dto.email,
+      email,
       emailToken,
       emailExpiresAt,
     );
     this.logger.warn(
-      `[TEST_LOG] REGISTER EMAIL TOKEN GENERATED email=${dto.email} token=${emailToken} expiresAt=${emailExpiresAt.toISOString()}`,
+      `[TEST_LOG] REGISTER EMAIL TOKEN GENERATED email=${email} token=${emailToken} expiresAt=${emailExpiresAt.toISOString()}`,
     );
 
     this.logger.log(
@@ -136,23 +138,23 @@ export class RegisterUseCase {
     );
     try {
       await this.emailSender.send({
-        to: dto.email,
+        to: email,
         subject: 'Verify your email',
         text: `Your email verification token is: ${emailToken}`,
         html: `<p>Your email verification token is:</p><p><b>${emailToken}</b></p>`,
       });
       this.logger.warn(
-        `[TEST_LOG] REGISTER EMAIL TOKEN SEND SUCCESS email=${dto.email} token=${emailToken}`,
+        `[TEST_LOG] REGISTER EMAIL TOKEN SEND SUCCESS email=${email} token=${emailToken}`,
       );
     } catch (err) {
       this.logger.warn(
-        `Email verification send failed for ${dto.email}: ${String(err)}`,
+        `Email verification send failed for ${email}: ${String(err)}`,
       );
       this.logger.warn(
-        `[TEST_LOG] REGISTER EMAIL TOKEN SEND FAILED email=${dto.email} token=${emailToken} error=${String(err)}`,
+        `[TEST_LOG] REGISTER EMAIL TOKEN SEND FAILED email=${email} token=${emailToken} error=${String(err)}`,
       );
     }
-    this.logger.log(`Email verification token generated for ${dto.email}`);
+    this.logger.log(`Email verification token generated for ${email}`);
 
     return new VerificationActionResultDto('REGISTRATION_PENDING_VERIFICATION');
   }

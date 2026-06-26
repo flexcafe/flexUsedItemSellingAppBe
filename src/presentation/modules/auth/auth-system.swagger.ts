@@ -53,7 +53,7 @@ After successful email verification:
 
 ### 4. Login (\`POST /client/auth/login\`)
 
-Clients sign in with **phone + password**:
+Clients sign in with **phone + password** or **email + password**:
 - Rejects **admin accounts** (\`adminRoleId !== null\`) with **403** — they must use the admin dashboard login.
 - Rejects **inactive/banned** accounts.
 - On success, returns \`accessToken\` only; this codebase does **not** issue a refresh token yet.
@@ -86,8 +86,8 @@ After successful KBZPay verification:
 
 | Step | Endpoint | Description |
 |------|----------|-------------|
-| 1 | \`POST /client/auth/forgot-password\` | Requests a password-reset OTP sent via SMS to the registered phone |
-| 2 | \`POST /client/auth/reset-password\` | Submits OTP + new password to complete the reset |
+| 1 | \`POST /client/auth/forgot-password\` | Requests a password-reset code sent via SMS (phone) or email (email) |
+| 2 | \`POST /client/auth/reset-password\` | Submits reset code + new password with either phone or email |
 
 - Admin accounts cannot use this flow (must use admin dashboard mechanisms).
 

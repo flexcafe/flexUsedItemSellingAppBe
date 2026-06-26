@@ -12,7 +12,7 @@ This system uses **Role-Based Access Control (RBAC)** to delegate admin responsi
 |------|-------------|-------------|
 | **Root admin** | Seeded once, full permissions, immutable role. Manages all other admins. | Email + password via \`POST /admin/dashboard/auth/login\` |
 | **Staff admin** | Created by root admin with cherry-picked permissions. Managed via these endpoints. | Email + password via \`POST /admin/dashboard/auth/login\` |
-| **Client** | Regular buyer/seller account. No admin panel access. | Phone + password via \`POST /client/auth/login\` |
+| **Client** | Regular buyer/seller account. No admin panel access. | Phone/email + password via \`POST /client/auth/login\` |
 
 ### Authentication
 - **All endpoints on this page require JWT** (\`Authorization: Bearer <accessToken>\`).
@@ -94,6 +94,6 @@ Completely removes the admin role from a user, converting them to a regular clie
 1. Sets \`adminRoleId\` to \`null\` on the user record.
 2. The user retains their existing profile, listings, transactions, points, and KBZPay data.
 3. They lose all admin panel access immediately — subsequent \`POST /admin/dashboard/auth/login\` attempts will fail with **403**.
-4. They can still log in via \`POST /client/auth/login\` with their phone number.
+4. They can still log in via \`POST /client/auth/login\` with either phone or email.
 
 **Use case:** Decommissioning a staff member without deleting their account history.`;

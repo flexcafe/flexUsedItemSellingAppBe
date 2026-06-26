@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -16,6 +17,7 @@ import {
   UserProfileDto,
 } from '../../dtos/auth/auth-response.dto.js';
 import { UserEntity } from '../../../domain/entities/user.entity.js';
+import { normalizeEmail } from '../../../common/utils/normalize-email.js';
 
 @Injectable()
 export class LoginUseCase {
@@ -28,8 +30,24 @@ export class LoginUseCase {
   ) {}
 
   async loginClient(dto: ClientLoginDto): Promise<AuthResponseDto> {
-    this.logger.log(`Client login attempt: phone=${dto.phone}`);
-    const user = await this.userRepository.findByPhone(dto.phone);
+    const phone = dto.phone?.trim();
+    const email = dto.email?.trim();
+    if ((!phone && !email) || (phone && email)) {
+      throw new BadRequestException(
+        'Provide exactly one identifier: phone or email',
+      );
+    }
+
+    this.logger.log(
+      phone
+        ? `Client login attempt: phone=${phone}`
+        : `Client login attempt: email=${email}`,
+    );
+
+    const user = phone
+      ? await this.userRepository.findByPhone(phone)
+      : await this.userRepository.findByEmail(normalizeEmail(email!));
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -42,14 +60,15 @@ export class LoginUseCase {
   }
 
   async loginAdmin(dto: AdminLoginDto): Promise<AuthResponseDto> {
-    this.logger.log(`Admin login attempt: email=${dto.email}`);
-    const user = await this.userRepository.findByEmail(dto.email);
+    const email = normalizeEmail(dto.email);
+    this.logger.log(`Admin login attempt: email=${email}`);
+    const user = await this.userRepository.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
     if (!user.isAdmin()) {
       throw new ForbiddenException(
-        'This sign-in is for admin accounts only. Clients must use phone login.',
+        'This sign-in is for admin accounts only. Clients must use client login with phone or email.',
       );
     }
     return this.finalizeLogin(user, dto.password, true);

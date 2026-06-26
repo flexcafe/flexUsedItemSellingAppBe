@@ -13,6 +13,7 @@ import type { IUserRepository } from '../../../domain/repositories/user.reposito
 import { ResetPasswordDto } from '../../dtos/auth/reset-password.dto.js';
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
 import { validatePendingPhoneOtp } from './_phone-otp-validation.helper.js';
+import { normalizeEmail } from '../../../common/utils/normalize-email.js';
 
 @Injectable()
 export class ResetPasswordUseCase {
@@ -28,9 +29,24 @@ export class ResetPasswordUseCase {
       );
     }
 
-    const user = await this.userRepository.findByPhone(dto.phone);
+    const phone = dto.phone?.trim();
+    const email = dto.email?.trim();
+    if ((!phone && !email) || (phone && email)) {
+      throw new BadRequestException(
+        'Provide exactly one identifier: phone or email',
+      );
+    }
+
+    const normalizedEmail = email ? normalizeEmail(email) : undefined;
+    const user = phone
+      ? await this.userRepository.findByPhone(phone)
+      : await this.userRepository.findByEmail(normalizedEmail!);
     if (!user) {
-      throw new NotFoundException('User with this phone number not found');
+      throw new NotFoundException(
+        phone
+          ? 'User with this phone number not found'
+          : 'User with this email not found',
+      );
     }
 
     if (user.isAdmin()) {
@@ -43,14 +59,34 @@ export class ResetPasswordUseCase {
       throw new UnauthorizedException('Account is deactivated or banned');
     }
 
-    const otp = await validatePendingPhoneOtp(
-      this.userRepository,
-      dto.phone,
-      dto.code,
-      OtpPurpose.PASSWORD_RESET,
-    );
+    if (phone) {
+      const otp = await validatePendingPhoneOtp(
+        this.userRepository,
+        phone,
+        dto.code,
+        OtpPurpose.PASSWORD_RESET,
+      );
 
-    await this.userRepository.markPhoneOtpVerified(otp.id);
+      await this.userRepository.markPhoneOtpVerified(otp.id);
+    } else {
+      const token = this.passwordResetEmailToken(dto.code);
+      const verification = await this.userRepository.findActiveEmailVerification(
+        normalizedEmail!,
+        token,
+      );
+      if (!verification) {
+        throw new BadRequestException(
+          'No pending reset code found for this email',
+        );
+      }
+
+      if (verification.expiresAt.getTime() < Date.now()) {
+        await this.userRepository.markEmailVerificationExpired(verification.id);
+        throw new UnauthorizedException('Reset code has expired');
+      }
+
+      await this.userRepository.markEmailVerificationVerified(verification.id);
+    }
 
     const newHash = await hash(dto.newPassword, 12);
     await this.userRepository.update(user.id, {
@@ -59,5 +95,9 @@ export class ResetPasswordUseCase {
     });
 
     return new VerificationActionResultDto('PASSWORD_RESET');
+  }
+
+  private passwordResetEmailToken(code: string): string {
+    return `pwd-reset:${code}`;
   }
 }

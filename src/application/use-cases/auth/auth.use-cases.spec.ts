@@ -371,6 +371,82 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         pointsRepo.grantAccountLifetimeMilestoneBonus,
       ).toHaveBeenCalledWith('user-new', PointSourceType.REGISTRATION_BONUS);
     });
+
+    it('stores normalized email when registration dto uses mixed case', async () => {
+      const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
+      repo.findByPhone.mockResolvedValue(null);
+      repo.findByEmail.mockResolvedValue(null);
+      repo.create.mockResolvedValue(buildUser({ id: 'user-new' }));
+      const useCase = new RegisterUseCase(
+        repo,
+        { sign: jest.fn() } as unknown as JwtService,
+        emailSender,
+        smsSender,
+        buildPointsRepoMock(),
+      );
+
+      await useCase.execute({
+        nickname: 'Nick',
+        phone: '+959123456789',
+        email: '  JOHN@Example.COM ',
+        password: 'password123',
+        confirmPassword: 'password123',
+        kbzPayName: 'Kyaw Zin',
+        kbzPayPhoneNumber: '+959876543210',
+        gender: Gender.MALE,
+        age: 27,
+        maritalStatus: MaritalStatus.SINGLE,
+        region: 'Yangon Region',
+        gpsLatitude: 16.84,
+        gpsLongitude: 96.17,
+      });
+
+      expect(repo.findByEmail).toHaveBeenCalledWith('john@example.com');
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'john@example.com' }),
+      );
+      expect(repo.createEmailVerification).toHaveBeenCalledWith(
+        'john@example.com',
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(emailSender.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'john@example.com' }),
+      );
+    });
+
+    it('rejects duplicate email when only casing differs', async () => {
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(null);
+      repo.findByEmail.mockResolvedValue(buildUser({ email: 'john@example.com' }));
+      const useCase = new RegisterUseCase(
+        repo,
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+
+      await expect(
+        useCase.execute({
+          nickname: 'Nick',
+          phone: '+959999999999',
+          email: 'JOHN@Example.COM',
+          password: 'password123',
+          confirmPassword: 'password123',
+          kbzPayName: 'Kyaw Zin',
+          kbzPayPhoneNumber: '+959876543210',
+          gender: Gender.MALE,
+          age: 27,
+          maritalStatus: MaritalStatus.SINGLE,
+          region: 'Yangon Region',
+          gpsLatitude: 16.84,
+          gpsLongitude: 96.17,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   describe(LoginUseCase.name, () => {
@@ -541,6 +617,70 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           }),
         ]),
       );
+    });
+
+    it('logs in client with email+password and returns profile + token', async () => {
+      const repo = buildRepoMock();
+      const hashed = await hash('correct-password', 12);
+      const user = buildUser({
+        id: 'user-email-login',
+        email: 'client@example.com',
+        password: hashed,
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        adminRoleId: null,
+      });
+      repo.findByEmail.mockResolvedValue(user);
+      repo.update.mockResolvedValue(user);
+      repo.getAuthDataByUserId.mockResolvedValue(buildAuthData(user));
+
+      const jwt = {
+        sign: jest.fn().mockReturnValue('access-token'),
+      } as unknown as JwtService;
+      const useCase = new LoginUseCase(repo, jwt);
+
+      const res = await useCase.loginClient({
+        email: 'client@example.com',
+        password: 'correct-password',
+      });
+
+      expect(repo.findByEmail).toHaveBeenCalledWith('client@example.com');
+      expect(repo.update).toHaveBeenCalledWith(
+        'user-email-login',
+        expect.objectContaining({ lastLoginAt: expect.any(Date) }),
+      );
+      expect(res.tokens.accessToken).toBe('access-token');
+      expect(res.user.id).toBe('user-email-login');
+    });
+
+    it('rejects client login when both phone and email are provided', async () => {
+      const repo = buildRepoMock();
+      const jwt = {
+        sign: jest.fn().mockReturnValue('t'),
+      } as unknown as JwtService;
+      const useCase = new LoginUseCase(repo, jwt);
+
+      await expect(
+        useCase.loginClient({
+          phone: '+959123456789',
+          email: 'client@example.com',
+          password: 'pw',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects client login when neither phone nor email is provided', async () => {
+      const repo = buildRepoMock();
+      const jwt = {
+        sign: jest.fn().mockReturnValue('t'),
+      } as unknown as JwtService;
+      const useCase = new LoginUseCase(repo, jwt);
+
+      await expect(
+        useCase.loginClient({
+          password: 'pw',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('logs in admin with email+password and returns profile + token', async () => {
@@ -736,9 +876,14 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
 
     it('RequestForgotPasswordUseCase sends PASSWORD_RESET OTP', async () => {
       const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
       const smsSender = buildSmsSenderMock();
       repo.findByPhone.mockResolvedValue(buildUser());
-      const useCase = new RequestForgotPasswordUseCase(repo, smsSender);
+      const useCase = new RequestForgotPasswordUseCase(
+        repo,
+        emailSender,
+        smsSender,
+      );
       const res = await useCase.execute({ phone: '+959123456789' });
       expect(res.action).toBe('PASSWORD_RESET_OTP_SENT');
       expect(repo.createPhoneOtp).toHaveBeenCalledWith(
@@ -753,6 +898,50 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           clientReference: 'password-reset:+959123456789',
         }),
       );
+      expect(emailSender.send).not.toHaveBeenCalled();
+    });
+
+    it('RequestForgotPasswordUseCase sends password reset code via email', async () => {
+      const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
+      repo.findByEmail.mockResolvedValue(buildUser({ email: 'john@example.com' }));
+      const useCase = new RequestForgotPasswordUseCase(
+        repo,
+        emailSender,
+        smsSender,
+      );
+      const res = await useCase.execute({ email: 'john@example.com' });
+      expect(res.action).toBe('PASSWORD_RESET_OTP_SENT');
+      expect(repo.createEmailVerification).toHaveBeenCalledWith(
+        'john@example.com',
+        expect.stringMatching(/^pwd-reset:\d{6}$/),
+        expect.any(Date),
+      );
+      expect(emailSender.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'john@example.com',
+          subject: 'Reset your password',
+        }),
+      );
+      expect(smsSender.send).not.toHaveBeenCalled();
+    });
+
+    it('RequestForgotPasswordUseCase rejects when both phone and email are provided', async () => {
+      const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
+      const useCase = new RequestForgotPasswordUseCase(
+        repo,
+        emailSender,
+        smsSender,
+      );
+      await expect(
+        useCase.execute({
+          phone: '+959123456789',
+          email: 'john@example.com',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('ResetPasswordUseCase updates password and does not verify phone', async () => {
@@ -798,6 +987,38 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmNewPassword: 'different',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('ResetPasswordUseCase updates password with email reset code', async () => {
+      const repo = buildRepoMock();
+      repo.findByEmail.mockResolvedValue(
+        buildUser({ id: 'user-email', email: 'john@example.com' }),
+      );
+      repo.findActiveEmailVerification.mockResolvedValue({
+        id: 'ev-reset',
+        email: 'john@example.com',
+        token: 'pwd-reset:654321',
+        status: VerificationStatus.PENDING,
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      const useCase = new ResetPasswordUseCase(repo);
+      const res = await useCase.execute({
+        email: 'john@example.com',
+        code: '654321',
+        newPassword: 'newpass123',
+        confirmNewPassword: 'newpass123',
+      });
+
+      expect(res.action).toBe('PASSWORD_RESET');
+      expect(repo.markEmailVerificationVerified).toHaveBeenCalledWith(
+        'ev-reset',
+      );
+      expect(repo.update).toHaveBeenCalledWith(
+        'user-email',
+        expect.objectContaining({
+          password: expect.any(String),
+        }),
+      );
     });
 
     it('SendEmailVerificationUseCase calls createEmailVerification', async () => {

@@ -82,7 +82,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register user with phone',
     description:
-      'Registration stores profile + KBZPay account and initializes phone OTP + email verification flows. Users can sign in with phone+password and complete verification from profile when needed.',
+      'Registration stores profile + KBZPay account and initializes phone OTP + email verification flows. Users can sign in with phone/email + password and complete verification from profile when needed.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.CREATED,
@@ -121,9 +121,9 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Client login (phone + password)',
+    summary: 'Client login (phone/email + password)',
     description:
-      `## Client login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /client/auth/login\`\nClients sign in with phone and password. Admin users must use POST /admin/dashboard/auth/login with email.`,
+      `## Client login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /client/auth/login\`\nClients sign in with either phone+password or email+password. Admin users must use POST /admin/dashboard/auth/login with email.`,
   })
   @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.OK,
@@ -138,8 +138,12 @@ export class AuthController {
     description: 'Invalid credentials or inactive account',
   })
   @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Provide exactly one identifier: phone or email',
+  })
+  @ApiErrorResponse({
     status: HttpStatus.TOO_MANY_REQUESTS,
-    description: 'Rate limit exceeded for this IP or phone',
+    description: 'Rate limit exceeded for this IP or phone/email',
   })
   async login(
     @Body() dto: ClientLoginDto,
@@ -157,9 +161,9 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Request password reset OTP (client phone)',
+    summary: 'Request password reset code (client phone/email)',
     description:
-      'Sends a 6-digit SMS OTP for password reset. Separate from phone verification OTP. Admin accounts cannot use this flow.',
+      'Sends a 6-digit password reset code to either registered phone (SMS) or email. Admin accounts cannot use this flow.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
@@ -167,7 +171,11 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Phone does not belong to a registered client',
+    description: 'Phone/email does not belong to a registered client',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Provide exactly one identifier: phone or email',
   })
   @ApiErrorResponse({
     status: HttpStatus.FORBIDDEN,
@@ -179,7 +187,7 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.TOO_MANY_REQUESTS,
-    description: 'Rate limit exceeded for this IP or phone',
+    description: 'Rate limit exceeded for this IP or phone/email',
   })
   async forgotPassword(
     @Body() dto: ForgotPasswordDto,
@@ -197,9 +205,9 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Reset password with SMS OTP',
+    summary: 'Reset password with phone/email reset code',
     description:
-      'Verifies the password-reset OTP from forgot-password and sets a new password. Does not change phone verification status.',
+      'Verifies the password-reset code from forgot-password and sets a new password. Does not change phone/email verification status.',
   })
   @ApiSuccessResponse(VerificationActionResultDto, {
     status: HttpStatus.OK,
@@ -207,11 +215,12 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Password mismatch or no pending reset OTP',
+    description:
+      'Password mismatch, invalid identifier payload, or no pending reset code',
   })
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Phone does not belong to a registered client',
+    description: 'Phone/email does not belong to a registered client',
   })
   @ApiErrorResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -219,7 +228,7 @@ export class AuthController {
   })
   @ApiErrorResponse({
     status: HttpStatus.TOO_MANY_REQUESTS,
-    description: 'Rate limit exceeded for this IP or phone',
+    description: 'Rate limit exceeded for this IP or phone/email',
   })
   async resetPassword(
     @Body() dto: ResetPasswordDto,

@@ -25,6 +25,7 @@ import { OtpPurpose } from '../../domain/enums/otp-purpose.enum.js';
 import { VerificationStatus } from '../../domain/enums/verification-status.enum.js';
 import { AdminPermission } from '../../domain/enums/admin-permission.enum.js';
 import { PusherService } from '../realtime/pusher.service.js';
+import { normalizeEmail } from '../../common/utils/normalize-email.js';
 
 const {
   NotificationType,
@@ -60,7 +61,7 @@ export class UserRepository implements IUserRepository {
       data: {
         registrationType: data.registrationType,
         phone: data.phone,
-        email: data.email,
+        email: normalizeEmail(data.email),
         password: data.password,
         nickname: data.nickname,
         facebookId: data.facebookId,
@@ -98,7 +99,9 @@ export class UserRepository implements IUserRepository {
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(email) },
+    });
     return user ? UserMapper.toDomain(user) : null;
   }
 
@@ -125,7 +128,12 @@ export class UserRepository implements IUserRepository {
   }
 
   async update(id: string, data: UpdateUserData): Promise<UserEntity> {
-    const user = await this.prisma.user.update({ where: { id }, data });
+    const payload: UpdateUserData = { ...data };
+    if (typeof payload.email === 'string') {
+      payload.email = normalizeEmail(payload.email);
+    }
+
+    const user = await this.prisma.user.update({ where: { id }, data: payload });
     return UserMapper.toDomain(user);
   }
 
@@ -298,10 +306,11 @@ export class UserRepository implements IUserRepository {
     token: string,
     expiresAt: Date,
   ): Promise<void> {
+    const normalizedEmail = normalizeEmail(email);
     await this.prisma.$transaction([
       this.prisma.emailVerification.updateMany({
         where: {
-          email,
+          email: normalizedEmail,
           status: PrismaVerificationStatus.PENDING,
         },
         data: {
@@ -310,7 +319,7 @@ export class UserRepository implements IUserRepository {
       }),
       this.prisma.emailVerification.create({
         data: {
-          email,
+          email: normalizedEmail,
           token,
           expiresAt,
           status: PrismaVerificationStatus.PENDING,
@@ -325,7 +334,7 @@ export class UserRepository implements IUserRepository {
   ): Promise<EmailVerificationData | null> {
     const verification = await this.prisma.emailVerification.findFirst({
       where: {
-        email,
+        email: normalizeEmail(email),
         token,
         status: PrismaVerificationStatus.PENDING,
       },
@@ -365,7 +374,7 @@ export class UserRepository implements IUserRepository {
 
   async markUserEmailVerified(email: string): Promise<void> {
     await this.prisma.user.updateMany({
-      where: { email },
+      where: { email: normalizeEmail(email) },
       data: {
         isEmailVerified: true,
         emailVerifiedAt: new Date(),

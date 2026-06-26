@@ -65,7 +65,7 @@ export class AdminDashboardAuthController {
   @ApiOperation({
     summary: 'Admin dashboard login (email + password)',
     description:
-      `## Admin dashboard login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /admin/dashboard/auth/login\`\nRoot and staff admins sign in with email and password. Client accounts must use client phone login.`,
+      `## Admin dashboard login\n\n${AUTH_SYSTEM_OVERVIEW}\n\n### This endpoint: \`POST /admin/dashboard/auth/login\`\nRoot and staff admins sign in with email and password. Client accounts must use client login with phone or email.`,
   })
   @ApiSuccessResponse(AuthResponseDto, {
     status: HttpStatus.OK,
