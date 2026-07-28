@@ -109,6 +109,28 @@ export function ApiBooleanSuccessResponse(options: ResponseOptions) {
   );
 }
 
+export function ApiStringArraySuccessResponse(options: ResponseOptions) {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto),
+    ApiResponse({
+      status: options.status ?? HttpStatus.OK,
+      description: options.description,
+      schema: baseResponseSchema({
+        type: 'array',
+        items: {
+          type: 'string',
+          format: 'uuid',
+          example: '44444444-4444-4444-8444-444444444444',
+        },
+        example: [
+          '44444444-4444-4444-8444-444444444444',
+          '77777777-7777-4777-8777-777777777777',
+        ],
+      }),
+    }),
+  );
+}
+
 export function ApiNumberSuccessResponse(options: ResponseOptions) {
   return applyDecorators(
     ApiExtraModels(ApiResponseDto),

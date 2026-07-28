@@ -13,7 +13,10 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
-import { ApiSuccessResponse } from '../../../common/decorators/api-response.decorator.js';
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from '../../../common/decorators/api-response.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import {
@@ -44,7 +47,9 @@ export class ClientLegalController {
   @ApiOperation({
     summary: 'Get active Terms of Use / EULA',
     description:
-      'Present this before registration or login. Includes zero-tolerance policy for objectionable content.',
+      'Present this **before** registration or login (App Store Guideline 1.2). ' +
+      'Response includes the zero-tolerance policy for objectionable content. ' +
+      'Registration must send `acceptedTerms: true` and `termsVersion` matching `data.version`.',
   })
   @ApiSuccessResponse(TermsOfServiceDto, {
     status: HttpStatus.OK,
@@ -57,10 +62,27 @@ export class ClientLegalController {
 
   @Post('terms/accept')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Accept the current Terms of Use version' })
+  @ApiOperation({
+    summary: 'Accept the current Terms of Use version',
+    description:
+      'Call after login when `GET .../terms/status` returns `needsAcceptance: true`, ' +
+      'or after the user agrees on the Terms screen. `termsVersion` must match the active version.',
+  })
   @ApiSuccessResponse(TermsAcceptanceStatusDto, {
     status: HttpStatus.OK,
     description: 'Terms accepted',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'termsVersion does not match the active Terms version',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid JWT',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found',
   })
   async accept(
     @CurrentUser() user: JwtPayload,
@@ -72,10 +94,22 @@ export class ClientLegalController {
 
   @Get('terms/status')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Check whether the user must re-accept Terms' })
+  @ApiOperation({
+    summary: 'Check whether the user must re-accept Terms',
+    description:
+      'If `needsAcceptance` is true, block app use until the user accepts via `POST .../terms/accept`.',
+  })
   @ApiSuccessResponse(TermsAcceptanceStatusDto, {
     status: HttpStatus.OK,
     description: 'Terms status retrieved',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid JWT',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found',
   })
   async status(
     @CurrentUser() user: JwtPayload,
