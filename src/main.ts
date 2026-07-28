@@ -2,10 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { RedisIoAdapter } from './infrastructure/realtime/redis-io.adapter.js';
 
+function readPackageVersion(): string {
+  try {
+    const raw = readFileSync(join(process.cwd(), 'package.json'), 'utf8');
+    const pkg = JSON.parse(raw) as { version?: string };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
@@ -45,6 +56,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  const packageVersion = readPackageVersion();
   const {
     CHAT_CLIENT_TAG_DOC,
     CHAT_ADMIN_TAG_DOC,
@@ -57,7 +69,7 @@ async function bootstrap() {
     .setDescription(
       `Client-to-client second-hand selling platform.\n\n## Client Chat\n${CHAT_CLIENT_TAG_DOC}\n\n## Admin Chat\n${CHAT_ADMIN_TAG_DOC}\n\n${CHAT_TRANSACTION_FLOW_DOC}\n\n${CHAT_WS_EVENTS_DOC}`,
     )
-    .setVersion('1.0')
+    .setVersion(packageVersion)
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
@@ -66,7 +78,9 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
   logger.log(`Application running on http://localhost:${port}`);
-  logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  logger.log(
+    `Swagger docs at http://localhost:${port}/api/docs (v${packageVersion})`,
+  );
 }
 
 bootstrap().catch((err) => {

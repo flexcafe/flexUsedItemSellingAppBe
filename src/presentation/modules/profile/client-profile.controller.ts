@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -29,11 +30,16 @@ import { AllowVpn } from '../../../common/decorators/allow-vpn.decorator.js';
 import { ApiResponseDto } from '../../../application/dtos/common/api-response.dto.js';
 import { ROUTE_PREFIX } from '../../routing.paths.js';
 import { ChangePasswordUseCase } from '../../../application/use-cases/profile/change-password.use-case.js';
+import { DeleteAccountUseCase } from '../../../application/use-cases/profile/delete-account.use-case.js';
 import { UploadAvatarUseCase } from '../../../application/use-cases/profile/upload-avatar.use-case.js';
 import { LinkFacebookUseCase } from '../../../application/use-cases/profile/link-facebook.use-case.js';
 import { SubmitFacebookFollowUseCase } from '../../../application/use-cases/profile/submit-facebook-follow.use-case.js';
 import { GetMyFacebookFollowSubmissionUseCase } from '../../../application/use-cases/profile/get-my-facebook-follow-submission.use-case.js';
 import { ChangePasswordDto } from '../../../application/dtos/profile/change-password.dto.js';
+import {
+  DeleteAccountDto,
+  DeleteAccountResultDto,
+} from '../../../application/dtos/profile/delete-account.dto.js';
 import { LinkFacebookDto } from '../../../application/dtos/profile/link-facebook.dto.js';
 import { SubmitFacebookFollowDto } from '../../../application/dtos/profile/submit-facebook-follow.dto.js';
 import { FacebookFollowSubmissionDto } from '../../../application/dtos/profile/facebook-follow-submission.dto.js';
@@ -46,6 +52,7 @@ import { UploadAvatarResponseDto } from '../../../application/dtos/profile/uploa
 export class ClientProfileController {
   constructor(
     private readonly changePasswordUseCase: ChangePasswordUseCase,
+    private readonly deleteAccountUseCase: DeleteAccountUseCase,
     private readonly uploadAvatarUseCase: UploadAvatarUseCase,
     private readonly linkFacebookUseCase: LinkFacebookUseCase,
     private readonly submitFacebookFollowUseCase: SubmitFacebookFollowUseCase,
@@ -73,6 +80,48 @@ export class ClientProfileController {
   ): Promise<ApiResponseDto<boolean>> {
     await this.changePasswordUseCase.execute(user.sub, dto);
     return ApiResponseDto.success(true, 'Password changed successfully');
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Permanently delete my account',
+    description:
+      'App Store Guideline 5.1.1(v). Permanently deletes the account (not a temporary deactivate): ' +
+      'anonymizes personal data, soft-deletes listings, closes chat rooms, revokes sessions, ' +
+      'and frees phone/email for re-registration. Historical transactions/reviews/reports are retained without PII. ' +
+      'Requires current password and confirm=DELETE.',
+  })
+  @ApiSuccessResponse(DeleteAccountResultDto, {
+    status: HttpStatus.OK,
+    description: 'Account permanently deleted',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'confirm is not exactly DELETE',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing JWT or current password incorrect',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Admin accounts cannot self-delete via client API',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Account is already deleted',
+  })
+  async deleteAccount(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: DeleteAccountDto,
+  ): Promise<ApiResponseDto<DeleteAccountResultDto>> {
+    const result = await this.deleteAccountUseCase.execute(user.sub, dto);
+    return ApiResponseDto.success(result, 'Account permanently deleted');
   }
 
   @Post('avatar')

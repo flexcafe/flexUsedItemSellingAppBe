@@ -174,7 +174,11 @@ export interface IUserRepository {
     banned: boolean,
     banReason?: string | null,
   ): Promise<UserEntity>;
-  delete(id: string): Promise<boolean>;
+  /**
+   * Permanently delete an account for Guideline 5.1.1(v):
+   * anonymize PII, soft-delete listings, revoke sessions, keep audit FKs.
+   */
+  deleteAccount(userId: string): Promise<void>;
   getProfileAvatarUrl(userId: string): Promise<string | null>;
   setProfileAvatar(userId: string, avatarUrl: string | null): Promise<void>;
 

@@ -3,11 +3,14 @@ import { jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { ChangePasswordUseCase } from './change-password.use-case.js';
+import { DeleteAccountUseCase } from './delete-account.use-case.js';
 import { UploadAvatarUseCase } from './upload-avatar.use-case.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import type { IFileStorage } from '../../../domain/services/file-storage.interface.js';
@@ -55,7 +58,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findByReferralCode: jest.fn(),
     findAll: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
+    deleteAccount: jest.fn(),
     setProfileAvatar: jest.fn(),
     createPhoneOtp: jest.fn(),
     findLatestActivePhoneOtp: jest.fn(),
@@ -215,6 +218,77 @@ describe('Profile use-cases', () => {
       expect(url).toBe('https://cdn.example.com/u.png');
       expect(storage.uploadPublicFile).toHaveBeenCalledTimes(1);
       expect(repo.setProfileAvatar).toHaveBeenCalledWith('user-1', url);
+    });
+  });
+
+  describe(DeleteAccountUseCase.name, () => {
+    const BCRYPT_TEST_COST = 4;
+
+    it('rejects when user not found', async () => {
+      const repo = buildRepoMock();
+      repo.findById.mockResolvedValue(null);
+      const useCase = new DeleteAccountUseCase(repo);
+      await expect(
+        useCase.execute('user-1', {
+          currentPassword: 'x',
+          confirm: 'DELETE',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rejects admin self-delete', async () => {
+      const repo = buildRepoMock();
+      repo.findById.mockResolvedValue(buildUser({ adminRoleId: 'role-1' }));
+      const useCase = new DeleteAccountUseCase(repo);
+      await expect(
+        useCase.execute('user-1', {
+          currentPassword: 'x',
+          confirm: 'DELETE',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects already deleted accounts', async () => {
+      const repo = buildRepoMock();
+      repo.findById.mockResolvedValue(
+        buildUser({ deletedAt: new Date(), isActive: false }),
+      );
+      const useCase = new DeleteAccountUseCase(repo);
+      await expect(
+        useCase.execute('user-1', {
+          currentPassword: 'x',
+          confirm: 'DELETE',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects incorrect password', async () => {
+      const repo = buildRepoMock();
+      repo.findById.mockResolvedValue(
+        buildUser({ password: await hash('correct', BCRYPT_TEST_COST) }),
+      );
+      const useCase = new DeleteAccountUseCase(repo);
+      await expect(
+        useCase.execute('user-1', {
+          currentPassword: 'wrong',
+          confirm: 'DELETE',
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('deletes account on success', async () => {
+      const repo = buildRepoMock();
+      repo.findById.mockResolvedValue(
+        buildUser({ password: await hash('secret', BCRYPT_TEST_COST) }),
+      );
+      repo.deleteAccount.mockResolvedValue(undefined);
+      const useCase = new DeleteAccountUseCase(repo);
+      const result = await useCase.execute('user-1', {
+        currentPassword: 'secret',
+        confirm: 'DELETE',
+      });
+      expect(result.deleted).toBe(true);
+      expect(repo.deleteAccount).toHaveBeenCalledWith('user-1');
     });
   });
 });

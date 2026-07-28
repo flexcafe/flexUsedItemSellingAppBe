@@ -19,6 +19,7 @@ export class UserMapper {
       phoneVerifiedAt: prismaUser.phoneVerifiedAt,
       isActive: prismaUser.isActive,
       isBanned: prismaUser.isBanned,
+      deletedAt: prismaUser.deletedAt,
       totalPoints: prismaUser.totalPoints,
       currentRank: prismaUser.currentRank as RankTier,
       referralCode: prismaUser.referralCode,

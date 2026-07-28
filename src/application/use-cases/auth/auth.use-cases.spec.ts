@@ -119,7 +119,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findByReferralCode: jest.fn(),
     findAll: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
+    deleteAccount: jest.fn(),
     createPhoneOtp: jest.fn(),
     findLatestActivePhoneOtp: jest.fn(),
     incrementPhoneOtpAttempt: jest.fn(),
@@ -556,6 +556,24 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
     it('rejects inactive/banned account (client)', async () => {
       const repo = buildRepoMock();
       repo.findByPhone.mockResolvedValue(buildUser({ isBanned: true }));
+      const jwt = {
+        sign: jest.fn().mockReturnValue('t'),
+      } as unknown as JwtService;
+      const useCase = new LoginUseCase(repo, jwt);
+
+      await expect(
+        useCase.loginClient({ phone: '+959123456789', password: 'pw' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects permanently deleted account (client)', async () => {
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(
+        buildUser({
+          deletedAt: new Date('2026-07-29T12:00:00.000Z'),
+          isActive: false,
+        }),
+      );
       const jwt = {
         sign: jest.fn().mockReturnValue('t'),
       } as unknown as JwtService;

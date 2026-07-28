@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientProfileController } from './client-profile.controller.js';
 import { AdminFacebookFollowController } from './admin-facebook-follow.controller.js';
 import { ChangePasswordUseCase } from '../../../application/use-cases/profile/change-password.use-case.js';
+import { DeleteAccountUseCase } from '../../../application/use-cases/profile/delete-account.use-case.js';
 import { UploadAvatarUseCase } from '../../../application/use-cases/profile/upload-avatar.use-case.js';
 import { LinkFacebookUseCase } from '../../../application/use-cases/profile/link-facebook.use-case.js';
 import { SubmitFacebookFollowUseCase } from '../../../application/use-cases/profile/submit-facebook-follow.use-case.js';
@@ -21,6 +22,7 @@ import { SupabaseFileStorageService } from '../../../infrastructure/storage/supa
   controllers: [ClientProfileController, AdminFacebookFollowController],
   providers: [
     ChangePasswordUseCase,
+    DeleteAccountUseCase,
     UploadAvatarUseCase,
     LinkFacebookUseCase,
     SubmitFacebookFollowUseCase,

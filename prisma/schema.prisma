@@ -284,6 +284,8 @@ model User {
   isBanned  Boolean   @default(false) @map("is_banned")
   banReason String?   @map("ban_reason")
   bannedAt  DateTime? @map("banned_at")
+  // Permanent account deletion (App Store Guideline 5.1.1(v)); PII anonymized
+  deletedAt DateTime? @map("deleted_at")
 
   // Terms of Use / EULA acceptance (App Store Guideline 1.2)
   termsAcceptedAt DateTime? @map("terms_accepted_at")
@@ -338,6 +340,7 @@ model User {
   @@index([facebookId])
   @@index([currentRank])
   @@index([isActive, isBanned])
+  @@index([deletedAt])
   @@map("users")
 }
 

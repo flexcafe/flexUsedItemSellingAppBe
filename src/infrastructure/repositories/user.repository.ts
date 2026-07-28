@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import PrismaPkg from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { hash } from 'bcrypt';
 import { PrismaService } from '../database/prisma.service.js';
 import { UserMapper } from '../mappers/user.mapper.js';
 import { UserEntity } from '../../domain/entities/user.entity.js';
@@ -31,6 +32,7 @@ const {
   NotificationType,
   OtpPurpose: PrismaOtpPurpose,
   VerificationStatus: PrismaVerificationStatus,
+  ListingStatus: PrismaListingStatus,
 } = PrismaPkg;
 
 type UserWithAuthIncludes = Prisma.UserGetPayload<{
@@ -167,12 +169,113 @@ export class UserRepository implements IUserRepository {
     return UserMapper.toDomain(user);
   }
 
-  async delete(id: string): Promise<boolean> {
-    await this.prisma.user.update({
-      where: { id },
-      data: { isActive: false },
+  async deleteAccount(userId: string): Promise<void> {
+    const current = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { authTokenVersion: true, deletedAt: true },
     });
-    return true;
+    if (!current) {
+      return;
+    }
+    if (current.deletedAt) {
+      return;
+    }
+
+    const now = new Date();
+    const anonymizedPhone = `deleted:${userId}`;
+    const anonymizedReferral = `DEL${userId.replace(/-/g, '').slice(0, 13)}`;
+    const lockedPassword = await hash(
+      `deleted-${userId}-${now.getTime()}-${Math.random()}`,
+      12,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.updateMany({
+        where: { sellerId: userId, isDeleted: false },
+        data: {
+          isDeleted: true,
+          status: PrismaListingStatus.ARCHIVED,
+        },
+      });
+
+      await tx.chatRoom.updateMany({
+        where: {
+          OR: [{ buyerId: userId }, { sellerId: userId }],
+          isActive: true,
+        },
+        data: { isActive: false },
+      });
+
+      await tx.locationShare.updateMany({
+        where: { userId, isActive: true },
+        data: { isActive: false },
+      });
+
+      await tx.refreshToken.deleteMany({ where: { userId } });
+      await tx.userBlock.deleteMany({
+        where: {
+          OR: [{ blockerId: userId }, { blockedId: userId }],
+        },
+      });
+      await tx.notification.deleteMany({ where: { userId } });
+
+      await tx.userProfile.updateMany({
+        where: { userId },
+        data: {
+          avatar: null,
+          gender: null,
+          age: null,
+          maritalStatus: null,
+          inputRegion: null,
+          gpsLatitude: null,
+          gpsLongitude: null,
+          isRegionVerified: false,
+          gpsVerifiedAt: null,
+          bio: null,
+          facebookName: null,
+          facebookProfileUrl: null,
+          facebookLinkedAt: null,
+        },
+      });
+
+      await tx.kbzPayAccount.updateMany({
+        where: { userId },
+        data: {
+          accountName: 'Deleted User',
+          phoneNumber: anonymizedPhone,
+          kbzTransactionId: null,
+          adminPhoneForTransfer: null,
+          adminNote: null,
+          status: PrismaVerificationStatus.PENDING,
+          isVerified: false,
+          verifyRequestedAt: null,
+          adminInstructionSentAt: null,
+          verifiedAt: null,
+          verifiedById: null,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          phone: anonymizedPhone,
+          email: null,
+          facebookId: null,
+          password: lockedPassword,
+          nickname: 'Deleted User',
+          isEmailVerified: false,
+          isPhoneVerified: false,
+          emailVerifiedAt: null,
+          phoneVerifiedAt: null,
+          isActive: false,
+          termsAcceptedAt: null,
+          termsVersion: null,
+          referralCode: anonymizedReferral,
+          deletedAt: now,
+          authTokenVersion: current.authTokenVersion + 1,
+        },
+      });
+    });
   }
 
   async getProfileAvatarUrl(userId: string): Promise<string | null> {

@@ -15,6 +15,7 @@ export interface UserEntityProps {
   phoneVerifiedAt: Date | null;
   isActive: boolean;
   isBanned: boolean;
+  deletedAt?: Date | null;
   totalPoints: number;
   currentRank: RankTier;
   referralCode: string;
@@ -39,6 +40,7 @@ export class UserEntity {
   readonly phoneVerifiedAt: Date | null;
   readonly isActive: boolean;
   readonly isBanned: boolean;
+  readonly deletedAt: Date | null;
   readonly totalPoints: number;
   readonly currentRank: RankTier;
   readonly referralCode: string;
@@ -62,6 +64,7 @@ export class UserEntity {
     this.phoneVerifiedAt = props.phoneVerifiedAt;
     this.isActive = props.isActive;
     this.isBanned = props.isBanned;
+    this.deletedAt = props.deletedAt ?? null;
     this.totalPoints = props.totalPoints;
     this.currentRank = props.currentRank;
     this.referralCode = props.referralCode;
@@ -73,7 +76,11 @@ export class UserEntity {
   }
 
   isActiveUser(): boolean {
-    return this.isActive && !this.isBanned;
+    return this.isActive && !this.isBanned && this.deletedAt === null;
+  }
+
+  isDeleted(): boolean {
+    return this.deletedAt !== null;
   }
 
   isVerified(): boolean {

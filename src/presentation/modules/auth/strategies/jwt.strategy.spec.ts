@@ -61,4 +61,24 @@ describe(JwtStrategy.name, () => {
       strategy.validate({ sub: 'user-1', phone: '+959123456789' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('rejects permanently deleted users (isActiveUser false after deletedAt)', async () => {
+    const config = buildConfigService();
+    const userRepository = buildUserRepository();
+    userRepository.findById.mockResolvedValue({
+      isActiveUser: () => false,
+      deletedAt: new Date('2026-07-29T12:00:00.000Z'),
+      authTokenVersion: 6,
+    } as never);
+
+    const strategy = new JwtStrategy(config, userRepository);
+
+    await expect(
+      strategy.validate({
+        sub: 'user-1',
+        phone: 'deleted:user-1',
+        authTokenVersion: 6,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

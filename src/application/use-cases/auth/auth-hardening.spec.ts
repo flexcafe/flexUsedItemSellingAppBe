@@ -87,7 +87,7 @@ function buildRepoMock(): jest.Mocked<IUserRepository> {
     findAll: jest.fn(),
     update: jest.fn(),
     setUserBanned: jest.fn(),
-    delete: jest.fn(),
+    deleteAccount: jest.fn(),
     getProfileAvatarUrl: jest.fn(),
     setProfileAvatar: jest.fn(),
     createPhoneOtp: jest.fn(),
