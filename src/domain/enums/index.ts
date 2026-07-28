@@ -14,3 +14,6 @@ export * from './marital-status.enum.js';
 export * from './verification-status.enum.js';
 export * from './admin-permission.enum.js';
 export * from './otp-purpose.enum.js';
+export * from './content-report-target-type.enum.js';
+export * from './content-report-reason.enum.js';
+export * from './content-report-status.enum.js';

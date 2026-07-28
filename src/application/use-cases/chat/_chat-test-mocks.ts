@@ -201,3 +201,35 @@ export function buildRealtimeMock(): jest.Mocked<IChatRealtime> {
     emitToUser: jest.fn(),
   };
 }
+
+export function buildUserBlockRepoMock(): {
+  create: jest.Mock;
+  delete: jest.Mock;
+  listByBlocker: jest.Mock;
+  listBlockedIds: jest.Mock;
+  listExcludedUserIdsForViewer: jest.Mock;
+  isBlockedEitherWay: jest.Mock;
+  findBlock: jest.Mock;
+} {
+  return {
+    create: jest.fn(),
+    delete: jest.fn(),
+    listByBlocker: jest.fn(),
+    listBlockedIds: jest.fn(),
+    listExcludedUserIdsForViewer: jest.fn(() => Promise.resolve([])),
+    isBlockedEitherWay: jest.fn(() => Promise.resolve(false)),
+    findBlock: jest.fn(),
+  };
+}
+
+export function buildContentFilterMock(): {
+  ensureDefaultsSeeded: jest.Mock;
+  invalidate: jest.Mock;
+  assertClean: jest.Mock;
+} {
+  return {
+    ensureDefaultsSeeded: jest.fn(() => Promise.resolve()),
+    invalidate: jest.fn(),
+    assertClean: jest.fn(() => Promise.resolve()),
+  };
+}

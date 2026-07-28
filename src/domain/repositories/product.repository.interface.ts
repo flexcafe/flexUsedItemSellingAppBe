@@ -57,6 +57,7 @@ export interface ProductSearchQuery {
   latitude?: number;
   longitude?: number;
   radiusKm?: number;
+  excludeSellerIds?: string[];
   skip: number;
   take: number;
 }

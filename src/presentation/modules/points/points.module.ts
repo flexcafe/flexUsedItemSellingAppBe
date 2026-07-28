@@ -18,8 +18,10 @@ import { PointsRepository } from '../../../infrastructure/repositories/points.re
 import { UserRepository } from '../../../infrastructure/repositories/user.repository.js';
 import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
+import { ModerationModule } from '../moderation/moderation.module.js';
 
 @Module({
+  imports: [ModerationModule],
   controllers: [ClientPointsController, AdminPointsController],
   providers: [
     GetPointsSummaryUseCase,

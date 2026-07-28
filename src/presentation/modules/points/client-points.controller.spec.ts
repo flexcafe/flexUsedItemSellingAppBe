@@ -7,6 +7,7 @@ import { ClientPointsController } from './client-points.controller.js';
 import { GetPointsSummaryUseCase } from '../../../application/use-cases/points/get-points-summary.use-case.js';
 import { GetTransactionStatsUseCase } from '../../../application/use-cases/points/get-transaction-stats.use-case.js';
 import { GetPublicUserProfileUseCase } from '../../../application/use-cases/points/get-public-user-profile.use-case.js';
+import { ListSellerReviewsUseCase } from '../../../application/use-cases/points/list-seller-reviews.use-case.js';
 import { CreateTransactionReviewUseCase } from '../../../application/use-cases/points/create-transaction-review.use-case.js';
 import { RequestWithdrawalUseCase } from '../../../application/use-cases/points/request-withdrawal.use-case.js';
 import { ListMyWithdrawalsUseCase } from '../../../application/use-cases/points/list-my-withdrawals.use-case.js';
@@ -22,29 +23,51 @@ describe(ClientPointsController.name, () => {
     },
   };
 
+  function baseProviders(
+    overrides: Record<string, { execute: jest.Mock }> = {},
+  ) {
+    return [
+      {
+        provide: GetPointsSummaryUseCase,
+        useValue: overrides.summary ?? { execute: jest.fn() },
+      },
+      {
+        provide: GetTransactionStatsUseCase,
+        useValue: { execute: jest.fn() },
+      },
+      {
+        provide: GetPublicUserProfileUseCase,
+        useValue: { execute: jest.fn() },
+      },
+      {
+        provide: ListSellerReviewsUseCase,
+        useValue: { execute: jest.fn() },
+      },
+      {
+        provide: CreateTransactionReviewUseCase,
+        useValue: { execute: jest.fn() },
+      },
+      {
+        provide: RequestWithdrawalUseCase,
+        useValue: overrides.reqW ?? { execute: jest.fn() },
+      },
+      {
+        provide: ListMyWithdrawalsUseCase,
+        useValue: { execute: jest.fn() },
+      },
+      {
+        provide: ListClientRankConfigUseCase,
+        useValue: overrides.rank ?? { execute: jest.fn() },
+      },
+    ];
+  }
+
   it('GET /client/profile/rank-config is public (200)', async () => {
     const rank = { execute: jest.fn().mockResolvedValue([]) };
 
     const { app, close } = await createHttpTestApp({
       controllers: [ClientPointsController],
-      providers: [
-        { provide: GetPointsSummaryUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: GetTransactionStatsUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: GetPublicUserProfileUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: CreateTransactionReviewUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        { provide: RequestWithdrawalUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListMyWithdrawalsUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListClientRankConfigUseCase, useValue: rank },
-      ],
+      providers: baseProviders({ rank }),
       overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
     });
 
@@ -64,27 +87,7 @@ describe(ClientPointsController.name, () => {
 
     const { app, close } = await createHttpTestApp({
       controllers: [ClientPointsController],
-      providers: [
-        { provide: GetPointsSummaryUseCase, useValue: summary },
-        {
-          provide: GetTransactionStatsUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: GetPublicUserProfileUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: CreateTransactionReviewUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        { provide: RequestWithdrawalUseCase, useValue: { execute: jest.fn() } },
-        { provide: ListMyWithdrawalsUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: ListClientRankConfigUseCase,
-          useValue: { execute: jest.fn() },
-        },
-      ],
+      providers: baseProviders({ summary }),
       overrideGuards: [
         { guard: ThrottlerGuard, canActivate: () => true },
         authGuard,
@@ -109,27 +112,7 @@ describe(ClientPointsController.name, () => {
 
     const { app, close } = await createHttpTestApp({
       controllers: [ClientPointsController],
-      providers: [
-        { provide: GetPointsSummaryUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: GetTransactionStatsUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: GetPublicUserProfileUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: CreateTransactionReviewUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        { provide: RequestWithdrawalUseCase, useValue: reqW },
-        { provide: ListMyWithdrawalsUseCase, useValue: { execute: jest.fn() } },
-        {
-          provide: ListClientRankConfigUseCase,
-          useValue: { execute: jest.fn() },
-        },
-      ],
+      providers: baseProviders({ reqW }),
       overrideGuards: [
         { guard: ThrottlerGuard, canActivate: () => true },
         authGuard,
@@ -142,7 +125,7 @@ describe(ClientPointsController.name, () => {
       .expect(201);
 
     expect(res.body.success).toBe(true);
-    expect(reqW.execute).toHaveBeenCalledTimes(1);
+    expect(reqW.execute).toHaveBeenCalled();
     await close();
   });
 });

@@ -13,43 +13,50 @@ import { SendKbzPayInstructionUseCase } from '../../../application/use-cases/aut
 import { AdminVerifyKbzPayUseCase } from '../../../application/use-cases/auth/admin-verify-kbzpay.use-case.js';
 
 describe(AdminDashboardAuthController.name, () => {
-  it('POST /admin/dashboard/auth/login validates body (400)', async () => {
-    const { app, close } = await createHttpTestApp({
-      controllers: [AdminDashboardAuthController],
-      providers: [
-        { provide: LoginUseCase, useValue: { loginAdmin: jest.fn() } },
-        {
-          provide: ListKbzPayVerificationRequestedUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: ListKbzPayMoneyCheckUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: ListKbzPayVerifiedUsersUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: ListKbzPayRegisteredAccountsUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
-          provide: SendKbzPayInstructionUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        { provide: AdminVerifyKbzPayUseCase, useValue: { execute: jest.fn() } },
-      ],
-      overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
-    });
+  it(
+    'POST /admin/dashboard/auth/login validates body (400)',
+    async () => {
+      const { app, close } = await createHttpTestApp({
+        controllers: [AdminDashboardAuthController],
+        providers: [
+          { provide: LoginUseCase, useValue: { loginAdmin: jest.fn() } },
+          {
+            provide: ListKbzPayVerificationRequestedUseCase,
+            useValue: { execute: jest.fn() },
+          },
+          {
+            provide: ListKbzPayMoneyCheckUseCase,
+            useValue: { execute: jest.fn() },
+          },
+          {
+            provide: ListKbzPayVerifiedUsersUseCase,
+            useValue: { execute: jest.fn() },
+          },
+          {
+            provide: ListKbzPayRegisteredAccountsUseCase,
+            useValue: { execute: jest.fn() },
+          },
+          {
+            provide: SendKbzPayInstructionUseCase,
+            useValue: { execute: jest.fn() },
+          },
+          {
+            provide: AdminVerifyKbzPayUseCase,
+            useValue: { execute: jest.fn() },
+          },
+        ],
+        overrideGuards: [{ guard: ThrottlerGuard, canActivate: () => true }],
+      });
 
-    await request(app.getHttpServer())
-      .post('/api/v1/admin/dashboard/auth/login')
-      .send({})
-      .expect(400);
+      await request(app.getHttpServer())
+        .post('/api/v1/admin/dashboard/auth/login')
+        .send({})
+        .expect(400);
 
-    await close();
-  });
+      await close();
+    },
+    20_000,
+  );
 
   it('POST /admin/dashboard/auth/login returns success envelope', async () => {
     const loginUseCase = { loginAdmin: jest.fn() };

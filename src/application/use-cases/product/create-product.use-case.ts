@@ -25,6 +25,7 @@ import {
   assertNotBlank,
   assertProductInputRules,
 } from './_helpers.js';
+import { ContentFilterService } from '../../services/content-filter.service.js';
 
 @Injectable()
 export class CreateProductUseCase {
@@ -35,6 +36,7 @@ export class CreateProductUseCase {
     private readonly categoryRepository: ICategoryRepository,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly contentFilter: ContentFilterService,
   ) {}
 
   async execute(
@@ -69,6 +71,12 @@ export class CreateProductUseCase {
       directTradeLatitude: dto.directTradeLatitude ?? null,
       directTradeLongitude: dto.directTradeLongitude ?? null,
     });
+    await this.contentFilter.assertClean(
+      title,
+      description,
+      dto.nearbyLandmarks,
+      dto.directTradeLocation,
+    );
     const images = dto.images ?? [];
     const preferredLocations = dto.preferredLocations ?? [];
 

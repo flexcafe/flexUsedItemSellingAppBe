@@ -22,6 +22,7 @@ import { SMS_SENDER } from '../../../domain/services/sms-sender.interface.js';
 import type { ISmsSender } from '../../../domain/services/sms-sender.interface.js';
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
 import { normalizeEmail } from '../../../common/utils/normalize-email.js';
+import { CURRENT_TERMS_VERSION } from '../../../domain/constants/terms-of-service.constant.js';
 // Registration no longer issues auth tokens. Tokens are only issued after
 // phone + email are verified and the user logs in.
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
@@ -76,6 +77,8 @@ export class RegisterUseCase {
       nickname: dto.nickname,
       referralCode,
       referredById: referredById ?? undefined,
+      termsAcceptedAt: new Date(),
+      termsVersion: CURRENT_TERMS_VERSION,
       profile: {
         gender: dto.gender,
         age: dto.age,
@@ -162,6 +165,16 @@ export class RegisterUseCase {
   private validateRegistrationRules(dto: RegisterDto): void {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Password and confirmPassword must match');
+    }
+    if (!dto.acceptedTerms) {
+      throw new BadRequestException(
+        'You must accept the Terms of Use before registering',
+      );
+    }
+    if (dto.termsVersion.trim() !== CURRENT_TERMS_VERSION) {
+      throw new BadRequestException(
+        `Please accept the current Terms of Use (version ${CURRENT_TERMS_VERSION})`,
+      );
     }
   }
 

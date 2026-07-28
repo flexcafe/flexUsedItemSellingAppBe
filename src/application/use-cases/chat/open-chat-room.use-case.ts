@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -16,6 +17,10 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../../domain/repositories/user.repository.interface.js';
+import {
+  USER_BLOCK_REPOSITORY,
+  type IUserBlockRepository,
+} from '../../../domain/repositories/user-block.repository.interface.js';
 import type { OpenChatRoomDto } from '../../dtos/chat/chat.dto.js';
 import { requireActiveChatUser } from './_helpers.js';
 
@@ -28,6 +33,8 @@ export class OpenChatRoomUseCase {
     private readonly products: IProductRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: IUserRepository,
+    @Inject(USER_BLOCK_REPOSITORY)
+    private readonly userBlocks: IUserBlockRepository,
   ) {}
 
   async execute(userId: string, dto: OpenChatRoomDto) {
@@ -44,6 +51,12 @@ export class OpenChatRoomUseCase {
     if (!listing.canAcceptNewBuyerChat()) {
       throw new BadRequestException(
         'Chat is not available for this listing status',
+      );
+    }
+
+    if (await this.userBlocks.isBlockedEitherWay(userId, dto.sellerId)) {
+      throw new ForbiddenException(
+        'Chat is unavailable because one of you has blocked the other',
       );
     }
 

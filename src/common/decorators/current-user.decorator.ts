@@ -10,10 +10,14 @@ export const CurrentUser = createParamDecorator(
   (
     data: keyof JwtPayload | undefined,
     ctx: ExecutionContext,
-  ): JwtPayload | string => {
+  ): JwtPayload | string | null => {
     const request = ctx
       .switchToHttp()
-      .getRequest<Request & { user: JwtPayload }>();
-    return data ? request.user[data] : request.user;
+      .getRequest<Request & { user?: JwtPayload | null }>();
+    const user = request.user ?? null;
+    if (!user) {
+      return null;
+    }
+    return data ? user[data] : user;
   },
 );

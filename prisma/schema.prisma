@@ -208,6 +208,32 @@ enum FraudReportStatus {
   DISMISSED
 }
 
+// ── UGC Moderation (App Store Guideline 1.2) ─────────────────────────────────
+
+enum ContentReportTargetType {
+  LISTING
+  CHAT_MESSAGE
+  REVIEW
+  USER_PROFILE
+}
+
+enum ContentReportReason {
+  OBJECTIONABLE_CONTENT
+  HARASSMENT
+  HATE_SPEECH
+  SEXUAL_CONTENT
+  SPAM
+  VIOLENCE
+  SCAM
+  OTHER
+}
+
+enum ContentReportStatus {
+  PENDING
+  ACTIONED
+  DISMISSED
+}
+
 // ── Notifications ────────────────────────────────────────────────────────────
 
 enum NotificationType {
@@ -259,6 +285,10 @@ model User {
   banReason String?   @map("ban_reason")
   bannedAt  DateTime? @map("banned_at")
 
+  // Terms of Use / EULA acceptance (App Store Guideline 1.2)
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
+  termsVersion    String?   @map("terms_version")
+
   // Points & ranking (denormalized for fast reads; authoritative ledger is PointTransaction)
   totalPoints Int      @default(0) @map("total_points")
   currentRank RankTier @default(NEWBIE) @map("current_rank")
@@ -287,6 +317,10 @@ model User {
   suggestions               Suggestion[]
   reportsFiled              FraudReport[]              @relation("ReporterReports")
   reportsAgainst            FraudReport[]              @relation("ReportedUserReports")
+  contentReportsFiled       ContentReport[]            @relation("ContentReporterReports")
+  contentReportsAgainst     ContentReport[]            @relation("ContentReportedUserReports")
+  blocksInitiated           UserBlock[]                @relation("BlockerBlocks")
+  blocksReceived            UserBlock[]                @relation("BlockedBlocks")
   notifications             Notification[]
   refreshTokens             RefreshToken[]
   buyerTransactions         Transaction[]              @relation("BuyerTransactions")
@@ -671,6 +705,7 @@ model ChatMessage {
   metadata Json?
 
   isRead    Boolean  @default(false) @map("is_read")
+  isHidden  Boolean  @default(false) @map("is_hidden")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([chatRoomId, createdAt])
@@ -841,6 +876,7 @@ model Review {
   stars         Int
   comment       String? @db.Text
   pointsAwarded Int     @default(0) @map("points_awarded")
+  isHidden      Boolean @default(false) @map("is_hidden")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -949,6 +985,76 @@ model Suggestion {
   @@index([userId])
   @@index([status])
   @@map("suggestions")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  11b · UGC MODERATION  (terms, content reports, user blocks, keyword filter)
+// ════════════════════════════════════════════════════════════════════════════════
+
+model TermsOfService {
+  id          String   @id @default(uuid())
+  version     String   @unique
+  title       String
+  content     String   @db.Text
+  isActive    Boolean  @default(false) @map("is_active")
+  publishedAt DateTime @default(now()) @map("published_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("terms_of_service")
+}
+
+model ContentReport {
+  id             String                  @id @default(uuid())
+  reporterId     String                  @map("reporter_id")
+  reporter       User                    @relation("ContentReporterReports", fields: [reporterId], references: [id])
+  reportedUserId String                  @map("reported_user_id")
+  reportedUser   User                    @relation("ContentReportedUserReports", fields: [reportedUserId], references: [id])
+  targetType     ContentReportTargetType @map("target_type")
+  targetId       String                  @map("target_id")
+  reason         ContentReportReason
+  details        String?                 @db.Text
+
+  status       ContentReportStatus @default(PENDING)
+  adminNote    String?             @map("admin_note")
+  reviewedById String?             @map("reviewed_by_id")
+  reviewedAt   DateTime?           @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([targetType, targetId])
+  @@index([status, createdAt])
+  @@map("content_reports")
+}
+
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String   @map("blocker_id")
+  blocker   User     @relation("BlockerBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String   @map("blocked_id")
+  blocked   User     @relation("BlockedBlocks", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+model ContentFilterKeyword {
+  id        String   @id @default(uuid())
+  keyword   String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("content_filter_keywords")
 }
 
 // ════════════════════════════════════════════════════════════════════════════════

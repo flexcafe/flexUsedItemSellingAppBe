@@ -223,6 +223,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           region: 'Yangon Region',
           gpsLatitude: 16.84,
           gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(
@@ -264,6 +266,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           region: 'Yangon Region',
           gpsLatitude: 16.84,
           gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
         }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(
@@ -305,6 +309,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           region: 'Yangon Region',
           gpsLatitude: 16.84,
           gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
           referralId: 'BADCODE',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -353,12 +359,16 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         region: 'Yangon Region',
         gpsLatitude: 16.84,
         gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
       });
 
       expect(repo.create).toHaveBeenCalledTimes(1);
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           registrationType: RegistrationType.PHONE_ONLY,
+          termsVersion: '1.0',
+          termsAcceptedAt: expect.any(Date),
         }),
       );
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
@@ -370,6 +380,64 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(
         pointsRepo.grantAccountLifetimeMilestoneBonus,
       ).toHaveBeenCalledWith('user-new', PointSourceType.REGISTRATION_BONUS);
+    });
+
+    it('rejects when acceptedTerms is false', async () => {
+      const useCase = new RegisterUseCase(
+        buildRepoMock(),
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+      await expect(
+        useCase.execute({
+          nickname: 'Nick',
+          phone: '+959123456789',
+          email: 'john@example.com',
+          password: 'password123',
+          confirmPassword: 'password123',
+          kbzPayName: 'Kyaw Zin',
+          kbzPayPhoneNumber: '+959876543210',
+          gender: Gender.MALE,
+          age: 27,
+          maritalStatus: MaritalStatus.SINGLE,
+          region: 'Yangon Region',
+          gpsLatitude: 16.84,
+          gpsLongitude: 96.17,
+          acceptedTerms: false,
+          termsVersion: '1.0',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects wrong termsVersion', async () => {
+      const useCase = new RegisterUseCase(
+        buildRepoMock(),
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+      await expect(
+        useCase.execute({
+          nickname: 'Nick',
+          phone: '+959123456789',
+          email: 'john@example.com',
+          password: 'password123',
+          confirmPassword: 'password123',
+          kbzPayName: 'Kyaw Zin',
+          kbzPayPhoneNumber: '+959876543210',
+          gender: Gender.MALE,
+          age: 27,
+          maritalStatus: MaritalStatus.SINGLE,
+          region: 'Yangon Region',
+          gpsLatitude: 16.84,
+          gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '0.9',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('stores normalized email when registration dto uses mixed case', async () => {
@@ -401,6 +469,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         region: 'Yangon Region',
         gpsLatitude: 16.84,
         gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
       });
 
       expect(repo.findByEmail).toHaveBeenCalledWith('john@example.com');
@@ -444,6 +514,8 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           region: 'Yangon Region',
           gpsLatitude: 16.84,
           gpsLongitude: 96.17,
+          acceptedTerms: true,
+          termsVersion: '1.0',
         }),
       ).rejects.toBeInstanceOf(ConflictException);
     });

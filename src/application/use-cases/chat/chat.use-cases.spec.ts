@@ -39,12 +39,14 @@ import {
   buildChatMessage,
   buildChatRepoMock,
   buildChatRoom,
+  buildContentFilterMock,
   buildIdempotencyMock,
   buildOpenChatRoomResult,
   buildProductRepoMock,
   buildPublisherMock,
   buildRealtimeMock,
   buildTransaction,
+  buildUserBlockRepoMock,
   buildUserRepoMock,
   BUYER_ID,
   LISTING_ID,
@@ -129,6 +131,7 @@ describe(OpenChatRoomUseCase.name, () => {
       buildChatRepoMock(),
       products,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
     );
 
     await expect(
@@ -148,6 +151,7 @@ describe(OpenChatRoomUseCase.name, () => {
       buildChatRepoMock(),
       products,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
     );
 
     await expect(
@@ -167,7 +171,7 @@ describe(OpenChatRoomUseCase.name, () => {
         '77777777-7777-7777-7777-777777777777',
       ),
     );
-    const useCase = new OpenChatRoomUseCase(chats, products, buildUserRepoMock());
+    const useCase = new OpenChatRoomUseCase(chats, products, buildUserRepoMock(), buildUserBlockRepoMock() as never);
 
     await expect(
       useCase.execute(BUYER_ID, {
@@ -188,7 +192,7 @@ describe(OpenChatRoomUseCase.name, () => {
     users.findById.mockImplementation(async (id: string) =>
       id === BUYER_ID ? null : (buildActiveUserMock({ id }) as never),
     );
-    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    const useCase = new OpenChatRoomUseCase(chats, products, users, buildUserBlockRepoMock() as never);
 
     await expect(
       useCase.execute(BUYER_ID, {
@@ -208,6 +212,7 @@ describe(OpenChatRoomUseCase.name, () => {
       buildChatRepoMock(),
       products,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
     );
 
     await expect(
@@ -230,7 +235,7 @@ describe(OpenChatRoomUseCase.name, () => {
         ? (buildActiveUserMock({ id, active: false }) as never)
         : (buildActiveUserMock({ id }) as never),
     );
-    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    const useCase = new OpenChatRoomUseCase(chats, products, users, buildUserBlockRepoMock() as never);
 
     await expect(
       useCase.execute(BUYER_ID, {
@@ -257,7 +262,7 @@ describe(OpenChatRoomUseCase.name, () => {
       buildOpenChatRoomResult({ room, wasCreated: true }),
     );
 
-    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    const useCase = new OpenChatRoomUseCase(chats, products, users, buildUserBlockRepoMock() as never);
     const result = await useCase.execute(BUYER_ID, {
       listingId: LISTING_ID,
       sellerId: SELLER_ID,
@@ -294,7 +299,7 @@ describe(OpenChatRoomUseCase.name, () => {
       }),
     );
 
-    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    const useCase = new OpenChatRoomUseCase(chats, products, users, buildUserBlockRepoMock() as never);
     await useCase.execute(BUYER_ID, {
       listingId: LISTING_ID,
       sellerId: SELLER_ID,
@@ -329,13 +334,37 @@ describe(OpenChatRoomUseCase.name, () => {
       }),
     );
 
-    const useCase = new OpenChatRoomUseCase(chats, products, users);
+    const useCase = new OpenChatRoomUseCase(chats, products, users, buildUserBlockRepoMock() as never);
     await useCase.execute(BUYER_ID, {
       listingId: LISTING_ID,
       sellerId: SELLER_ID,
     });
 
     expect(users.createNotification).not.toHaveBeenCalled();
+  });
+
+  it('rejects when either party has blocked the other', async () => {
+    const chats = buildChatRepoMock();
+    const products = buildProductRepoMock();
+    const users = buildUserRepoMock();
+    const blocks = buildUserBlockRepoMock();
+    products.findById.mockResolvedValue(
+      buildOpenChatListing(ListingStatus.ACTIVE),
+    );
+    blocks.isBlockedEitherWay.mockResolvedValue(true);
+    const useCase = new OpenChatRoomUseCase(
+      chats,
+      products,
+      users,
+      blocks as never,
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, {
+        listingId: LISTING_ID,
+        sellerId: SELLER_ID,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
 
@@ -388,8 +417,10 @@ describe(SendChatMessageUseCase.name, () => {
     const useCase = new SendChatMessageUseCase(
       chats,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
       idempotency,
       publisher,
+      buildContentFilterMock() as never,
     );
     const result = await useCase.execute(BUYER_ID, ROOM_ID, 'hi');
 
@@ -400,6 +431,71 @@ describe(SendChatMessageUseCase.name, () => {
       SELLER_ID,
       message,
     );
+  });
+
+  it('rejects when either party has blocked the other', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    const blocks = buildUserBlockRepoMock();
+    blocks.isBlockedEitherWay.mockResolvedValue(true);
+
+    const useCase = new SendChatMessageUseCase(
+      chats,
+      buildUserRepoMock(),
+      blocks as never,
+      buildIdempotencyMock(),
+      buildPublisherMock(),
+      buildContentFilterMock() as never,
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, ROOM_ID, 'hi'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects TEXT messages blocked by content filter', async () => {
+    const chats = buildChatRepoMock();
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    const contentFilter = buildContentFilterMock();
+    contentFilter.assertClean.mockRejectedValue(
+      new BadRequestException('blocked'),
+    );
+
+    const useCase = new SendChatMessageUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
+      buildIdempotencyMock(),
+      buildPublisherMock(),
+      contentFilter as never,
+    );
+
+    await expect(
+      useCase.execute(BUYER_ID, ROOM_ID, 'bad word'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chats.createMessage).not.toHaveBeenCalled();
+  });
+
+  it('skips text filter for IMAGE messages', async () => {
+    const chats = buildChatRepoMock();
+    const publisher = buildPublisherMock();
+    const contentFilter = buildContentFilterMock();
+    const message = buildChatMessage({ type: MessageType.IMAGE });
+    chats.findRoomById.mockResolvedValue(buildChatRoom());
+    chats.createMessage.mockResolvedValue(message);
+
+    const useCase = new SendChatMessageUseCase(
+      chats,
+      buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
+      buildIdempotencyMock(),
+      publisher,
+      contentFilter as never,
+    );
+
+    await useCase.execute(BUYER_ID, ROOM_ID, 'https://img', MessageType.IMAGE);
+    expect(contentFilter.assertClean).not.toHaveBeenCalled();
+    expect(chats.createMessage).toHaveBeenCalled();
   });
 
   it('rejects duplicate idempotency key', async () => {
@@ -413,8 +509,10 @@ describe(SendChatMessageUseCase.name, () => {
     const useCase = new SendChatMessageUseCase(
       chats,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
       idempotency,
       publisher,
+      buildContentFilterMock() as never,
     );
 
     await expect(
@@ -429,8 +527,10 @@ describe(SendChatMessageUseCase.name, () => {
     const useCase = new SendChatMessageUseCase(
       chats,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
       buildIdempotencyMock(),
       buildPublisherMock(),
+      buildContentFilterMock() as never,
     );
 
     await expect(
@@ -455,8 +555,10 @@ describe(SendChatMessageUseCase.name, () => {
     const useCase = new SendChatMessageUseCase(
       chats,
       buildUserRepoMock(),
+      buildUserBlockRepoMock() as never,
       idempotency,
       publisher,
+      buildContentFilterMock() as never,
     );
 
     await useCase.execute(

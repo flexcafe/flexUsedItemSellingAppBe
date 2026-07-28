@@ -67,6 +67,8 @@ export class UserRepository implements IUserRepository {
         facebookId: data.facebookId,
         referralCode: data.referralCode,
         referredById: data.referredById,
+        termsAcceptedAt: data.termsAcceptedAt,
+        termsVersion: data.termsVersion,
         profile: {
           create: {
             gender: data.profile.gender,

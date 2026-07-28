@@ -5,6 +5,7 @@ import { createHttpTestApp } from '../../../test-utils/http-test-app.js';
 import { AdminNotificationsController } from './admin-notifications.controller.js';
 import { ListMyNotificationsUseCase } from '../../../application/use-cases/notifications/list-my-notifications.use-case.js';
 import { USER_REPOSITORY } from '../../../domain/repositories/user.repository.interface.js';
+import { mockAdminUser, mockRootAdminRole } from '../../../test-utils/mock-admin-user.js';
 
 describe(AdminNotificationsController.name, () => {
   const authGuard = {
@@ -19,7 +20,8 @@ describe(AdminNotificationsController.name, () => {
   it('GET /admin/dashboard/notifications checks admin and returns rows', async () => {
     const list = { execute: jest.fn().mockResolvedValue([]) };
     const userRepo = {
-      findById: jest.fn().mockResolvedValue({ isAdmin: () => true }),
+      findById: jest.fn().mockResolvedValue(mockAdminUser()),
+      getAdminRoleByUserId: jest.fn().mockResolvedValue(mockRootAdminRole()),
     };
 
     const { app, close } = await createHttpTestApp({

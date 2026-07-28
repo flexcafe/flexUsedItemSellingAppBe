@@ -345,6 +345,13 @@ export class ProductRepository implements IProductRepository {
     if (query.categoryId) {
       conditions.push(PrismaNs.sql`l.category_id = ${query.categoryId}`);
     }
+    if (query.excludeSellerIds && query.excludeSellerIds.length > 0) {
+      conditions.push(
+        PrismaNs.sql`l.seller_id NOT IN (${PrismaNs.join(
+          query.excludeSellerIds,
+        )})`,
+      );
+    }
     if (query.search?.trim()) {
       const q = `%${query.search.trim()}%`;
       conditions.push(

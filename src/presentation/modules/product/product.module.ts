@@ -21,8 +21,10 @@ import { PointsRepository } from '../../../infrastructure/repositories/points.re
 import { ChatRepository } from '../../../infrastructure/repositories/chat.repository.js';
 import { POINTS_REPOSITORY } from '../../../domain/repositories/points.repository.interface.js';
 import { CHAT_REPOSITORY } from '../../../domain/repositories/chat.repository.interface.js';
+import { ModerationModule } from '../moderation/moderation.module.js';
 
 @Module({
+  imports: [ModerationModule],
   controllers: [ClientProductsController],
   providers: [
     CreateProductUseCase,

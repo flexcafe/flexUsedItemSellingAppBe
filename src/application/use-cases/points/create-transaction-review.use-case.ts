@@ -15,12 +15,14 @@ import {
   CreateReviewDto,
   ReviewResponseDto,
 } from '../../dtos/points/review.dto.js';
+import { ContentFilterService } from '../../services/content-filter.service.js';
 
 @Injectable()
 export class CreateTransactionReviewUseCase {
   constructor(
     @Inject(POINTS_REPOSITORY)
     private readonly pointsRepository: IPointsRepository,
+    private readonly contentFilter: ContentFilterService,
   ) {}
 
   async execute(
@@ -73,6 +75,8 @@ export class CreateTransactionReviewUseCase {
     if (alreadyReviewed) {
       throw new ConflictException('You already reviewed this transaction');
     }
+
+    await this.contentFilter.assertClean(dto.comment);
 
     const revieweeId =
       transaction.buyerId === reviewerId

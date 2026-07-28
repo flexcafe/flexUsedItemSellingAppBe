@@ -46,6 +46,14 @@ function buildUserRepoMock(): jest.Mocked<IUserRepository> {
   } as unknown as jest.Mocked<IUserRepository>;
 }
 
+function buildContentFilterMock() {
+  return {
+    ensureDefaultsSeeded: jest.fn(async () => undefined),
+    invalidate: jest.fn(),
+    assertClean: jest.fn(async () => undefined),
+  };
+}
+
 function buildExistingListingForUpdate(
   overrides: Partial<{
     isDeliveryAvailable: boolean;
@@ -77,6 +85,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await expect(
       useCase.execute('u1', {
@@ -131,6 +140,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await useCase.execute('u1', {
       categoryId: '11111111-1111-1111-1111-111111111111',
@@ -148,6 +158,41 @@ describe(CreateProductUseCase.name, () => {
     );
   });
 
+  it('rejects when content filter blocks title/description', async () => {
+    const productRepo = buildProductRepoMock();
+    const categoryRepo = buildCategoryRepoMock();
+    const userRepo = buildUserRepoMock();
+    userRepo.findById.mockResolvedValue({ id: 'u1' } as any);
+    categoryRepo.findById.mockResolvedValue({
+      id: 'c1',
+      isActive: true,
+    } as any);
+    const contentFilter = buildContentFilterMock();
+    contentFilter.assertClean.mockRejectedValue(
+      new BadRequestException('blocked'),
+    );
+
+    const useCase = new CreateProductUseCase(
+      productRepo,
+      categoryRepo,
+      userRepo,
+      contentFilter as never,
+    );
+    await expect(
+      useCase.execute('u1', {
+        categoryId: '11111111-1111-1111-1111-111111111111',
+        title: 'bad',
+        description: 'desc',
+        price: 1,
+        paymentMethods: [PaymentMethod.CASH],
+        isDeliveryAvailable: false,
+        images: [],
+        preferredLocations: [],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(productRepo.create).not.toHaveBeenCalled();
+  });
+
   it('rejects blank title/description after trim', async () => {
     const productRepo = buildProductRepoMock();
     const categoryRepo = buildCategoryRepoMock();
@@ -162,6 +207,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
 
     await expect(
@@ -205,6 +251,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await expect(
       useCase.execute('u1', {
@@ -231,6 +278,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await expect(
       useCase.execute('u1', {
@@ -260,6 +308,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await expect(
       useCase.execute('u1', {
@@ -289,6 +338,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await expect(
       useCase.execute('u1', {
@@ -357,6 +407,7 @@ describe(CreateProductUseCase.name, () => {
       productRepo,
       categoryRepo,
       userRepo,
+      buildContentFilterMock() as never,
     );
     await useCase.execute('u1', {
       categoryId: '11111111-1111-1111-1111-111111111111',

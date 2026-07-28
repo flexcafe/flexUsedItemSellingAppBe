@@ -8,6 +8,12 @@ import { DeleteCategoryUseCase } from './delete-category.use-case.js';
 import type { ICategoryRepository } from '../../../domain/repositories/category.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import {
+  mockAdminRole,
+  mockAdminUser,
+} from '../../../test-utils/mock-admin-user.js';
+
 function buildCategoryRepo(): jest.Mocked<
   Pick<
     ICategoryRepository,
@@ -22,12 +28,16 @@ function buildCategoryRepo(): jest.Mocked<
   };
 }
 
-function buildUserRepo(admin: boolean): jest.Mocked<Pick<IUserRepository, 'findById'>> {
+function buildUserRepo(admin: boolean): jest.Mocked<
+  Pick<IUserRepository, 'findById' | 'getAdminRoleByUserId'>
+> {
   return {
-    findById: jest.fn().mockResolvedValue({
-      id: 'admin1',
-      isAdmin: () => admin,
-    } as any),
+    findById: jest.fn().mockResolvedValue(mockAdminUser({ admin })),
+    getAdminRoleByUserId: jest
+      .fn()
+      .mockResolvedValue(
+        admin ? mockAdminRole([AdminPermission.MANAGE_CATEGORIES]) : null,
+      ),
   };
 }
 

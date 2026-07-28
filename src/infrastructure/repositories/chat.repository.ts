@@ -204,6 +204,7 @@ export class ChatRepository implements IChatRepository {
     const rows = await this.prisma.chatMessage.findMany({
       where: {
         chatRoomId,
+        isHidden: false,
         ...(decoded
           ? {
               OR: [

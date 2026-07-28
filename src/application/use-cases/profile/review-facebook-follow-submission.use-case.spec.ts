@@ -4,6 +4,11 @@ import { ReviewFacebookFollowSubmissionUseCase } from './review-facebook-follow-
 import type { IFacebookRepository } from '../../../domain/repositories/facebook.repository.interface.js';
 import type { IUserRepository } from '../../../domain/repositories/user.repository.interface.js';
 import { FacebookFollowSubmissionStatus } from '../../../domain/enums/facebook-follow-submission-status.enum.js';
+import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
+import {
+  mockAdminRole,
+  mockAdminUser,
+} from '../../../test-utils/mock-admin-user.js';
 
 describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
   it('rejects approve when reward already granted', async () => {
@@ -33,7 +38,10 @@ describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
     } as unknown as IFacebookRepository;
 
     const userRepo = {
-      findById: jest.fn().mockResolvedValue({ isAdmin: () => true }),
+      findById: jest.fn().mockResolvedValue(mockAdminUser()),
+      getAdminRoleByUserId: jest
+        .fn()
+        .mockResolvedValue(mockAdminRole([AdminPermission.MANAGE_USERS])),
       createNotification: jest.fn(),
     } as unknown as IUserRepository;
 
@@ -54,7 +62,8 @@ describe(ReviewFacebookFollowSubmissionUseCase.name, () => {
     } as unknown as IFacebookRepository;
 
     const userRepo = {
-      findById: jest.fn().mockResolvedValue({ isAdmin: () => false }),
+      findById: jest.fn().mockResolvedValue(mockAdminUser({ admin: false })),
+      getAdminRoleByUserId: jest.fn(),
       createNotification: jest.fn(),
     } as unknown as IUserRepository;
 

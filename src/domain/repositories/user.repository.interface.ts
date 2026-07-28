@@ -23,6 +23,8 @@ export interface CreateUserData {
   facebookId?: string;
   referralCode: string;
   referredById?: string;
+  termsAcceptedAt?: Date;
+  termsVersion?: string;
   profile: CreateUserProfileData;
   kbzPayAccount: CreateKbzPayAccountData;
 }

@@ -8,6 +8,7 @@ import { UpdateCategoryUseCase } from '../../../application/use-cases/category/u
 import { DeleteCategoryUseCase } from '../../../application/use-cases/category/delete-category.use-case.js';
 import { ListCategoriesUseCase } from '../../../application/use-cases/category/list-categories.use-case.js';
 import { GetCategoryUseCase } from '../../../application/use-cases/category/get-category.use-case.js';
+import { UploadCategoryIconUseCase } from '../../../application/use-cases/category/upload-category-icon.use-case.js';
 
 describe(AdminCategoriesController.name, () => {
   it('GET /admin/dashboard/categories returns list', async () => {
@@ -20,6 +21,10 @@ describe(AdminCategoriesController.name, () => {
         { provide: DeleteCategoryUseCase, useValue: { execute: jest.fn() } },
         { provide: ListCategoriesUseCase, useValue: list },
         { provide: GetCategoryUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: UploadCategoryIconUseCase,
+          useValue: { execute: jest.fn() },
+        },
       ],
       overrideGuards: [
         {

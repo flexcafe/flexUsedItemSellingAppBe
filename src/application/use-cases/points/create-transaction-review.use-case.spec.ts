@@ -9,6 +9,14 @@ import { CreateTransactionReviewUseCase } from './create-transaction-review.use-
 import type { IPointsRepository } from '../../../domain/repositories/points.repository.interface.js';
 import { TransactionStatus } from '../../../domain/enums/transaction-status.enum.js';
 
+function buildContentFilterMock() {
+  return {
+    ensureDefaultsSeeded: jest.fn(async () => undefined),
+    invalidate: jest.fn(),
+    assertClean: jest.fn(async () => undefined),
+  };
+}
+
 function buildPointsRepoMock(): jest.Mocked<IPointsRepository> {
   return {
     getUserPointsSummary: jest.fn(),
@@ -56,7 +64,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       createdAt: new Date(),
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     const result = await useCase.execute('tx-1', 'buyer-1', { stars: 5 });
 
     expect(result.id).toBe('r-1');
@@ -91,7 +99,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       createdAt: new Date(),
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     const result = await useCase.execute('tx-1', 'seller-1', {
       stars: 4,
       comment: 'Smooth trade',
@@ -117,7 +125,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       sellerCompleted: false,
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'seller-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -134,7 +142,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       sellerCompleted: false,
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'buyer-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -143,7 +151,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
   it('rejects when transaction is missing', async () => {
     const points = buildPointsRepoMock();
     points.findTransactionReviewContext.mockResolvedValue(null);
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'buyer-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -160,7 +168,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       sellerCompleted: true,
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'other-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -178,7 +186,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
     });
     points.hasReview.mockResolvedValue(true);
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'buyer-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -196,7 +204,7 @@ describe(CreateTransactionReviewUseCase.name, () => {
       sellerCompleted: false,
     });
 
-    const useCase = new CreateTransactionReviewUseCase(points);
+    const useCase = new CreateTransactionReviewUseCase(points, buildContentFilterMock() as never);
     await expect(
       useCase.execute('tx-1', 'seller-1', { stars: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);

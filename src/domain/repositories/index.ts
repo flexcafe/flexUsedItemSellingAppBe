@@ -6,3 +6,6 @@ export * from './chat.repository.interface.js';
 export * from './suggestion.repository.interface.js';
 export * from './fraud-report.repository.interface.js';
 export * from './admin-role.repository.interface.js';
+export * from './content-report.repository.interface.js';
+export * from './user-block.repository.interface.js';
+export * from './moderation-support.repository.interface.js';

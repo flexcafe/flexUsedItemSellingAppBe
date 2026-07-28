@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  Equals,
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsInt,
@@ -107,4 +109,23 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   referralId?: string;
+
+  @ApiProperty({
+    example: true,
+    description:
+      'Must be true. User must agree to Terms of Use / EULA before registering (App Store Guideline 1.2).',
+  })
+  @IsBoolean()
+  @Equals(true, {
+    message: 'You must accept the Terms of Use before registering',
+  })
+  acceptedTerms: boolean;
+
+  @ApiProperty({
+    example: '1.0',
+    description: 'Active Terms of Use version from GET /client/legal/terms',
+  })
+  @IsString()
+  @IsNotEmpty()
+  termsVersion: string;
 }

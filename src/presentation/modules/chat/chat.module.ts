@@ -43,9 +43,11 @@ import { AdminMarkSafePaymentReceivedUseCase } from '../../../application/use-ca
 import { AdminMarkSafePaymentTransferredUseCase } from '../../../application/use-cases/chat/admin-mark-safe-payment-transferred.use-case.js';
 import { ListPendingSafePaymentsUseCase } from '../../../application/use-cases/chat/list-pending-safe-payments.use-case.js';
 import { SubmitChatReviewAfterCompletionUseCase } from '../../../application/use-cases/chat/submit-chat-review-after-completion.use-case.js';
+import { ModerationModule } from '../moderation/moderation.module.js';
 
 @Module({
   imports: [
+    ModerationModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

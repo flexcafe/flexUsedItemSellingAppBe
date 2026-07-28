@@ -38,6 +38,7 @@ import {
 } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
@@ -236,7 +237,7 @@ export class ClientProductsController {
   @Get()
   @SkipThrottle(PUBLIC_CATALOG_SKIP_THROTTLES)
   @Throttle({ 'catalog-search-ip': { limit: 60, ttl: 60_000 } })
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(OptionalJwtAuthGuard, ThrottlerGuard)
   @ApiOperation({
     summary: 'Search / list public product catalog (paginated)',
     description: CLIENT_PRODUCT_LIST_DOC,
@@ -249,8 +250,9 @@ export class ClientProductsController {
   })
   async list(
     @Query() query: ProductFilterDto,
+    @CurrentUser() user?: JwtPayload | null,
   ): Promise<ApiResponseDto<PaginatedResponseDto<ProductResponseDto>>> {
-    const rows = await this.listProductsUseCase.execute(query);
+    const rows = await this.listProductsUseCase.execute(query, user?.sub);
     const listingDisplayTimezone = this.configService.get<string>(
       'LISTING_DISPLAY_TIMEZONE',
       'UTC',

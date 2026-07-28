@@ -78,7 +78,16 @@ describe(RealtimeController.name, () => {
       authorizePrivateChannel: jest.fn().mockReturnValue({ auth: 'ok' }),
     };
     const userRepo = {
-      findById: jest.fn().mockResolvedValue({ isAdmin: () => true }),
+      findById: jest.fn().mockResolvedValue({
+        isAdmin: () => true,
+        isActiveUser: () => true,
+      }),
+      getAdminRoleByUserId: jest.fn().mockResolvedValue({
+        id: 'role-root',
+        name: 'ROOT_ADMIN',
+        isSystem: true,
+        permissions: [],
+      }),
     };
 
     const { app, close } = await createHttpTestApp({
