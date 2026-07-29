@@ -16,7 +16,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
@@ -44,9 +44,25 @@ import {
   UnblockUserUseCase,
 } from '../../../application/use-cases/moderation/index.js';
 
+/** Without SkipThrottle, every named throttler applies (incl. auth-id / admin-notify). */
+const SKIP_AUTH_REVIEW_CATALOG = {
+  'auth-ip': true,
+  'auth-id': true,
+  'review-submit-ip': true,
+  'review-submit-user': true,
+  'catalog-search-ip': true,
+  'catalog-detail-ip': true,
+};
+
+const SKIP_NOTIFY_AND_AUTH = {
+  ...SKIP_AUTH_REVIEW_CATALOG,
+  'admin-notify-ip': true,
+  'admin-notify-user': true,
+};
+
 @ApiTags('Client Moderation')
 @Controller(`${ROUTE_PREFIX.client}/moderation`)
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ClientModerationController {
   constructor(
@@ -60,7 +76,12 @@ export class ClientModerationController {
 
   @Post('reports')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ 'admin-notify-user': { limit: 20, ttl: 3_600_000 } })
+  @SkipThrottle(SKIP_AUTH_REVIEW_CATALOG)
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 20, ttl: 3_600_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Flag objectionable content',
     description:
@@ -99,6 +120,9 @@ export class ClientModerationController {
 
   @Get('reports/mine')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(SKIP_NOTIFY_AND_AUTH)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'List my content reports',
     description: 'Returns content reports submitted by the authenticated user.',
@@ -120,7 +144,12 @@ export class ClientModerationController {
 
   @Post('blocks')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ 'admin-notify-user': { limit: 30, ttl: 3_600_000 } })
+  @SkipThrottle(SKIP_AUTH_REVIEW_CATALOG)
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 30, ttl: 3_600_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Block an abusive user',
     description:
@@ -162,6 +191,9 @@ export class ClientModerationController {
 
   @Delete('blocks/:userId')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(SKIP_NOTIFY_AND_AUTH)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Unblock a user',
     description: 'Removes a previous block so the user can appear in feed/chat again.',
@@ -193,6 +225,9 @@ export class ClientModerationController {
 
   @Get('blocks')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(SKIP_NOTIFY_AND_AUTH)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'List users I blocked',
     description: 'Full block list with nickname and referral code for settings UI.',
@@ -214,6 +249,9 @@ export class ClientModerationController {
 
   @Get('blocks/ids')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(SKIP_NOTIFY_AND_AUTH)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'IDs to hide from feed instantly after blocking',
     description:

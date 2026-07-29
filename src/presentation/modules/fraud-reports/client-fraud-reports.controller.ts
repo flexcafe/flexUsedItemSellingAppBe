@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import type { JwtPayload } from '../../../common/decorators/current-user.decorator.js';
@@ -25,9 +25,25 @@ import {
 import { SubmitFraudReportUseCase } from '../../../application/use-cases/fraud-reports/submit-fraud-report.use-case.js';
 import { ListMyFraudReportsUseCase } from '../../../application/use-cases/fraud-reports/list-my-fraud-reports.use-case.js';
 
+/** Without SkipThrottle, every named throttler applies (incl. auth-id / admin-notify). */
+const SKIP_AUTH_REVIEW_CATALOG = {
+  'auth-ip': true,
+  'auth-id': true,
+  'review-submit-ip': true,
+  'review-submit-user': true,
+  'catalog-search-ip': true,
+  'catalog-detail-ip': true,
+};
+
+const SKIP_NOTIFY_AND_AUTH = {
+  ...SKIP_AUTH_REVIEW_CATALOG,
+  'admin-notify-ip': true,
+  'admin-notify-user': true,
+};
+
 @ApiTags('Client Fraud Reports')
 @Controller(`${ROUTE_PREFIX.client}/fraud-reports`)
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ClientFraudReportsController {
   constructor(
@@ -37,7 +53,12 @@ export class ClientFraudReportsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ 'admin-notify-user': { limit: 10, ttl: 3_600_000 } })
+  @SkipThrottle(SKIP_AUTH_REVIEW_CATALOG)
+  @Throttle({
+    'admin-notify-ip': { limit: 40, ttl: 60_000 },
+    'admin-notify-user': { limit: 10, ttl: 3_600_000 },
+  })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Submit a fraud report against another user',
     description:
@@ -57,6 +78,9 @@ export class ClientFraudReportsController {
 
   @Get('mine')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(SKIP_NOTIFY_AND_AUTH)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({ summary: 'List my submitted fraud reports' })
   @ApiArraySuccessResponse(FraudReportDto, {
     status: HttpStatus.OK,
