@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
@@ -30,9 +30,23 @@ import {
   GetTermsAcceptanceStatusUseCase,
 } from '../../../application/use-cases/moderation/index.js';
 
+/**
+ * Legal routes must not inherit auth/notify throttlers (no @Throttle → all named
+ * limits applied). Public GET /terms runs before login; a shared `anon` bucket
+ * was causing 429 and blocking the Terms / login flow.
+ */
+const LEGAL_SKIP_OTHER_THROTTLES = {
+  'auth-ip': true,
+  'auth-id': true,
+  'admin-notify-ip': true,
+  'admin-notify-user': true,
+  'review-submit-ip': true,
+  'review-submit-user': true,
+};
+
 @ApiTags('Client Legal')
 @Controller(`${ROUTE_PREFIX.client}/legal`)
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ClientLegalController {
   constructor(
@@ -44,6 +58,9 @@ export class ClientLegalController {
   @Public()
   @Get('terms')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(LEGAL_SKIP_OTHER_THROTTLES)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Get active Terms of Use / EULA',
     description:
@@ -57,6 +74,10 @@ export class ClientLegalController {
     status: HttpStatus.OK,
     description: 'Terms of Use retrieved',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (120 requests / minute per IP)',
+  })
   async terms(): Promise<ApiResponseDto<TermsOfServiceDto>> {
     const row = await this.getActiveTerms.execute();
     return ApiResponseDto.success(row, 'Terms of Use retrieved');
@@ -64,6 +85,9 @@ export class ClientLegalController {
 
   @Post('terms/accept')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(LEGAL_SKIP_OTHER_THROTTLES)
+  @Throttle({ 'catalog-detail-ip': { limit: 60, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Accept the current Terms of Use version',
     description:
@@ -86,6 +110,10 @@ export class ClientLegalController {
     status: HttpStatus.NOT_FOUND,
     description: 'User not found',
   })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (60 requests / minute per IP)',
+  })
   async accept(
     @CurrentUser() user: JwtPayload,
     @Body() dto: AcceptTermsDto,
@@ -96,6 +124,9 @@ export class ClientLegalController {
 
   @Get('terms/status')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle(LEGAL_SKIP_OTHER_THROTTLES)
+  @Throttle({ 'catalog-detail-ip': { limit: 120, ttl: 60_000 } })
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Check whether the user must re-accept Terms',
     description:
@@ -112,6 +143,10 @@ export class ClientLegalController {
   @ApiErrorResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'User not found',
+  })
+  @ApiErrorResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'Rate limit exceeded (120 requests / minute per IP)',
   })
   async status(
     @CurrentUser() user: JwtPayload,
