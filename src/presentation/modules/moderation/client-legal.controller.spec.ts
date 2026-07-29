@@ -9,11 +9,17 @@ import { AcceptTermsUseCase } from '../../../application/use-cases/moderation/ac
 import { GetTermsAcceptanceStatusUseCase } from '../../../application/use-cases/moderation/get-terms-acceptance-status.use-case.js';
 
 describe(ClientLegalController.name, () => {
+  // Nest + app bootstrap in this repo can be slow under load.
+  jest.setTimeout(20_000);
+
   it('GET /client/legal/terms is public (200)', async () => {
     const getTerms = {
       execute: jest.fn().mockResolvedValue({
         version: '1.0',
+        titleKey: 'TERMS_OF_USE_TITLE',
         title: 'Terms of Use',
+        contentKey: 'TERMS_OF_USE',
+        metadata: { version: '1.0' },
         content: 'Zero tolerance',
         publishedAt: new Date().toISOString(),
       }),
@@ -40,6 +46,9 @@ describe(ClientLegalController.name, () => {
       .expect(200);
 
     expect(res.body.success).toBe(true);
+    expect(res.body.data.titleKey).toBe('TERMS_OF_USE_TITLE');
+    expect(res.body.data.contentKey).toBe('TERMS_OF_USE');
+    expect(res.body.data.metadata).toEqual({ version: '1.0' });
     expect(getTerms.execute).toHaveBeenCalledTimes(1);
     await close();
   });

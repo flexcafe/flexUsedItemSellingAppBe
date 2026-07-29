@@ -34,3 +34,7 @@ We may suspend or permanently ban accounts that post objectionable content, hara
 For safety concerns, use in-app reporting or contact support through the channels listed in the app store listing.
 
 By tapping Agree / Accept, you confirm that you have read and agree to these Terms, including the zero-tolerance policy for objectionable content and abusive users.`;
+
+// Stable FE i18n keys for language switcher (Guideline 1.2 / Terms screen).
+export const TERMS_OF_USE_TITLE_KEY = 'TERMS_OF_USE_TITLE';
+export const TERMS_OF_USE_CONTENT_KEY = 'TERMS_OF_USE';

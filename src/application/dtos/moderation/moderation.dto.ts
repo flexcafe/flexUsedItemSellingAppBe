@@ -14,6 +14,10 @@ import { ContentReportStatus } from '../../../domain/enums/content-report-status
 import { ContentReportTargetType } from '../../../domain/enums/content-report-target-type.enum.js';
 import type { ContentReportData } from '../../../domain/repositories/content-report.repository.interface.js';
 import type { UserBlockData } from '../../../domain/repositories/user-block.repository.interface.js';
+import {
+  TERMS_OF_USE_CONTENT_KEY,
+  TERMS_OF_USE_TITLE_KEY,
+} from '../../../domain/constants/terms-of-service.constant.js';
 import type {
   ContentFilterKeywordData,
   TermsOfServiceData,
@@ -23,8 +27,26 @@ export class TermsOfServiceDto {
   @ApiProperty({ example: '1.0', description: 'Active Terms of Use version' })
   version: string;
 
+  @ApiProperty({
+    example: 'TERMS_OF_USE_TITLE',
+    description: 'Stable FE i18n title key for language switcher',
+  })
+  titleKey: string;
+
   @ApiProperty({ example: 'Terms of Use' })
   title: string;
+
+  @ApiProperty({
+    example: 'TERMS_OF_USE',
+    description: 'Stable FE i18n content key for language switcher',
+  })
+  contentKey: string;
+
+  @ApiProperty({
+    example: { version: '1.0' },
+    description: 'Vars for FE translations (currently version-aware copy)',
+  })
+  metadata: { version: string };
 
   @ApiProperty({
     example:
@@ -41,6 +63,9 @@ export class TermsOfServiceDto {
 
   constructor(row: TermsOfServiceData) {
     this.version = row.version;
+    this.titleKey = TERMS_OF_USE_TITLE_KEY;
+    this.contentKey = TERMS_OF_USE_CONTENT_KEY;
+    this.metadata = { version: row.version };
     this.title = row.title;
     this.content = row.content;
     this.publishedAt = row.publishedAt;

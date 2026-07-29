@@ -49,6 +49,8 @@ export class ClientLegalController {
     description:
       'Present this **before** registration or login (App Store Guideline 1.2). ' +
       'Response includes the zero-tolerance policy for objectionable content. ' +
+      'Response also includes stable FE localization keys `titleKey` / `contentKey` (plus `metadata.version`), ' +
+      'so the Terms screen can switch languages using the app language switcher. ' +
       'Registration must send `acceptedTerms: true` and `termsVersion` matching `data.version`.',
   })
   @ApiSuccessResponse(TermsOfServiceDto, {

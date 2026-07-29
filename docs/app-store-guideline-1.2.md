@@ -47,6 +47,7 @@ Registration now requires:
 Show Apple a screen recording that demonstrates:
 
 1. EULA / Terms screen **before** register or login (call `GET /client/legal/terms`, require Accept)
+   - The Terms API now returns stable localization keys `titleKey` / `contentKey` plus `metadata.version`; the FE language switcher should use these keys for translation and fall back to `title` / `content` (English) if needed.
 2. Report / Flag on a listing, chat message, or profile (`POST /client/moderation/reports`)
 3. Block user (`POST /client/moderation/blocks`) and that their listings disappear from the feed immediately (catalog filters blocked sellers when the JWT is sent; also refresh with `GET /client/moderation/blocks/ids`)
 
