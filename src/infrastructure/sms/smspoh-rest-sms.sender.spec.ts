@@ -84,6 +84,22 @@ describe('SMSPohRestSmsSender', () => {
     );
   });
 
+  it('normalizes 09… numbers to +959… before sending', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          messages: [{ messageId: 'm1', status: 'Accepted', test: false }],
+        }),
+        { status: 201 },
+      ),
+    );
+
+    await buildSender().send({ to: '09123456789', message: 'test' });
+
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(request.body as string).to).toBe('+959123456789');
+  });
+
   it('includes the provider-required numeric test field in test mode', async () => {
     fetchMock.mockResolvedValue(
       new Response(
@@ -93,6 +109,7 @@ describe('SMSPohRestSmsSender', () => {
               messageId: 'test-1',
               to: '09123456789',
               status: 'Accepted',
+              test: true,
             },
           ],
         }),
@@ -107,6 +124,29 @@ describe('SMSPohRestSmsSender', () => {
 
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     expect(JSON.parse(request.body as string)).toMatchObject({ test: 1 });
+  });
+
+  it('throws when SMSPoh embeds provider errors inside messages[]', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          messages: [
+            {
+              status: false,
+              message: 'Invalid Sender ID',
+              data: 'FlexCafe',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      buildSender().send({ to: '+959123456789', message: 'test' }),
+    ).rejects.toMatchObject({
+      message: 'Invalid Sender ID (FlexCafe)',
+    });
   });
 
   it('throws the provider message for non-2xx responses', async () => {

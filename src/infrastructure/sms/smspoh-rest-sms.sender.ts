@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  HttpException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -21,8 +22,10 @@ interface SmsPohMessage {
   from?: string;
   network?: string;
   type?: string;
-  status?: string;
+  /** Success: `"Accepted"`. Provider-side failure: boolean `false`. */
+  status?: string | boolean;
   test?: boolean;
+  data?: string;
 }
 
 interface SmsPohSuccessResponse {
@@ -69,7 +72,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
     );
 
     this.logger.log(
-      `SMSPoh V3 client configured (testMode=${this.isTestMode})`,
+      `SMSPoh V3 client configured (senderId=${this.from}, testMode=${this.isTestMode})`,
     );
   }
 
@@ -79,7 +82,7 @@ export class SMSPohRestSmsSender implements ISmsSender {
     }
 
     const payload: Record<string, string | number> = {
-      to: options.to.trim(),
+      to: this.normalizeRecipient(options.to),
       message: options.message,
       from: this.from,
     };
@@ -135,12 +138,29 @@ export class SMSPohRestSmsSender implements ISmsSender {
         throw new BadGatewayException('Invalid success response from SMSPoh');
       }
 
-      const accepted = responseData.messages[0];
+      const first = responseData.messages[0];
+      const deliveryError = this.extractDeliveryError(first);
+      if (deliveryError) {
+        this.logger.error(
+          `SMSPoh did not accept SMS to ${this.maskTo(options.to)} (senderId=${this.from}): ${deliveryError}`,
+        );
+        throw new BadGatewayException(deliveryError);
+      }
+
+      if (!first.messageId) {
+        this.logger.error(
+          `SMSPoh accepted SMS without messageId for ${this.maskTo(options.to)}`,
+        );
+        throw new BadGatewayException(
+          'SMSPoh accepted the request but did not return a message ID',
+        );
+      }
+
       this.logger.log(
-        `SMS accepted by SMSPoh (messageId=${accepted.messageId ?? 'unknown'}, status=${accepted.status ?? 'accepted'}, to=${this.maskTo(accepted.to ?? options.to)})`,
+        `SMS accepted by SMSPoh (messageId=${first.messageId}, status=${String(first.status)}, to=${this.maskTo(first.to ?? options.to)}, test=${String(first.test ?? false)})`,
       );
     } catch (error: unknown) {
-      if (error instanceof BadGatewayException) {
+      if (error instanceof HttpException) {
         throw error;
       }
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -149,6 +169,51 @@ export class SMSPohRestSmsSender implements ISmsSender {
       );
       throw new ServiceUnavailableException('Unable to connect to SMS provider');
     }
+  }
+
+  /**
+   * SMSPoh sometimes returns HTTP 200/201 with `messages[0].status=false` and
+   * an error string in `message` (e.g. "Invalid Sender ID") instead of a top-level 4xx.
+   */
+  private extractDeliveryError(message: SmsPohMessage): string | null {
+    if (message.status === false) {
+      const detail =
+        typeof message.message === 'string' && message.message.trim().length > 0
+          ? message.message.trim()
+          : 'SMS was not accepted for delivery';
+      if (message.data) {
+        return `${detail} (${message.data})`;
+      }
+      return detail;
+    }
+
+    if (typeof message.status === 'string') {
+      const normalized = message.status.trim().toLowerCase();
+      if (normalized !== 'accepted') {
+        return message.message?.trim() || `SMS status: ${message.status}`;
+      }
+      return null;
+    }
+
+    return 'SMSPoh did not confirm message acceptance';
+  }
+
+  /** Normalize Myanmar mobiles to +959… for consistent delivery. */
+  private normalizeRecipient(raw: string): string {
+    const trimmed = raw.trim();
+    const digits = trimmed.replace(/\D/g, '');
+
+    if (digits.startsWith('959') && digits.length >= 11) {
+      return `+${digits}`;
+    }
+    if (digits.startsWith('09') && digits.length >= 9) {
+      return `+95${digits.slice(1)}`;
+    }
+    if (digits.startsWith('9') && digits.length >= 8 && !digits.startsWith('959')) {
+      return `+959${digits}`;
+    }
+
+    return trimmed;
   }
 
   private requiredConfig(key: string): string {
