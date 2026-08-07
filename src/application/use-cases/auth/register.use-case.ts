@@ -107,7 +107,7 @@ export class RegisterUseCase {
     await this.smsSender.send({
       to: dto.phone,
       message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
-      clientReference: `register:${createdUser.id}:${Date.now()}`,
+      clientReference: `reg:${Date.now()}:${createdUser.id.slice(0, 8)}`,
     });
 
     const emailToken = randomBytes(16).toString('hex');

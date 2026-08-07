@@ -80,7 +80,7 @@ export class RequestForgotPasswordUseCase {
     await this.smsSender.send({
       to: phone,
       message: `Your password reset code is ${code}. It expires in 5 minutes. Do not share this code.`,
-      clientReference: `password-reset:${user.id}:${Date.now()}`,
+      clientReference: `reset:${Date.now()}:${user.id.slice(0, 8)}`,
     });
 
     this.logger.log(

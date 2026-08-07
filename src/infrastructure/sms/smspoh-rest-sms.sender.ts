@@ -74,6 +74,10 @@ export class SMSPohRestSmsSender implements ISmsSender {
   }
 
   async send(options: SendSmsOptions): Promise<void> {
+    if (options.clientReference && options.clientReference.length > 50) {
+      throw new Error('SMSPoh clientReference must not exceed 50 characters');
+    }
+
     const payload: Record<string, string | number> = {
       to: options.to.trim(),
       message: options.message,

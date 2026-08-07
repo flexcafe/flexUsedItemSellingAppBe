@@ -932,7 +932,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         expect.objectContaining({
           to: '+959123456789',
           message: expect.stringMatching(/Your verification code is \d{6}\./),
-          clientReference: expect.stringMatching(/^phone-otp:user-1:\d+$/),
+          clientReference: expect.stringMatching(/^otp:\d+:user-1$/),
         }),
       );
     });
@@ -985,9 +985,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(smsSender.send).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringMatching(/password reset code is \d{6}/),
-          clientReference: expect.stringMatching(
-            /^password-reset:user-1:\d+$/,
-          ),
+          clientReference: expect.stringMatching(/^reset:\d+:user-1$/),
         }),
       );
       expect(emailSender.send).not.toHaveBeenCalled();

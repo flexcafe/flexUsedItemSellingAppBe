@@ -133,4 +133,15 @@ describe('SMSPohRestSmsSender', () => {
       buildSender().send({ to: '+959123456789', message: 'test' }),
     ).rejects.toThrow(ServiceUnavailableException);
   });
+
+  it('rejects client references longer than SMSPoh maximum', async () => {
+    await expect(
+      buildSender().send({
+        to: '+959123456789',
+        message: 'test',
+        clientReference: 'x'.repeat(51),
+      }),
+    ).rejects.toThrow('must not exceed 50 characters');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

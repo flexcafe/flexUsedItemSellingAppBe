@@ -38,7 +38,7 @@ export class SendPhoneOtpUseCase {
     await this.smsSender.send({
       to: dto.phone,
       message: `Your verification code is ${code}. It expires in 5 minutes. Do not share this code.`,
-      clientReference: `phone-otp:${user.id}:${Date.now()}`,
+      clientReference: `otp:${Date.now()}:${user.id.slice(0, 8)}`,
     });
 
     this.logger.log(
