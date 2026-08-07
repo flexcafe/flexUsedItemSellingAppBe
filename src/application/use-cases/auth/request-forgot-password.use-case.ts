@@ -76,29 +76,16 @@ export class RequestForgotPasswordUseCase {
       expiresAt,
       OtpPurpose.PASSWORD_RESET,
     );
-    this.logger.warn(
-      `[TEST_LOG] PASSWORD RESET OTP GENERATED phone=${phone} otp=${code} expiresAt=${expiresAt.toISOString()}`,
+
+    await this.smsSender.send({
+      to: phone,
+      message: `Your password reset code is ${code}. It expires in 5 minutes. Do not share this code.`,
+      clientReference: `password-reset:${user.id}:${Date.now()}`,
+    });
+
+    this.logger.log(
+      `Password reset OTP accepted by SMS provider for ${this.maskPhone(phone)}`,
     );
-
-    try {
-      await this.smsSender.send({
-        to: phone,
-        message: `Your password reset code is ${code}. It expires in 5 minutes. Do not share this code.`,
-        clientReference: `password-reset:${phone}`,
-      });
-      this.logger.warn(
-        `[TEST_LOG] PASSWORD RESET OTP SEND SUCCESS phone=${phone} otp=${code}`,
-      );
-    } catch (err) {
-      this.logger.warn(
-        `Password reset OTP SMS failed for ${this.maskPhone(phone)}: ${String(err)}`,
-      );
-      this.logger.warn(
-        `[TEST_LOG] PASSWORD RESET OTP SEND FAILED phone=${phone} otp=${code} error=${String(err)}`,
-      );
-    }
-
-    this.logger.log(`Password reset OTP dispatched for ${this.maskPhone(phone)}`);
 
     return new VerificationActionResultDto('PASSWORD_RESET_OTP_SENT');
   }

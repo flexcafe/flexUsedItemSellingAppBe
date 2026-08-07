@@ -103,27 +103,12 @@ export class RegisterUseCase {
     const otpCode = this.generateOtpCode();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await this.userRepository.createPhoneOtp(dto.phone, otpCode, otpExpiresAt);
-    this.logger.warn(
-      `[TEST_LOG] REGISTER SMS OTP GENERATED phone=${dto.phone} otp=${otpCode} expiresAt=${otpExpiresAt.toISOString()}`,
-    );
 
-    try {
-      await this.smsSender.send({
-        to: dto.phone,
-        message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
-        clientReference: `register:${dto.phone}`,
-      });
-      this.logger.warn(
-        `[TEST_LOG] REGISTER SMS OTP SEND SUCCESS phone=${dto.phone} otp=${otpCode}`,
-      );
-    } catch (err) {
-      this.logger.warn(
-        `OTP SMS failed for ${this.maskPhone(dto.phone)}: ${String(err)}`,
-      );
-      this.logger.warn(
-        `[TEST_LOG] REGISTER SMS OTP SEND FAILED phone=${dto.phone} otp=${otpCode} error=${String(err)}`,
-      );
-    }
+    await this.smsSender.send({
+      to: dto.phone,
+      message: `Your verification code is ${otpCode}. It expires in 5 minutes. Do not share this code.`,
+      clientReference: `register:${createdUser.id}:${Date.now()}`,
+    });
 
     const emailToken = randomBytes(16).toString('hex');
     const emailExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);

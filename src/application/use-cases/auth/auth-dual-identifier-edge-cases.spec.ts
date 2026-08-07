@@ -337,7 +337,7 @@ describe('Dual identifier auth edge cases', () => {
       );
     });
 
-    it('still succeeds when SMS provider fails on phone reset request', async () => {
+    it('does not claim an OTP was sent when the SMS provider fails', async () => {
       const repo = buildRepoMock();
       repo.findByPhone.mockResolvedValue(buildUser());
       const smsSender = buildSmsSenderMock();
@@ -348,9 +348,9 @@ describe('Dual identifier auth edge cases', () => {
         smsSender,
       );
 
-      const res = await useCase.execute({ phone: '+959123456789' });
-
-      expect(res.action).toBe('PASSWORD_RESET_OTP_SENT');
+      await expect(
+        useCase.execute({ phone: '+959123456789' }),
+      ).rejects.toThrow('SMS down');
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
     });
   });
