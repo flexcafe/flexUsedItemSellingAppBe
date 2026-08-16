@@ -192,6 +192,18 @@ function buildSmsSenderMock(): jest.Mocked<ISmsSender> {
 
 describe('Auth use-cases (registration + login + verification flows)', () => {
   describe(RegisterUseCase.name, () => {
+    const originalFetch = globalThis.fetch;
+
+    beforeEach(() => {
+      globalThis.fetch = jest.fn(async () => {
+        throw new Error('geocoder offline');
+      }) as unknown as typeof fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
     it('rejects when password != confirmPassword', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
@@ -369,6 +381,11 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           registrationType: RegistrationType.PHONE_ONLY,
           termsVersion: '1.0',
           termsAcceptedAt: expect.any(Date),
+          profile: expect.objectContaining({
+            inputRegion: 'Yangon Region',
+            gpsLatitude: 16.84,
+            gpsLongitude: 96.17,
+          }),
         }),
       );
       expect(repo.createPhoneOtp).toHaveBeenCalledTimes(1);
@@ -380,6 +397,211 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       expect(
         pointsRepo.grantAccountLifetimeMilestoneBonus,
       ).toHaveBeenCalledWith('user-new', PointSourceType.REGISTRATION_BONUS);
+    });
+
+    it('extracts region from GPS when FE omits region', async () => {
+      const repo = buildRepoMock();
+      const emailSender = buildEmailSenderMock();
+      const smsSender = buildSmsSenderMock();
+      repo.findByPhone.mockResolvedValue(null);
+      repo.findByEmail.mockResolvedValue(null);
+      repo.findByReferralCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue(
+        buildUser({ id: 'user-new', registrationType: RegistrationType.PHONE_ONLY }),
+      );
+
+      const useCase = new RegisterUseCase(
+        repo,
+        { sign: jest.fn() } as unknown as JwtService,
+        emailSender,
+        smsSender,
+        buildPointsRepoMock(),
+      );
+
+      await useCase.execute({
+        nickname: 'Nick',
+        phone: '+959123456789',
+        email: 'john@example.com',
+        password: 'password123',
+        confirmPassword: 'password123',
+        kbzPayName: 'Kyaw Zin',
+        kbzPayPhoneNumber: '+959876543210',
+        gender: Gender.MALE,
+        age: 27,
+        maritalStatus: MaritalStatus.SINGLE,
+        gpsLatitude: 16.84,
+        gpsLongitude: 96.17,
+        acceptedTerms: true,
+        termsVersion: '1.0',
+      });
+
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          profile: expect.objectContaining({
+            inputRegion: 'Yangon Region',
+          }),
+        }),
+      );
+    });
+
+    it('extracts a global region from GPS outside Myanmar', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = jest.fn(async () =>
+        new Response(
+          JSON.stringify({
+            city: 'Bangkok',
+            principalSubdivision: 'Bangkok',
+            countryName: 'Thailand',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ) as unknown as typeof fetch;
+
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(null);
+      repo.findByEmail.mockResolvedValue(null);
+      repo.findByReferralCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue(
+        buildUser({
+          id: 'user-new',
+          registrationType: RegistrationType.PHONE_ONLY,
+        }),
+      );
+
+      const useCase = new RegisterUseCase(
+        repo,
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+
+      try {
+        await useCase.execute({
+          nickname: 'Nick',
+          phone: '+959123456789',
+          email: 'john@example.com',
+          password: 'password123',
+          confirmPassword: 'password123',
+          kbzPayName: 'Kyaw Zin',
+          kbzPayPhoneNumber: '+959876543210',
+          gender: Gender.MALE,
+          age: 27,
+          maritalStatus: MaritalStatus.SINGLE,
+          gpsLatitude: 13.7563,
+          gpsLongitude: 100.5018,
+          acceptedTerms: true,
+          termsVersion: '1.0',
+        });
+
+        expect(repo.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            profile: expect.objectContaining({
+              inputRegion: 'Bangkok, Thailand',
+              gpsLatitude: 13.7563,
+              gpsLongitude: 100.5018,
+            }),
+          }),
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('still registers outside Myanmar when live geocoders are unreachable', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = jest.fn(async () => {
+        throw new Error('network down');
+      }) as unknown as typeof fetch;
+
+      const repo = buildRepoMock();
+      repo.findByPhone.mockResolvedValue(null);
+      repo.findByEmail.mockResolvedValue(null);
+      repo.findByReferralCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue(
+        buildUser({
+          id: 'user-new',
+          registrationType: RegistrationType.PHONE_ONLY,
+        }),
+      );
+
+      const useCase = new RegisterUseCase(
+        repo,
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+
+      try {
+        await useCase.execute({
+          nickname: 'Nick',
+          phone: '+959123456789',
+          email: 'john@example.com',
+          password: 'password123',
+          confirmPassword: 'password123',
+          kbzPayName: 'Kyaw Zin',
+          kbzPayPhoneNumber: '+959876543210',
+          gender: Gender.MALE,
+          age: 27,
+          maritalStatus: MaritalStatus.SINGLE,
+          gpsLatitude: 13.7563,
+          gpsLongitude: 100.5018,
+          acceptedTerms: true,
+          termsVersion: '1.0',
+        });
+
+        expect(repo.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            profile: expect.objectContaining({
+              inputRegion: 'Thailand',
+            }),
+          }),
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('rejects when GPS cannot be reverse-geocoded and no region is sent', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = jest.fn(async () =>
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ) as unknown as typeof fetch;
+
+      const useCase = new RegisterUseCase(
+        buildRepoMock(),
+        { sign: jest.fn() } as unknown as JwtService,
+        buildEmailSenderMock(),
+        buildSmsSenderMock(),
+        buildPointsRepoMock(),
+      );
+
+      try {
+        await expect(
+          useCase.execute({
+            nickname: 'Nick',
+            phone: '+959123456789',
+            email: 'john@example.com',
+            password: 'password123',
+            confirmPassword: 'password123',
+            kbzPayName: 'Kyaw Zin',
+            kbzPayPhoneNumber: '+959876543210',
+            gender: Gender.MALE,
+            age: 27,
+            maritalStatus: MaritalStatus.SINGLE,
+            gpsLatitude: 0,
+            gpsLongitude: 0,
+            acceptedTerms: true,
+            termsVersion: '1.0',
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
 
     it('rejects when acceptedTerms is false', async () => {

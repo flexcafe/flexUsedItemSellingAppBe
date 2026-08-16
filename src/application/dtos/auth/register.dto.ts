@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   MinLength,
 } from 'class-validator';
@@ -78,11 +79,13 @@ export class RegisterDto {
 
   @ApiProperty({
     example: 'Yangon Region',
-    description: 'User entered region name',
+    required: false,
+    description:
+      'Optional region label. When omitted or blank, the backend extracts the region from gpsLatitude/gpsLongitude (Myanmar admin region when inside Myanmar, otherwise a global city/region/country label). Used only if GPS extraction fails.',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  region: string;
+  region?: string;
 
   @ApiProperty({
     example: 16.8409,
@@ -90,6 +93,8 @@ export class RegisterDto {
   })
   @Type(() => Number)
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   gpsLatitude: number;
 
   @ApiProperty({
@@ -98,6 +103,8 @@ export class RegisterDto {
   })
   @Type(() => Number)
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   gpsLongitude: number;
 
   @ApiProperty({

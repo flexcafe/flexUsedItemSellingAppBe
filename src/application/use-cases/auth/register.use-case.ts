@@ -23,6 +23,7 @@ import type { ISmsSender } from '../../../domain/services/sms-sender.interface.j
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
 import { normalizeEmail } from '../../../common/utils/normalize-email.js';
 import { CURRENT_TERMS_VERSION } from '../../../domain/constants/terms-of-service.constant.js';
+import { extractRegionFromCoordinates } from '../../../common/utils/extract-myanmar-region.js';
 // Registration no longer issues auth tokens. Tokens are only issued after
 // phone + email are verified and the user logs in.
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
@@ -65,6 +66,7 @@ export class RegisterUseCase {
     }
 
     const referredById = await this.resolveReferrer(dto.referralId);
+    const inputRegion = await this.resolveInputRegion(dto);
 
     const hashedPassword = await hash(dto.password, 12);
     const referralCode = await this.generateUniqueReferralCode();
@@ -83,7 +85,7 @@ export class RegisterUseCase {
         gender: dto.gender,
         age: dto.age,
         maritalStatus: dto.maritalStatus,
-        inputRegion: dto.region,
+        inputRegion,
         gpsLatitude: dto.gpsLatitude,
         gpsLongitude: dto.gpsLongitude,
         isRegionVerified: true,
@@ -145,6 +147,30 @@ export class RegisterUseCase {
     this.logger.log(`Email verification token generated for ${email}`);
 
     return new VerificationActionResultDto('REGISTRATION_PENDING_VERIFICATION');
+  }
+
+  private async resolveInputRegion(dto: RegisterDto): Promise<string> {
+    let extracted: string | null = null;
+    try {
+      extracted = await extractRegionFromCoordinates(
+        dto.gpsLatitude,
+        dto.gpsLongitude,
+      );
+    } catch {
+      extracted = null;
+    }
+    if (extracted) {
+      return extracted;
+    }
+
+    const fallback = dto.region?.trim();
+    if (fallback) {
+      return fallback;
+    }
+
+    throw new BadRequestException(
+      'Unable to determine region from the provided location',
+    );
   }
 
   private validateRegistrationRules(dto: RegisterDto): void {
