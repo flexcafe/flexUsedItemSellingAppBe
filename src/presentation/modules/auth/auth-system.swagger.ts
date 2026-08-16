@@ -16,7 +16,7 @@ New users sign up with:
 - **email** (unique, used for email verification token)
 - **password** (hashed with bcrypt, 12 rounds)
 - **nickname** (display name)
-- **profile** fields (gender, age, marital status, GPS). `region` is optional — the backend extracts it from GPS (Myanmar admin region, or a global city/region/country label when outside Myanmar).
+- **profile** fields (gender, age, marital status, GPS). \`region\` is optional — the backend extracts it from GPS (Myanmar admin region, or a global city/region/country label when outside Myanmar).
 - **kbzPayAccount** (KBZPay account name + phone number)
 - **referralId** (optional, referral code of the inviting user)
 

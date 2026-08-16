@@ -107,7 +107,7 @@ export function extractMyanmarRegion(
 
 const GEOCODE_TIMEOUT_MS = 2500;
 const GEOCODE_USER_AGENT =
-  'FlexCafeBackend/1.0.8 (used-item marketplace reverse-geocode)';
+  'FlexCafeBackend/1.0.9 (used-item marketplace reverse-geocode)';
 
 /**
  * Smaller countries first so nested/overlapping boxes do not steal the match.
