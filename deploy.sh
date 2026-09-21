@@ -14,13 +14,16 @@ cd "$APP_DIR"
 echo "==> Updating code"
 git pull
 
-echo "==> Ensure .env exists (Prisma reads .env by default)"
+echo "==> Ensure production .env exists (Prisma reads .env by default)"
+if [ -f ".env.production" ] && [ ! -f ".env" ]; then
+  cp .env.production .env
+fi
 if [ -f ".env.local" ] && [ ! -f ".env" ]; then
   mv .env.local .env
 fi
 
 if [ ! -f ".env" ]; then
-  echo "ERROR: .env not found. Create it before deploying."
+  echo "ERROR: .env not found. Copy .env.production to .env on the VPS (see docs/supabase-environments.md)."
   exit 1
 fi
 

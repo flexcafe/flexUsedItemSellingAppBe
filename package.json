@@ -27,11 +27,17 @@
     "perf:k6:chat:local": "cross-env K6_PROFILE=local node perf/k6/run-with-fixtures.mjs perf/k6/chat-section.js",
     "perf:k6:product:local": "cross-env K6_PROFILE=local node perf/k6/run-with-fixtures.mjs perf/k6/product-section.js",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:deploy:dev": "node scripts/with-env.mjs .env.development npm run db:migrate:deploy",
+    "db:migrate:deploy:prod": "node scripts/with-env.mjs .env.production npm run db:migrate:deploy",
+    "db:migrate:deploy:backup": "node scripts/with-env.mjs .env.production-backup npm run db:migrate:deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:seed:dev": "node scripts/with-env.mjs .env.development npm run db:seed",
+    "db:studio": "prisma studio",
+    "db:studio:dev": "node scripts/with-env.mjs .env.development npm run db:studio",
+    "db:check": "node scripts/check-db-env.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
