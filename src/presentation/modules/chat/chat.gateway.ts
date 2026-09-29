@@ -50,10 +50,10 @@ const MESSAGE_SUSTAINED_MAX_ACTIONS = 60;
 
 @WebSocketGateway({
   namespace: '/chat',
+  // JWT is the gate. Reflect the caller origin so the phone app can connect;
+  // a website-only allow-list rejects the React Native handshake.
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? [
-      'http://localhost:3000',
-    ],
+    origin: true,
     credentials: true,
   },
 })
