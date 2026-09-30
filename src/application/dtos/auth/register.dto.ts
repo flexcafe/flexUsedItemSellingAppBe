@@ -3,19 +3,19 @@ import {
   Equals,
   IsBoolean,
   IsEmail,
-  IsEnum,
-  IsInt,
+  // IsEnum,
+  // IsInt,
   IsNotEmpty,
-  IsNumber,
+  // IsNumber,
   IsOptional,
   IsString,
-  Max,
-  Min,
+  // Max,
+  // Min,
   MinLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Gender } from '../../../domain/enums/gender.enum.js';
-import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
+// import { Type } from 'class-transformer';
+// import { Gender } from '../../../domain/enums/gender.enum.js';
+// import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 
 export class RegisterDto {
   @ApiProperty({ example: 'CoolTrader' })
@@ -63,49 +63,50 @@ export class RegisterDto {
   @IsNotEmpty()
   kbzPayPhoneNumber: string;
 
-  @ApiProperty({ enum: Gender, example: Gender.MALE })
-  @IsEnum(Gender)
-  gender: Gender;
+  // Not collected at registration (App Store privacy). Kept for a later profile editor.
+  // @ApiProperty({ enum: Gender, example: Gender.MALE })
+  // @IsEnum(Gender)
+  // gender: Gender;
 
-  @ApiProperty({ example: 27 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(13)
-  age: number;
+  // @ApiProperty({ example: 27 })
+  // @Type(() => Number)
+  // @IsInt()
+  // @Min(13)
+  // age: number;
 
-  @ApiProperty({ enum: MaritalStatus, example: MaritalStatus.SINGLE })
-  @IsEnum(MaritalStatus)
-  maritalStatus: MaritalStatus;
+  // @ApiProperty({ enum: MaritalStatus, example: MaritalStatus.SINGLE })
+  // @IsEnum(MaritalStatus)
+  // maritalStatus: MaritalStatus;
 
-  @ApiProperty({
-    example: 'Yangon Region',
-    required: false,
-    description:
-      'Optional region label. When omitted or blank, the backend extracts the region from gpsLatitude/gpsLongitude (Myanmar admin region when inside Myanmar, otherwise a global city/region/country label). Used only if GPS extraction fails.',
-  })
-  @IsOptional()
-  @IsString()
-  region?: string;
+  // @ApiProperty({
+  //   example: 'Yangon Region',
+  //   required: false,
+  //   description:
+  //     'Optional region label. When omitted or blank, the backend extracts the region from gpsLatitude/gpsLongitude (Myanmar admin region when inside Myanmar, otherwise a global city/region/country label). Used only if GPS extraction fails.',
+  // })
+  // @IsOptional()
+  // @IsString()
+  // region?: string;
 
-  @ApiProperty({
-    example: 16.8409,
-    description: 'GPS latitude captured from device location permission',
-  })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(-90)
-  @Max(90)
-  gpsLatitude: number;
+  // @ApiProperty({
+  //   example: 16.8409,
+  //   description: 'GPS latitude captured from device location permission',
+  // })
+  // @Type(() => Number)
+  // @IsNumber()
+  // @Min(-90)
+  // @Max(90)
+  // gpsLatitude: number;
 
-  @ApiProperty({
-    example: 96.1735,
-    description: 'GPS longitude captured from device location permission',
-  })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(-180)
-  @Max(180)
-  gpsLongitude: number;
+  // @ApiProperty({
+  //   example: 96.1735,
+  //   description: 'GPS longitude captured from device location permission',
+  // })
+  // @Type(() => Number)
+  // @IsNumber()
+  // @Min(-180)
+  // @Max(180)
+  // gpsLongitude: number;
 
   @ApiProperty({
     example: 'REF12345',

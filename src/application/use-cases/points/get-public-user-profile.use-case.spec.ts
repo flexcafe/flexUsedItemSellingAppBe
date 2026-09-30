@@ -11,7 +11,7 @@ describe(GetPublicUserProfileUseCase.name, () => {
         userId: 'seller-1',
         nickname: 'Seller A',
         avatar: null,
-        region: 'Yangon',
+        // region: 'Yangon',
         referralCode: 'ABC12345',
         currentRank: RankTier.BRONZE,
         averageStars: 4.5,

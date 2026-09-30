@@ -283,18 +283,18 @@ async function main() {
     where: { userId: clientUser.id },
     create: {
       userId: clientUser.id,
-      gender: 'PREFER_NOT_TO_SAY',
-      age: 25,
-      maritalStatus: 'PREFER_NOT_TO_SAY',
-      inputRegion: 'Yangon Region',
-      gpsLatitude: 16.8409,
-      gpsLongitude: 96.1735,
-      isRegionVerified: true,
-      gpsVerifiedAt: new Date(),
+      // gender: 'PREFER_NOT_TO_SAY',
+      // age: 25,
+      // maritalStatus: 'PREFER_NOT_TO_SAY',
+      // inputRegion: 'Yangon Region',
+      // gpsLatitude: 16.8409,
+      // gpsLongitude: 96.1735,
+      // isRegionVerified: true,
+      // gpsVerifiedAt: new Date(),
     },
     update: {
-      isRegionVerified: true,
-      gpsVerifiedAt: new Date(),
+      // isRegionVerified: true,
+      // gpsVerifiedAt: new Date(),
     },
   });
 

@@ -39,7 +39,7 @@ export interface PublicUserProfileData {
   userId: string;
   nickname: string;
   avatar: string | null;
-  region: string | null;
+  // region: string | null;
   /** Shareable code for registration referralId field. */
   referralCode: string;
   currentRank: RankTier;

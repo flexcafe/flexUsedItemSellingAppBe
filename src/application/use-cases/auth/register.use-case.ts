@@ -23,7 +23,7 @@ import type { ISmsSender } from '../../../domain/services/sms-sender.interface.j
 import { RegisterDto } from '../../dtos/auth/register.dto.js';
 import { normalizeEmail } from '../../../common/utils/normalize-email.js';
 import { CURRENT_TERMS_VERSION } from '../../../domain/constants/terms-of-service.constant.js';
-import { extractRegionFromCoordinates } from '../../../common/utils/extract-myanmar-region.js';
+// import { extractRegionFromCoordinates } from '../../../common/utils/extract-myanmar-region.js';
 // Registration no longer issues auth tokens. Tokens are only issued after
 // phone + email are verified and the user logs in.
 import { VerificationActionResultDto } from '../../dtos/auth/verification-action-result.dto.js';
@@ -66,7 +66,7 @@ export class RegisterUseCase {
     }
 
     const referredById = await this.resolveReferrer(dto.referralId);
-    const inputRegion = await this.resolveInputRegion(dto);
+    // const inputRegion = await this.resolveInputRegion(dto);
 
     const hashedPassword = await hash(dto.password, 12);
     const referralCode = await this.generateUniqueReferralCode();
@@ -82,14 +82,22 @@ export class RegisterUseCase {
       termsAcceptedAt: new Date(),
       termsVersion: CURRENT_TERMS_VERSION,
       profile: {
-        gender: dto.gender,
-        age: dto.age,
-        maritalStatus: dto.maritalStatus,
-        inputRegion,
-        gpsLatitude: dto.gpsLatitude,
-        gpsLongitude: dto.gpsLongitude,
-        isRegionVerified: true,
-        gpsVerifiedAt: new Date(),
+        // gender: dto.gender,
+        // age: dto.age,
+        // maritalStatus: dto.maritalStatus,
+        // inputRegion,
+        // gpsLatitude: dto.gpsLatitude,
+        // gpsLongitude: dto.gpsLongitude,
+        // isRegionVerified: true,
+        // gpsVerifiedAt: new Date(),
+        gender: null,
+        age: null,
+        maritalStatus: null,
+        inputRegion: null,
+        gpsLatitude: null,
+        gpsLongitude: null,
+        isRegionVerified: false,
+        gpsVerifiedAt: null,
       },
       kbzPayAccount: {
         accountName: dto.kbzPayName,
@@ -149,29 +157,30 @@ export class RegisterUseCase {
     return new VerificationActionResultDto('REGISTRATION_PENDING_VERIFICATION');
   }
 
-  private async resolveInputRegion(dto: RegisterDto): Promise<string> {
-    let extracted: string | null = null;
-    try {
-      extracted = await extractRegionFromCoordinates(
-        dto.gpsLatitude,
-        dto.gpsLongitude,
-      );
-    } catch {
-      extracted = null;
-    }
-    if (extracted) {
-      return extracted;
-    }
-
-    const fallback = dto.region?.trim();
-    if (fallback) {
-      return fallback;
-    }
-
-    throw new BadRequestException(
-      'Unable to determine region from the provided location',
-    );
-  }
+  // Account GPS/region is not collected at registration.
+  // private async resolveInputRegion(dto: RegisterDto): Promise<string> {
+  //   let extracted: string | null = null;
+  //   try {
+  //     extracted = await extractRegionFromCoordinates(
+  //       dto.gpsLatitude,
+  //       dto.gpsLongitude,
+  //     );
+  //   } catch {
+  //     extracted = null;
+  //   }
+  //   if (extracted) {
+  //     return extracted;
+  //   }
+  //
+  //   const fallback = dto.region?.trim();
+  //   if (fallback) {
+  //     return fallback;
+  //   }
+  //
+  //   throw new BadRequestException(
+  //     'Unable to determine region from the provided location',
+  //   );
+  // }
 
   private validateRegistrationRules(dto: RegisterDto): void {
     if (dto.password !== dto.confirmPassword) {

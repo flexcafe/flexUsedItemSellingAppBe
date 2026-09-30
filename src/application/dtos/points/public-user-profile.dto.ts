@@ -12,8 +12,9 @@ export class PublicUserProfileDto {
   @ApiProperty({ nullable: true })
   avatar: string | null;
 
-  @ApiProperty({ nullable: true })
-  region: string | null;
+  // Account location is not shown on the public profile.
+  // @ApiProperty({ nullable: true })
+  // region: string | null;
 
   @ApiProperty({
     example: 'A1B2C3D4',
@@ -44,7 +45,7 @@ export class PublicUserProfileDto {
     this.userId = data.userId;
     this.nickname = data.nickname;
     this.avatar = data.avatar;
-    this.region = data.region;
+    // this.region = data.region;
     this.referralCode = data.referralCode;
     this.currentRank = data.currentRank;
     this.averageStars = data.averageStars;

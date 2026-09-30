@@ -229,12 +229,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password124',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
         }),
@@ -272,12 +266,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password123',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
         }),
@@ -315,12 +303,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password123',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
           referralId: 'BADCODE',
@@ -365,12 +347,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         confirmPassword: 'password123',
         kbzPayName: 'Kyaw Zin',
         kbzPayPhoneNumber: '+959876543210',
-        gender: Gender.MALE,
-        age: 27,
-        maritalStatus: MaritalStatus.SINGLE,
-        region: 'Yangon Region',
-        gpsLatitude: 16.84,
-        gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
       });
@@ -382,9 +358,13 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           termsVersion: '1.0',
           termsAcceptedAt: expect.any(Date),
           profile: expect.objectContaining({
-            inputRegion: 'Yangon Region',
-            gpsLatitude: 16.84,
-            gpsLongitude: 96.17,
+            gender: null,
+            age: null,
+            maritalStatus: null,
+            inputRegion: null,
+            gpsLatitude: null,
+            gpsLongitude: null,
+            isRegionVerified: false,
           }),
         }),
       );
@@ -399,6 +379,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
       ).toHaveBeenCalledWith('user-new', PointSourceType.REGISTRATION_BONUS);
     });
 
+    /*
     it('extracts region from GPS when FE omits region', async () => {
       const repo = buildRepoMock();
       const emailSender = buildEmailSenderMock();
@@ -603,6 +584,7 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         globalThis.fetch = originalFetch;
       }
     });
+    */
 
     it('rejects when acceptedTerms is false', async () => {
       const useCase = new RegisterUseCase(
@@ -621,12 +603,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password123',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: false,
           termsVersion: '1.0',
         }),
@@ -650,12 +626,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password123',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '0.9',
         }),
@@ -685,12 +655,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
         confirmPassword: 'password123',
         kbzPayName: 'Kyaw Zin',
         kbzPayPhoneNumber: '+959876543210',
-        gender: Gender.MALE,
-        age: 27,
-        maritalStatus: MaritalStatus.SINGLE,
-        region: 'Yangon Region',
-        gpsLatitude: 16.84,
-        gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
       });
@@ -730,12 +694,6 @@ describe('Auth use-cases (registration + login + verification flows)', () => {
           confirmPassword: 'password123',
           kbzPayName: 'Kyaw Zin',
           kbzPayPhoneNumber: '+959876543210',
-          gender: Gender.MALE,
-          age: 27,
-          maritalStatus: MaritalStatus.SINGLE,
-          region: 'Yangon Region',
-          gpsLatitude: 16.84,
-          gpsLongitude: 96.17,
           acceptedTerms: true,
           termsVersion: '1.0',
         }),

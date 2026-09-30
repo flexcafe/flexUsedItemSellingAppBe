@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RegistrationType } from '../../../domain/enums/registration-type.enum.js';
-import { Gender } from '../../../domain/enums/gender.enum.js';
-import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
+// import { Gender } from '../../../domain/enums/gender.enum.js';
+// import { MaritalStatus } from '../../../domain/enums/marital-status.enum.js';
 import { VerificationStatus } from '../../../domain/enums/verification-status.enum.js';
 import { AdminPermission } from '../../../domain/enums/admin-permission.enum.js';
 import type {
@@ -42,26 +42,28 @@ export class ProfileDetailsDto {
   @ApiProperty({ nullable: true })
   avatar: string | null;
 
-  @ApiProperty({ enum: Gender, nullable: true })
-  gender: Gender | null;
+  // Not returned. Gender, age, marital status, and account location stay in the
+  // database only until a profile editor is added back.
+  // @ApiProperty({ enum: Gender, nullable: true })
+  // gender: Gender | null;
 
-  @ApiProperty({ nullable: true })
-  age: number | null;
+  // @ApiProperty({ nullable: true })
+  // age: number | null;
 
-  @ApiProperty({ enum: MaritalStatus, nullable: true })
-  maritalStatus: MaritalStatus | null;
+  // @ApiProperty({ enum: MaritalStatus, nullable: true })
+  // maritalStatus: MaritalStatus | null;
 
-  @ApiProperty({ nullable: true })
-  region: string | null;
+  // @ApiProperty({ nullable: true })
+  // region: string | null;
 
-  @ApiProperty({ nullable: true })
-  gpsLatitude: number | null;
+  // @ApiProperty({ nullable: true })
+  // gpsLatitude: number | null;
 
-  @ApiProperty({ nullable: true })
-  gpsLongitude: number | null;
+  // @ApiProperty({ nullable: true })
+  // gpsLongitude: number | null;
 
-  @ApiProperty()
-  isRegionVerified: boolean;
+  // @ApiProperty()
+  // isRegionVerified: boolean;
 
   @ApiProperty({ nullable: true })
   facebookName: string | null;
@@ -74,13 +76,13 @@ export class ProfileDetailsDto {
 
   constructor(data: UserAuthData['profile']) {
     this.avatar = data?.avatar ?? null;
-    this.gender = data?.gender ?? null;
-    this.age = data?.age ?? null;
-    this.maritalStatus = data?.maritalStatus ?? null;
-    this.region = data?.inputRegion ?? null;
-    this.gpsLatitude = data?.gpsLatitude ?? null;
-    this.gpsLongitude = data?.gpsLongitude ?? null;
-    this.isRegionVerified = data?.isRegionVerified ?? false;
+    // this.gender = data?.gender ?? null;
+    // this.age = data?.age ?? null;
+    // this.maritalStatus = data?.maritalStatus ?? null;
+    // this.region = data?.inputRegion ?? null;
+    // this.gpsLatitude = data?.gpsLatitude ?? null;
+    // this.gpsLongitude = data?.gpsLongitude ?? null;
+    // this.isRegionVerified = data?.isRegionVerified ?? false;
     this.facebookName = data?.facebookName ?? null;
     this.facebookProfileUrl = data?.facebookProfileUrl ?? null;
     this.facebookLinkedAt = data?.facebookLinkedAt ?? null;

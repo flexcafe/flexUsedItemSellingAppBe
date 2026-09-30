@@ -30,14 +30,15 @@ export interface CreateUserData {
 }
 
 export interface CreateUserProfileData {
-  gender: Gender;
-  age: number;
-  maritalStatus: MaritalStatus;
-  inputRegion: string;
-  gpsLatitude: number;
-  gpsLongitude: number;
+  // Nullable while gender, age, marital status, and account location are not collected.
+  gender: Gender | null;
+  age: number | null;
+  maritalStatus: MaritalStatus | null;
+  inputRegion: string | null;
+  gpsLatitude: number | null;
+  gpsLongitude: number | null;
   isRegionVerified: boolean;
-  gpsVerifiedAt: Date;
+  gpsVerifiedAt: Date | null;
 }
 
 export interface CreateKbzPayAccountData {
