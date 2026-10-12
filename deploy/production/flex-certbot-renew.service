@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew Flex TLS certificates
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/certbot/bin/certbot renew --quiet --deploy-hook "/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx"

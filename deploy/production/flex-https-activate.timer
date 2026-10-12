@@ -1,0 +1,9 @@
+[Unit]
+Description=Check DNS and issue Flex TLS certificate
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Unit=flex-https-activate.service
+[Install]
+WantedBy=timers.target

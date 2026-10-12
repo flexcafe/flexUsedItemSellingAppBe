@@ -1,0 +1,7 @@
+[Unit]
+Description=Activate Flex HTTPS after DNS cutover
+After=network-online.target nginx.service
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/flex-activate-https

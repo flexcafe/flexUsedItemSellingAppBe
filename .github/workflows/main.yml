@@ -4,60 +4,54 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flex-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PRODUCTION_HOST: 8.222.215.56
+      PRODUCTION_USER: flex-deploy
+      RELEASE_SHA: ${{ github.sha }}
     steps:
-      - name: SSH and Deploy
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout exact release
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          host: 47.82.249.130
-          username: root
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/admin/flexusedmarket/flexUsedItemSellingAppBe
+          persist-credentials: false
 
-            sudo systemctl stop flex-used-market-be.service
-            
-            # 1. Update source code
-            git pull origin main
-            
-            # 2. Install dependencies (clean install)
-            npm ci
-            
-            # 3. Generate Prisma Client
-            npx prisma generate
-            
-            # 4. Build with increased memory limit
-            export NODE_OPTIONS="--max-old-space-size=2048"
-            npm run build
-            
-            # 5. Run database migrations
-            npx prisma migrate deploy
-            
-            # 6. Locate the actual main.js (handles dist/main.js or dist/src/main.js)
-            ACTUAL_PATH=$(find dist -name main.js | head -n 1)
-            
-            if [ -z "$ACTUAL_PATH" ]; then
-              echo "❌ Build failed: main.js not found anywhere in dist/."
-              exit 1
-            fi
+      - name: Configure pinned SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
-            FULL_PATH="/home/admin/flexusedmarket/flexUsedItemSellingAppBe/$ACTUAL_PATH"
-            echo "✅ Found build entry point at: $FULL_PATH"
+      - name: Upload and deploy tested release
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz --output="$RUNNER_TEMP/$RELEASE_SHA.tar.gz" "$RELEASE_SHA"
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "$RUNNER_TEMP/$RELEASE_SHA.tar.gz" \
+            "$PRODUCTION_USER@$PRODUCTION_HOST:/opt/flex/incoming/$RELEASE_SHA.tar.gz"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "$PRODUCTION_USER@$PRODUCTION_HOST" \
+            "sudo /usr/local/sbin/flex-deploy-release $RELEASE_SHA"
 
-            # 7. Dynamically update the systemd service file if the path is wrong
-            # This ensures the service always points to where the build actually is
-            sudo sed -i "s|ExecStart=.*|ExecStart=/usr/bin/node $FULL_PATH|" /etc/systemd/system/flex-used-market-be.service
-            
-            # 8. Reload and Restart
-            echo "🚀 Restarting service..."
-            sudo systemctl daemon-reload
-            sudo systemctl start flex-used-market-be.service
-            sudo systemctl restart flex-used-market-be.service
-            
-            # 9. Health Check
-            sleep 2
-            sudo systemctl status flex-used-market-be.service --no-pager
+      - name: Remove temporary SSH credentials
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519 ~/.ssh/known_hosts
