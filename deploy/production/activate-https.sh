@@ -25,4 +25,5 @@ if ! nginx -t; then
   exit 1
 fi
 systemctl reload nginx
+systemctl disable --now flex-https-activate.timer
 echo 'HTTPS is configured on the production origin.'

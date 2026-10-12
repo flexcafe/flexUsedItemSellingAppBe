@@ -40,8 +40,8 @@ on startup; that behavior has not been changed.
 
 Every push to `main` triggers production deployment; feature branches do not
 deploy. Manual workflow dispatch is supported on `main`. Concurrent deployments
-are serialized without interrupting a running deployment; superseded pending
-runs can be replaced by the newest push under GitHub concurrency behavior.
+are serialized without interrupting a running deployment; `queue: max` keeps
+multiple pending pushes queued rather than replacing the previous pending push.
 
 Repository secrets:
 

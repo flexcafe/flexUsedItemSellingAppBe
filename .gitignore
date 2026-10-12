@@ -49,6 +49,8 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+__pycache__/
+*.pyc
 
 # Runtime data
 pids

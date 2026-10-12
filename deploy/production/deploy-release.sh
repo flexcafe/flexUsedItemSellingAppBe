@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installed root-owned as /usr/local/sbin/flex-deploy-release.
 set -euo pipefail
-export PATH=/opt/node/bin:/usr/local/bin:/usr/bin:/bin
+export PATH=/opt/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 [[ $# == 1 && "$1" =~ ^[0-9a-f]{40}$ ]] || { echo 'Usage: flex-deploy-release COMMIT_SHA'; exit 2; }
 sha=$1
 exec 9>/opt/flex/deploy.lock
